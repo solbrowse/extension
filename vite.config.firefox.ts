@@ -15,7 +15,13 @@ export default mergeConfig(
           background: {
             scripts: [ 'src/pages/background/index.ts' ]
           },
-        } as ManifestV3Export,
+          browser_specific_settings: {
+            gecko: {
+              id: "santi@domenech.com.mx",
+              strict_min_version: "109.0"
+            }
+          }
+        } as any,
         browser: 'firefox',
       })
     ],
