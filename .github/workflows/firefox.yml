@@ -27,7 +27,7 @@ jobs:
         run: npm run build:firefox
 
       - name: Upload Firefox extension artifacts
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: vite-web-extension-firefox
           path: dist_firefox
