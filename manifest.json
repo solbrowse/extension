@@ -1,0 +1,43 @@
+{
+  "manifest_version": 3,
+  "name": "Sol",
+  "description": "Improve your browsing experience with the power of AI",
+  "background": {
+    "scripts": ["src/background/index.ts"],
+    "type": "module"
+  },
+  "options_ui": {
+    "page": "src/pages/options/index.html"
+  },
+  "action": {
+    "default_popup": "src/pages/popup/index.html",
+    "default_icon": {
+      "32": "icon-32.png"
+    }
+  },
+  "icons": {
+    "128": "icon-128.png"
+  },
+  "permissions": [
+    "storage",
+    "activeTab"
+  ],
+  "host_permissions": [
+    "https://*.openai.com/",
+    "https://openrouter.ai/",
+    "https://*.googleapis.com/",
+    "<all_urls>"
+  ],
+  "content_scripts": [
+    {
+      "matches": [
+        "http://*/*",
+        "https://*/*",
+        "<all_urls>"
+      ],
+      "js": [
+        "src/pages/content/index.tsx"
+      ]
+    }
+  ]
+}

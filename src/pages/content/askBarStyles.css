@@ -1,0 +1,73 @@
+@import "../../assets/styles/tailwind.css";
+
+/* Custom styles that cannot be achieved with Tailwind */
+
+/* Ensure fixed positioning stays fixed to viewport */
+.sol-ask-bar {
+  position: fixed !important;
+  z-index: 2147483647 !important;
+  /* Adjust prominent border and shadow via CSS */
+  border: 1px solid rgba(0, 0, 0, 0.15) !important;
+  box-shadow: 0 10px 20px rgba(0, 0, 0, 0.07), 0 2px 6px rgba(0, 0, 0, 0.03) !important;
+}
+
+/* Dividing line for expanded conversation */
+.sol-conversation-divider {
+  border-bottom: 1px solid rgba(0, 0, 0, 0.08) !important;
+}
+
+/* Custom scrollbar for conversation area */
+.sol-conversation::-webkit-scrollbar {
+  width: 4px;
+}
+
+.sol-conversation::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.sol-conversation::-webkit-scrollbar-thumb {
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 2px;
+}
+
+.sol-conversation::-webkit-scrollbar-thumb:hover {
+  background: rgba(0, 0, 0, 0.3);
+}
+
+/* Quote styling - matching OG blockquote */
+.sol-quote {
+  border-left: 3px solid rgba(0, 0, 0, 0.1);
+  padding-left: 12px;
+  margin: 8px 0;
+  font-style: italic;
+}
+
+/* Streaming animation for text */
+@keyframes typing {
+  from {
+    opacity: 0.7;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.sol-streaming {
+  animation: typing 1s ease-in-out infinite alternate;
+}
+
+/* Message entrance animation */
+@keyframes animate-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-in {
+  animation: animate-in 0.3s ease-out forwards;
+}

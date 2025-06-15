@@ -1,0 +1,33 @@
+name: Build and Zip Firefox Extension
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    name: Build Firefox Extension
+    timeout-minutes: 15
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
+
+      - name: Setup Node.js environment
+        uses: actions/setup-node@v3
+        with:
+          node-version: 18
+          cache: "npm"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build Firefox
+        run: npm run build:firefox
+
+      - name: Upload Firefox extension artifacts
+        uses: actions/upload-artifact@v3
+        with:
+          name: vite-web-extension-firefox
+          path: dist_firefox
