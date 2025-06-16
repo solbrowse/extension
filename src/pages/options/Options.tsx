@@ -311,7 +311,7 @@ export default function Options() {
                     />
                   </div>
                   <p className="text-xs text-gray-500 mt-2">
-                    Enter the base URL for your OpenAI-compatible API endpoint (e.g., for local models, Ollama, or other providers)
+                    Enter the base URL for your OpenAI-compatible API endpoint. Format your endpoint as https://your-api-endpoint.com/v1. Make sure /models and /chat/completions are available.
                   </p>
                 </div>
               )}

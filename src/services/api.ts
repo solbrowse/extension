@@ -97,15 +97,15 @@ export class ApiService {
         ];
       case 'gemini':
         return [
-          { id: 'gemini-2.0-flash', name: 'Gemini 2.0 Flash', provider },
-          { id: 'gemini-1.5-pro-latest', name: 'Gemini 1.5 Pro', provider },
+          { id: 'models/gemini-2.5-flash-preview-05-20', name: 'Gemini 2.5 Flash (Preview 05/20)', provider },
+          { id: 'models/gemini-2.5-pro-preview-06-05', name: 'Gemini 2.5 Pro (Preview 06/05)', provider }
         ];
       case 'openrouter':
         return [
           { id: 'openai/gpt-4o', name: 'GPT-4o', provider },
           { id: 'openai/gpt-4o-mini', name: 'GPT-4o Mini', provider },
-          { id: 'google/gemini-flash-1.5', name: 'Gemini 1.5 Flash', provider },
-          { id: 'google/gemini-pro-1.5', name: 'Gemini 1.5 Pro', provider },
+          { id: 'google/gemini-flash-2.5-preview', name: 'Gemini 2.5 Flash (Preview)', provider },
+          { id: 'google/gemini-pro-2.5-preview', name: 'Gemini 2.5 Pro (Preview)', provider },
           { id: 'anthropic/claude-3.5-sonnet', name: 'Claude 3.5 Sonnet', provider },
         ];
       default:

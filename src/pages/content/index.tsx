@@ -2,6 +2,7 @@ import { get } from '@src/utils/storage';
 import { parseKeybind, matchesKeybind } from '@src/utils/keybind';
 import { Message } from '@src/utils/storage';
 import { ContentScraperService } from '@src/services/contentScraper';
+import browser from 'webextension-polyfill';
 
 let iframeAskBarVisible = false;
 
@@ -105,27 +106,41 @@ async function injectIframeAskBar(settings: any) {
     togglePointerEvents(isNearAskBar);
   };
   
-  // Scrape content and send to iframe when it loads
-  iframe.onload = async () => {
+  const handlePointerLockMsg = (event: MessageEvent) => {
+    if (event.data?.type === 'sol-pointer-lock') {
+      togglePointerEvents(!!event.data.enabled);
+    }
+  };
+  
+  // Send conversation immediately, then scrape content asynchronously
+  iframe.onload = () => {
     try {
-      const contentScraper = ContentScraperService.getInstance();
-      const scrapedContent = await contentScraper.scrapePageContent();
-      
+      // 1) Send initial conversation + position so AskBar can render instantly
       iframe.contentWindow?.postMessage({
-        type: 'sol-page-content',
-        content: scrapedContent,
-        url: window.location.href,
-        title: document.title,
-        position: settings.features?.askBar?.position || 'top-right',
-        existingConversation: existingConversation
+        type: 'sol-init',
+        existingConversation,
+        position: settings.features?.askBar?.position || 'top-right'
       }, '*');
-      
-      // Request AskBar bounds after content loads
-      setTimeout(() => {
-        iframe.contentWindow?.postMessage({ type: 'sol-request-askbar-bounds' }, '*');
-      }, 100);
-      
-    } catch (error) {
+
+      // 2) Start scraping page content in the background
+      const contentScraper = ContentScraperService.getInstance();
+      contentScraper.scrapePageContent()
+        .then(scrapedContent => {
+          iframe.contentWindow?.postMessage({
+            type: 'sol-page-content',
+            content: scrapedContent,
+            url: window.location.href,
+            title: document.title
+          }, '*');
+
+          // Request AskBar bounds once the AskBar has potentially resized after receiving content
+          setTimeout(() => {
+            iframe.contentWindow?.postMessage({ type: 'sol-request-askbar-bounds' }, '*');
+          }, 100);
+        })
+        .catch(() => {/* ignore scrape errors */});
+    } catch {
+      // ignore
     }
   };
   
@@ -137,9 +152,13 @@ async function injectIframeAskBar(settings: any) {
   // Add global mouse move listener
   document.addEventListener('mousemove', handleMouseMove, { passive: true });
   
+  // Listen for pointer lock messages
+  window.addEventListener('message', handlePointerLockMsg);
+  
   // Store cleanup function on iframe for later removal
   (iframe as any).__solCleanup = () => {
     document.removeEventListener('mousemove', handleMouseMove);
+    window.removeEventListener('message', handlePointerLockMsg);
   };
   
   return iframe;
@@ -163,14 +182,14 @@ async function main() {
   const settings = await get();
   console.log('Sol Content Script: Loaded settings:', settings);
   
-  if (!settings.features.askBar.isEnabled) {
-    console.log('Sol Content Script: AskBar is disabled, exiting');
-    return;
+  let askBarEnabled = settings.features.askBar.isEnabled;
+  let targetKeybind = parseKeybind(settings.features.askBar.keybind);
+
+  if (!askBarEnabled) {
+    console.log('Sol Content Script: AskBar initially disabled (can be enabled live via Options)');
   }
-  
-  console.log('Sol Content Script: AskBar is enabled, setting up listener');
-  const targetKeybind = parseKeybind(settings.features.askBar.keybind);
-  console.log('Sol Content Script: Parsed keybind:', targetKeybind, 'from:', settings.features.askBar.keybind);
+
+  console.log('Sol Content Script: AskBar listener ready. Current keybind:', settings.features.askBar.keybind);
 
   // Clear conversation when navigating to a new page/site
   let currentUrl = window.location.href;
@@ -250,16 +269,32 @@ async function main() {
   };
 
   document.addEventListener('keydown', async (event) => {
-    console.log('Sol Content Script: Keydown event:', event.key, event);
+    if (!askBarEnabled) return;
     if (matchesKeybind(event, targetKeybind)) {
-      console.log('Sol Content Script: Keybind matched! Opening AskBar');
-      
       // Only open AskBar, don't toggle
       if (!iframeAskBarVisible) {
         iframeAskBarVisible = true;
-        await injectIframeAskBar(settings);
+        await injectIframeAskBar(await get()); // fetch latest settings for position etc.
       }
-      // If already visible, do nothing (keybind only opens)
+    }
+  });
+
+  // Listen for live storage updates to features/keybind
+  browser.storage.onChanged.addListener((changes, area) => {
+    if (area !== 'local') return;
+    if (changes.features) {
+      const newFeatures = changes.features.newValue as any;
+      if (newFeatures?.askBar) {
+        askBarEnabled = newFeatures.askBar.isEnabled;
+        targetKeybind = parseKeybind(newFeatures.askBar.keybind);
+        console.log('Sol Content Script: AskBar settings updated', { askBarEnabled, targetKeybind });
+
+        if (!askBarEnabled && iframeAskBarVisible) {
+          // Feature disabled while AskBar is open -> close it
+          iframeAskBarVisible = false;
+          removeIframeAskBar();
+        }
+      }
     }
   });
 

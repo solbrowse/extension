@@ -38,6 +38,7 @@ export default function AskBar({
   const conversationRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const askBarRef = useRef<HTMLDivElement>(null);
+  const mountTimeRef = useRef<number>(Date.now());
   const contentScraper = ContentScraperService.getInstance();
 
   // Animation and visibility effects
@@ -48,10 +49,7 @@ export default function AskBar({
       inputRef.current?.focus();
     }, 10);
 
-    // Request content from parent window if we're in iframe
-    if (window.parent !== window) {
-      window.parent.postMessage({ type: 'sol-request-content' }, '*');
-    }
+    // Content script proactively sends page data on iframe load, so no need to request it here.
   }, []);
 
   // Conversation loading is now handled via pre-loaded data from parent (no async loading needed)
@@ -59,7 +57,19 @@ export default function AskBar({
   // Listen for messages from parent window
   useEffect(() => {
     const handleMessage = (event: MessageEvent) => {
-      if (event.data?.type === 'sol-page-content') {
+      if (event.data?.type === 'sol-init') {
+        // Fast path: receive preloaded conversation & position
+        if (event.data.position) {
+          setCurrentPosition(event.data.position);
+        }
+
+        if (event.data.existingConversation && event.data.existingConversation.messages.length > 0) {
+          setConversationHistory(event.data.existingConversation.messages);
+          setCurrentConversationId(event.data.existingConversation.id);
+          setIsExpanded(true);
+        }
+
+      } else if (event.data?.type === 'sol-page-content') {
         setPageContent(event.data.content);
         setPageUrl(event.data.url);
         setPageTitle(event.data.title);
@@ -462,6 +472,36 @@ export default function AskBar({
     };
   }, []);
 
+  useEffect(() => {
+    if (window.parent === window) return; // Not inside iframe
+    const el = askBarRef.current;
+    if (!el) return;
+
+    const handleEnter = () => {
+      try {
+        window.parent.postMessage({ type: 'sol-pointer-lock', enabled: true }, '*');
+      } catch (_) {
+        // Ignore cross-origin errors
+      }
+    };
+
+    const handleLeave = () => {
+      try {
+        window.parent.postMessage({ type: 'sol-pointer-lock', enabled: false }, '*');
+      } catch (_) {
+        // Ignore cross-origin errors
+      }
+    };
+
+    el.addEventListener('mouseenter', handleEnter);
+    el.addEventListener('mouseleave', handleLeave);
+
+    return () => {
+      el.removeEventListener('mouseenter', handleEnter);
+      el.removeEventListener('mouseleave', handleLeave);
+    };
+  }, []);
+
   return (
     <div className={`askbar-container ${currentPosition}`}>
       <div 
@@ -483,19 +523,21 @@ export default function AskBar({
             sol-conversation
           `}
         >
-          {conversationHistory.map((message, index) => (
+          {conversationHistory.map((message, index) => {
+            const isNew = message.timestamp > mountTimeRef.current;
+            return (
             <div
               key={index}
               className={`
                 mb-3 last:mb-0 relative group
-                opacity-0 translate-y-2 animate-in
+                ${isNew ? 'opacity-0 translate-y-2 animate-in' : ''}
                 transition-all duration-300 ease-out
                 ${message.type === 'user' ? 'text-right' : 'text-left'}
               `}
-              style={{
+              style={isNew ? {
                 animationDelay: `${index * 50}ms`,
                 animationFillMode: 'forwards'
-              }}
+              } : {}}
             >
               {message.type === 'user' ? (
                 <div className="text-gray-900 font-semibold text-sm leading-relaxed">
@@ -534,7 +576,8 @@ export default function AskBar({
                 </>
               )}
             </div>
-          ))}
+            );
+          })}
         </div>
 
         {/* Input Area */}
