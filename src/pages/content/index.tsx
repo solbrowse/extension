@@ -60,7 +60,7 @@ async function injectIframeAskBar(settings: any) {
   iframe.id = 'sol-askview-container';
   iframe.src = iframeUrl;
   
-  // Full-size iframe with smart pointer events
+  // Smart overlay: start with pointer-events: none for full hover/cursor preservation
   iframe.style.cssText = `
     position: fixed !important;
     top: 0 !important;
@@ -70,12 +70,40 @@ async function injectIframeAskBar(settings: any) {
     border: none !important;
     background: transparent !important;
     z-index: 2147483647 !important;
-    pointer-events: auto !important;
+    pointer-events: none !important;
     overflow: hidden !important;
   `;
   
-  // Allow iframe to communicate pointer events properly
+  // Allow transparency for older browsers
   iframe.setAttribute('allowtransparency', 'true');
+  
+  // Track pointer events state for smart toggling
+  let isPointerEventsEnabled = false;
+  
+  const togglePointerEvents = (enable: boolean) => {
+    if (enable !== isPointerEventsEnabled) {
+      iframe.style.pointerEvents = enable ? 'auto' : 'none';
+      isPointerEventsEnabled = enable;
+    }
+  };
+  
+  // Global mouse move handler for smart pointer-events toggling
+  const handleMouseMove = (e: MouseEvent) => {
+    const askBarBounds = (iframe as any).__askBarBounds;
+    if (!askBarBounds) return;
+    
+    const mouseX = e.clientX;
+    const mouseY = e.clientY;
+    
+    // Add padding around AskBar for better UX (20px buffer zone)
+    const padding = 20;
+    const isNearAskBar = mouseX >= askBarBounds.left - padding &&
+                        mouseX <= askBarBounds.right + padding &&
+                        mouseY >= askBarBounds.top - padding &&
+                        mouseY <= askBarBounds.bottom + padding;
+    
+    togglePointerEvents(isNearAskBar);
+  };
   
   // Scrape content and send to iframe when it loads
   iframe.onload = async () => {
@@ -92,6 +120,11 @@ async function injectIframeAskBar(settings: any) {
         existingConversation: existingConversation
       }, '*');
       
+      // Request AskBar bounds after content loads
+      setTimeout(() => {
+        iframe.contentWindow?.postMessage({ type: 'sol-request-askbar-bounds' }, '*');
+      }, 100);
+      
     } catch (error) {
     }
   };
@@ -101,12 +134,24 @@ async function injectIframeAskBar(settings: any) {
   
   document.body.appendChild(iframe);
   
+  // Add global mouse move listener
+  document.addEventListener('mousemove', handleMouseMove, { passive: true });
+  
+  // Store cleanup function on iframe for later removal
+  (iframe as any).__solCleanup = () => {
+    document.removeEventListener('mousemove', handleMouseMove);
+  };
+  
   return iframe;
 }
 
 function removeIframeAskBar() {
-  const existingIframe = document.getElementById('sol-askview-container');
+  const existingIframe = document.getElementById('sol-askview-container') as HTMLIFrameElement & { __solCleanup?: () => void };
   if (existingIframe) {
+    // Clean up event listeners
+    if (existingIframe.__solCleanup) {
+      existingIframe.__solCleanup();
+    }
     existingIframe.remove();
     console.log('Sol Content Script: AskView iframe removed');
   }
@@ -151,31 +196,19 @@ async function main() {
 
   // Listen for messages from iframe (e.g., close requests)
   window.addEventListener('message', (event) => {
-    if (event.data?.type === 'sol-close-askbar') {
+    if (event.data?.type === 'sol-askbar-bounds') {
+      // Store AskBar bounds for smart pointer-events toggling
+      const iframe = document.getElementById('sol-askview-container') as HTMLIFrameElement & { __askBarBounds?: DOMRect };
+      if (iframe && iframe.__askBarBounds !== event.data.bounds) {
+        iframe.__askBarBounds = event.data.bounds;
+      }
+    } else if (event.data?.type === 'sol-close-askbar') {
       if (iframeAskBarVisible) {
         iframeAskBarVisible = false;
         // Remove iframe after animation completes
         setTimeout(() => {
           removeIframeAskBar();
         }, 350); // Wait for full animation to complete (300ms + buffer)
-      }
-    } else if (event.data?.type === 'sol-click-through') {
-      // Handle click-through by finding the element at the coordinates
-      try {
-        const iframe = document.getElementById('sol-askview-container') as HTMLIFrameElement;
-        if (iframe) {
-          // Temporarily hide iframe to get element behind it
-          iframe.style.pointerEvents = 'none';
-          const elementBelow = document.elementFromPoint(event.data.x, event.data.y);
-          iframe.style.pointerEvents = 'auto';
-          
-          // Click the element behind the iframe
-          if (elementBelow && elementBelow !== iframe) {
-            (elementBelow as HTMLElement).click();
-          }
-        }
-      } catch (error) {
-        // Ignore errors
       }
     } else if (event.data?.type === 'sol-update-tab-conversation') {
       // Update tab-specific conversation storage

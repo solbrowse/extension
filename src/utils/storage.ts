@@ -27,6 +27,7 @@ function getDefaultKeybind(): string {
 }
 
 export interface StorageData {
+  version: string;
   features: {
     askBar: {
       isEnabled: boolean;
@@ -46,6 +47,7 @@ export interface StorageData {
  * yet still usable as a value-typed template for `get`.
  */
 export const DEFAULT_STORAGE: Readonly<StorageData> = {
+  version: '2.0.0',
   features: {
     askBar: {
       isEnabled: true,
@@ -86,6 +88,40 @@ export async function get(): Promise<StorageData> {
     (await browser.storage.local.get(null)) as Partial<StorageData>;
 
   return withDefaults(DEFAULT_STORAGE, stored);
+}
+
+/**
+ * Check if stored data has incompatible schema and needs reset
+ */
+export async function needsSchemaReset(): Promise<boolean> {
+  try {
+    const stored = await browser.storage.local.get(null) as any;
+    
+    // No data at all - fresh install, no reset needed
+    if (!stored || Object.keys(stored).length === 0) {
+      return false;
+    }
+    
+    // Check version mismatch
+    if (!stored.version || stored.version !== DEFAULT_STORAGE.version) {
+      console.log('Sol Storage: Version mismatch detected', { 
+        stored: stored.version, 
+        expected: DEFAULT_STORAGE.version 
+      });
+      return true;
+    }
+    
+    // Check for old schema (features.aiSearch instead of features.askBar)
+    if (stored.features && stored.features.aiSearch && !stored.features.askBar) {
+      console.log('Sol Storage: Old schema detected (features.aiSearch found)');
+      return true;
+    }
+    
+    return false;
+  } catch (error) {
+    console.error('Sol Storage: Error checking schema:', error);
+    return true; // Reset on error to be safe
+  }
 }
 
 /**

@@ -5,26 +5,19 @@ import './index.css';
 import './askBarStyles.css';
 
 const App: React.FC = () => {
-  // Handle click-through for areas outside the AskBar
-  const handleContainerClick = (e: React.MouseEvent) => {
-    // If the click target is the container itself (not a child), 
-    // attempt to pass the click through to the parent page
+  const handleClick = (e: React.MouseEvent) => {
+    // Only handle clicks on the container itself, not child elements
     if (e.target === e.currentTarget) {
-      try {
-        // Send message to parent to handle click-through
-        window.parent.postMessage({
-          type: 'sol-click-through',
-          x: e.clientX,
-          y: e.clientY
-        }, '*');
-      } catch (error) {
-        // Ignore cross-origin errors
-      }
+      window.parent.postMessage({
+        type: 'sol-click-through',
+        x: e.clientX,
+        y: e.clientY
+      }, '*');
     }
   };
 
   return (
-    <div className="iframe-container" onClick={handleContainerClick}>
+    <div className="iframe-container" onClick={handleClick}>
       <AskBar />
     </div>
   );

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useLayoutEffect } from 'react';
 import { HiXMark, HiClipboardDocument, HiArrowRight, HiCheck } from 'react-icons/hi2';
 import browser from 'webextension-polyfill';
 import { get, saveConversation, updateConversation, Message } from '@src/utils/storage';
@@ -37,6 +37,7 @@ export default function AskBar({
   
   const conversationRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const askBarRef = useRef<HTMLDivElement>(null);
   const contentScraper = ContentScraperService.getInstance();
 
   // Animation and visibility effects
@@ -416,9 +417,55 @@ export default function AskBar({
     return context.join('\n\n');
   }, [scrapedContent, pageUrl, pageTitle]);
 
+  // ---------------------
+  // Expose AskBar bounds to parent so content script can enable pointer-events
+  // ---------------------
+  useLayoutEffect(() => {
+    const sendBounds = () => {
+      if (window.parent === window) return; // Not inside iframe
+      if (!askBarRef.current) return;
+      const rect = askBarRef.current.getBoundingClientRect();
+      window.parent.postMessage({
+        type: 'sol-askbar-bounds',
+        bounds: {
+          left: rect.left,
+          top: rect.top,
+          right: rect.right,
+          bottom: rect.bottom,
+        }
+      }, '*');
+    };
+
+    // Send once after mount
+    sendBounds();
+
+    // Observe size changes
+    const resizeObserver = new ResizeObserver(() => sendBounds());
+    if (askBarRef.current) {
+      resizeObserver.observe(askBarRef.current);
+    }
+
+    // Listen for explicit requests from parent
+    const messageHandler = (event: MessageEvent) => {
+      if (event.data?.type === 'sol-request-askbar-bounds') {
+        sendBounds();
+      }
+    };
+
+    window.addEventListener('message', messageHandler);
+    window.addEventListener('resize', sendBounds);
+
+    return () => {
+      resizeObserver.disconnect();
+      window.removeEventListener('message', messageHandler);
+      window.removeEventListener('resize', sendBounds);
+    };
+  }, []);
+
   return (
     <div className={`askbar-container ${currentPosition}`}>
       <div 
+        ref={askBarRef}
         className={`sol-ask-bar bg-white/95 backdrop-blur-md rounded-2xl transition-all duration-300 ${
           isClosing ? 'animate-out' : isVisible ? 'sol-visible' : ''
         } ${isExpanded ? 'w-[500px] p-3' : 'w-[400px] p-2'}`}

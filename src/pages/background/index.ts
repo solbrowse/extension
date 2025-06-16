@@ -1,7 +1,21 @@
 import browser from 'webextension-polyfill';
 import { ApiService } from '@src/services/api';
+import { needsSchemaReset, resetToDefaults } from '@src/utils/storage';
 
 console.log("Sol Background Script Loaded");
+
+// Check for schema updates and reset if needed
+const checkAndResetSchema = async () => {
+  try {
+    if (await needsSchemaReset()) {
+      console.log('Sol Background: Resetting storage due to schema change');
+      await resetToDefaults();
+      console.log('Sol Background: Storage reset completed');
+    }
+  } catch (error) {
+    console.error('Sol Background: Error during schema check:', error);
+  }
+};
 
 // Keep the service worker alive
 const keepAlive = () => {
@@ -14,15 +28,22 @@ const keepAlive = () => {
 
 keepAlive();
 
-browser.runtime.onInstalled.addListener(details => {
+browser.runtime.onInstalled.addListener(async (details) => {
   console.log('Sol Background: onInstalled event fired');
+  
+  // Check schema on install/update
+  await checkAndResetSchema();
+  
   if (details.reason === 'install') {
     browser.runtime.openOptionsPage();
   }
 });
 
-browser.runtime.onStartup.addListener(() => {
+browser.runtime.onStartup.addListener(async () => {
   console.log('Sol Background: onStartup event fired, extension is active.');
+  
+  // Check schema on startup (browser restart)
+  await checkAndResetSchema();
 });
 
 // Keep track of active streaming sessions

@@ -1,17 +1,15 @@
-/* Iframe Container Styles - Full viewport coverage */
+/* Simple iframe with click-through on background */
 body {
   margin: 0;
   padding: 0;
   background: transparent;
   overflow: hidden;
-  pointer-events: none;
 }
 
 #root {
   width: 100vw;
   height: 100vh;
   background: transparent;
-  pointer-events: none;
   display: flex;
   position: relative;
 }
@@ -20,27 +18,14 @@ body {
   width: 100%;
   height: 100%;
   background: transparent;
-  pointer-events: none;
   position: relative;
   display: flex;
 }
 
-/* Allow clicks only on the AskBar container */
-.askbar-container {
-  pointer-events: auto;
-}
-
-/* Ensure all AskBar content is clickable */
-.askbar-container * {
-  pointer-events: auto;
-}
-
-/* The AskBar container will handle its own positioning and pointer events */
 .askbar-container {
   position: absolute;
-  pointer-events: auto; /* Re-enable pointer events for the actual content */
-  width: auto; /* Don't take full width */
-  height: auto; /* Don't take full height */
+  width: auto;
+  height: auto;
 }
 
 /* Position classes for the AskBar */
