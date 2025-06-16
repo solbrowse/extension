@@ -15,20 +15,20 @@ export const PROVIDERS: Provider[] = [
   {
     id: 'openai',
     name: 'OpenAI',
-    baseUrl: 'https://api.openai.com',
-    modelsEndpoint: '/v1/models',
+    baseUrl: 'https://api.openai.com/v1',
+    modelsEndpoint: '/models',
   },
   {
     id: 'openrouter',
     name: 'OpenRouter',
-    baseUrl: 'https://openrouter.ai/api',
-    modelsEndpoint: '/v1/models',
+    baseUrl: 'https://openrouter.ai/api/v1',
+    modelsEndpoint: '/models',
   },
   {
     id: 'gemini',
     name: 'Google Gemini',
-    baseUrl: 'https://generativelanguage.googleapis.com',
-    modelsEndpoint: '/v1/models',
+    baseUrl: 'https://generativelanguage.googleapis.com/v1beta/openai',
+    modelsEndpoint: '/models',
   },
   {
     id: 'custom',
@@ -53,26 +53,22 @@ export class ApiService {
         'Content-Type': 'application/json',
       };
 
-      if (provider === 'openai' || provider === 'openrouter') {
+      if (provider !== 'custom') {
         headers['Authorization'] = `Bearer ${apiKey}`;
-      } else if (provider === 'gemini') {
-        // Gemini uses API key as query parameter
-        const urlWithKey = `${url}?key=${apiKey}`;
-        const response = await fetch(urlWithKey, { headers });
-        const data = await response.json();
-        return this.parseGeminiModels(data);
       }
 
       const response = await fetch(url, { headers });
-      
+
       if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
+        const errorText = await response.text();
+        console.error(`Sol API: Fetch models error for ${provider}:`, response.status, errorText);
+        throw new Error(`API error for ${provider}: ${response.status} ${errorText}`);
       }
 
       const data = await response.json();
       return this.parseModels(data, provider);
     } catch (error) {
-      console.error('Error fetching models:', error);
+      console.error(`Error fetching models for ${provider}:`, error);
       return this.getDefaultModels(provider);
     }
   }
@@ -92,41 +88,25 @@ export class ApiService {
       .sort((a: Model, b: Model) => a.name.localeCompare(b.name));
   }
 
-  private static parseGeminiModels(data: any): Model[] {
-    if (!data || !Array.isArray(data.models)) {
-      return this.getDefaultModels('gemini');
-    }
-
-    return data.models
-      .filter((model: any) => model.name && model.name.includes('generateContent'))
-      .map((model: any) => ({
-        id: model.name.replace('models/', ''),
-        name: model.displayName || model.name.replace('models/', ''),
-        provider: 'gemini',
-      }));
-  }
-
   static getDefaultModels(provider: string): Model[] {
     switch (provider) {
       case 'openai':
         return [
           { id: 'gpt-4o-mini', name: 'GPT-4o Mini', provider },
           { id: 'gpt-4o', name: 'GPT-4o', provider },
-          { id: 'gpt-4.1', name: 'GPT-4.1', provider },
         ];
       case 'gemini':
         return [
-          { id: 'gemini-2.5-flash', name: 'Gemini 2.5 Flash', provider },
-          { id: 'gemini-2.5-pro', name: 'Gemini 2.5 Pro', provider },
+          { id: 'gemini-2.0-flash', name: 'Gemini 2.0 Flash', provider },
+          { id: 'gemini-1.5-pro-latest', name: 'Gemini 1.5 Pro', provider },
         ];
       case 'openrouter':
         return [
           { id: 'openai/gpt-4o', name: 'GPT-4o', provider },
           { id: 'openai/gpt-4o-mini', name: 'GPT-4o Mini', provider },
-          { id: 'google/gemini-2.5-flash-preview', name: 'Gemini 2.5 Flash (Preview)', provider },
-          { id: 'google/gemini-2.5-pro-preview', name: 'Gemini 2.5 Pro (Preview)', provider },
-          { id: 'anthropic/claude-sonnet-4', name: 'Claude Sonnet 4', provider },
-          { id: 'anthropic/claude-3.5-haiku', name: 'Claude 3.5 Haiku', provider },
+          { id: 'google/gemini-flash-1.5', name: 'Gemini 1.5 Flash', provider },
+          { id: 'google/gemini-pro-1.5', name: 'Gemini 1.5 Pro', provider },
+          { id: 'anthropic/claude-3.5-sonnet', name: 'Claude 3.5 Sonnet', provider },
         ];
       default:
         return [];
@@ -139,6 +119,7 @@ export class ApiService {
     model,
     messages,
     customEndpoint,
+    abortSignal,
     onDelta,
     onComplete,
     onError,
@@ -148,6 +129,7 @@ export class ApiService {
     model: string;
     messages: { role: string; content: string }[];
     customEndpoint?: string;
+    abortSignal: AbortSignal;
     onDelta: (chunk: string) => void;
     onComplete: () => void;
     onError: (error: Error) => void;
@@ -159,7 +141,46 @@ export class ApiService {
     }
 
     const baseUrl = provider === 'custom' && customEndpoint ? customEndpoint : providerConfig.baseUrl;
-    const url = `${baseUrl}/v1/chat/completions`; // Common endpoint for OpenAI-compatible APIs
+
+    try {
+      console.log(`Sol API: Starting stream completion for provider: ${provider}, model: ${model}`);
+      
+      await this.streamOpenAICompletion({
+        baseUrl,
+        apiKey,
+        model,
+        messages,
+        abortSignal,
+        onDelta,
+        onComplete,
+        onError,
+      });
+    } catch (error) {
+      console.error(`Sol API: Error during ${provider} chat completion:`, error);
+      onError(error as Error);
+    }
+  }
+
+  private static async streamOpenAICompletion({
+    baseUrl,
+    apiKey,
+    model,
+    messages,
+    abortSignal,
+    onDelta,
+    onComplete,
+    onError,
+  }: {
+    baseUrl: string;
+    apiKey: string;
+    model: string;
+    messages: { role: string; content: string }[];
+    abortSignal: AbortSignal;
+    onDelta: (chunk: string) => void;
+    onComplete: () => void;
+    onError: (error: Error) => void;
+  }): Promise<void> {
+    const url = `${baseUrl}/chat/completions`;
 
     try {
       const response = await fetch(url, {
@@ -173,7 +194,14 @@ export class ApiService {
           messages: messages,
           stream: true,
         }),
+        signal: abortSignal,
       });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error(`Sol API: OpenAI-compatible API error response:`, errorText);
+        throw new Error(`API error: ${response.status} ${errorText}`);
+      }
 
       if (!response.body) {
         throw new Error('Response body is null');
@@ -183,6 +211,11 @@ export class ApiService {
       const decoder = new TextDecoder();
 
       while (true) {
+        if (abortSignal.aborted) {
+          reader.cancel();
+          break;
+        }
+
         const { done, value } = await reader.read();
         if (done) break;
 
@@ -195,17 +228,23 @@ export class ApiService {
           }
           if (line.startsWith('data: ')) {
             const jsonStr = line.substring(6);
-            const parsed = JSON.parse(jsonStr);
-            const delta = parsed.choices[0]?.delta?.content;
-            if (delta) {
-              onDelta(delta);
+            try {
+              const parsed = JSON.parse(jsonStr);
+              const delta = parsed.choices?.[0]?.delta?.content;
+              if (delta) {
+                onDelta(delta);
+              }
+            } catch (parseError) {
+              console.warn('Failed to parse response chunk:', parseError, 'Line:', line);
             }
           }
         }
       }
     } catch (error) {
-      console.error('Error during chat completion:', error);
-      onError(error as Error);
+      if ((error as Error).name !== 'AbortError') {
+        console.error('Sol API: Error in streamOpenAICompletion:', error);
+        onError(error as Error);
+      }
     } finally {
       onComplete();
     }

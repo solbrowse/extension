@@ -28,7 +28,7 @@ function getDefaultKeybind(): string {
 
 export interface StorageData {
   features: {
-    aiSearch: {
+    askBar: {
       isEnabled: boolean;
       keybind: string;
       position: 'top-left' | 'top-right' | 'bottom-left' | 'bottom-right';
@@ -47,7 +47,7 @@ export interface StorageData {
  */
 export const DEFAULT_STORAGE: Readonly<StorageData> = {
   features: {
-    aiSearch: {
+    askBar: {
       isEnabled: true,
       keybind: getDefaultKeybind(),
       position: 'top-right',
@@ -86,6 +86,14 @@ export async function get(): Promise<StorageData> {
     (await browser.storage.local.get(null)) as Partial<StorageData>;
 
   return withDefaults(DEFAULT_STORAGE, stored);
+}
+
+/**
+ * Clear all storage and reset to defaults
+ */
+export async function resetToDefaults(): Promise<void> {
+  await browser.storage.local.clear();
+  await browser.storage.local.set({ ...DEFAULT_STORAGE });
 }
 
 /**
@@ -232,6 +240,13 @@ export async function deleteConversation(id: string): Promise<void> {
   const data = await get();
   const updatedConversations = data.conversations.filter(conv => conv.id !== id);
   await set({ conversations: updatedConversations });
+}
+
+/**
+ * Delete all conversations
+ */
+export async function deleteAllConversations(): Promise<void> {
+  await set({ conversations: [] });
 }
 
 /**

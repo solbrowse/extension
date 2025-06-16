@@ -9,11 +9,18 @@
   "web_accessible_resources": [
     {
       "resources": [
-        "contentStyle.css",
         "icon-128.png",
         "icon-32.png"
       ],
       "matches": []
+    },
+    {
+      "resources": [
+        "src/pages/askview/index.html",
+        "src/pages/askview/*",
+        "askview/*"
+      ],
+      "matches": ["<all_urls>"]
     }
   ]
 }

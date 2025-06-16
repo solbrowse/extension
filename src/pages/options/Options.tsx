@@ -8,7 +8,7 @@ import {
   HiDocumentArrowDown,
   HiClipboardDocument
 } from 'react-icons/hi2';
-import { get, set, StorageData, getConversations, deleteConversation, exportConversationToMarkdown, exportAllConversationsToMarkdown, Conversation } from '@src/utils/storage';
+import { get, set, StorageData, getConversations, deleteConversation, deleteAllConversations, exportConversationToMarkdown, exportAllConversationsToMarkdown, Conversation, resetToDefaults } from '@src/utils/storage';
 import { ApiService, PROVIDERS, Model } from '@src/services/api';
 import logo from '@assets/img/logo.svg';
 import '@pages/options/Options.css';
@@ -71,13 +71,18 @@ export default function Options() {
 
   const loadModels = async (provider: string, apiKey: string, endpoint?: string) => {
     if (!apiKey) return;
+    console.log(`Sol Dashboard: Loading models for ${provider}...`);
     setIsLoadingModels(true);
     try {
       const fetchedModels = await ApiService.fetchModels(provider, apiKey, endpoint);
+      console.log(`Sol Dashboard: Loaded ${fetchedModels.length} models for ${provider}:`, fetchedModels);
       setModels(fetchedModels);
     } catch (error) {
-      console.error('Error loading models:', error);
-      setModels(ApiService.getDefaultModels(provider));
+      console.error(`Sol Dashboard: Error loading models for ${provider}:`, error);
+      // Show default models as fallback
+      const defaultModels = ApiService.getDefaultModels(provider);
+      console.log(`Sol Dashboard: Using ${defaultModels.length} default models for ${provider}:`, defaultModels);
+      setModels(defaultModels);
     } finally {
       setIsLoadingModels(false);
     }
@@ -193,6 +198,28 @@ export default function Options() {
     }
   };
 
+  const handleDeleteAllConversations = async () => {
+    if (confirm('Are you sure you want to delete ALL conversations? This action cannot be undone.')) {
+      try {
+        await deleteAllConversations();
+        await loadConversations();
+      } catch (error) {
+        console.error('Error deleting all conversations:', error);
+      }
+    }
+  };
+
+  const handleResetStorage = async () => {
+    if (confirm('Are you sure you want to reset ALL settings and conversations? This will clear everything and cannot be undone.')) {
+      try {
+        await resetToDefaults();
+        window.location.reload();
+      } catch (error) {
+        console.error('Error resetting storage:', error);
+      }
+    }
+  };
+
   if (!settings) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
@@ -207,7 +234,7 @@ export default function Options() {
         <div className="max-w-5xl mx-auto px-8 py-2">
           <div className="flex flex-col justify-center items-center">
             <img src={logo} alt="Sol" className="w-24 h-24" />
-            <p className="text-sm text-gray-500">Alpha Build 1</p>
+            <p className="text-sm text-gray-500">Alpha Build 2</p>
           </div>
         </div>
       </div>
@@ -377,6 +404,14 @@ export default function Options() {
                     <HiDocumentArrowDown className="w-4 h-4" />
                     <span>Export All</span>
                   </button>
+                  <button
+                    onClick={handleDeleteAllConversations}
+                    disabled={conversations.length === 0}
+                    className="flex items-center space-x-2 px-4 py-2 bg-red-100 text-red-700 rounded-lg hover:bg-red-200 disabled:opacity-50 disabled:cursor-not-allowed transition-all text-sm"
+                  >
+                    <HiTrash className="w-4 h-4" />
+                    <span>Delete All</span>
+                  </button>
                 </div>
               </div>
 
@@ -437,16 +472,16 @@ export default function Options() {
               <h3 className="text-lg font-medium text-gray-900 mb-4">Features</h3>
               <div className="space-y-4">
                 <div className="flex items-center justify-between">
-                  <span className="font-medium text-gray-800">AI Search</span>
+                  <span className="font-medium text-gray-800">Ask</span>
                   <button
-                    onClick={() => handleFeatureToggle('aiSearch')}
+                    onClick={() => handleFeatureToggle('askBar')}
                     className={`relative inline-flex h-7 w-12 items-center rounded-full transition-colors duration-300 ease-in-out focus:outline-none focus:ring-2 focus:ring-gray-900 focus:ring-offset-2 ${
-                      settings.features.aiSearch.isEnabled ? 'bg-gray-900' : 'bg-gray-200'
+                      settings.features.askBar.isEnabled ? 'bg-gray-900' : 'bg-gray-200'
                     }`}
                   >
                     <span className="sr-only">Enable or disable AI Features</span>
                     <span className={`inline-block h-5 w-5 transform rounded-full bg-white shadow-sm transition-transform duration-300 ease-in-out ${
-                      settings.features.aiSearch.isEnabled ? 'translate-x-6' : 'translate-x-1'
+                      settings.features.askBar.isEnabled ? 'translate-x-6' : 'translate-x-1'
                     }`} />
                   </button>
                 </div>
@@ -456,8 +491,8 @@ export default function Options() {
                   </label>
                   <input
                     type="text"
-                    value={settings.features.aiSearch.keybind}
-                    onChange={(e) => handleFeatureConfigChange('aiSearch', 'keybind', e.target.value)}
+                    value={settings.features.askBar.keybind}
+                    onChange={(e) => handleFeatureConfigChange('askBar', 'keybind', e.target.value)}
                     className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-gray-900 focus:border-transparent transition-all bg-gray-50 text-sm"
                     placeholder="e.g., Cmd+J"
                   />
@@ -467,8 +502,8 @@ export default function Options() {
                     Ask Bar Position
                   </label>
                   <select
-                    value={settings.features.aiSearch.position}
-                    onChange={(e) => handleFeatureConfigChange('aiSearch', 'position', e.target.value)}
+                    value={settings.features.askBar.position}
+                    onChange={(e) => handleFeatureConfigChange('askBar', 'position', e.target.value)}
                     className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-gray-900 focus:border-transparent transition-all bg-gray-50 text-sm appearance-none"
                   >
                     <option value="top-left">Top Left</option>
@@ -496,11 +531,20 @@ export default function Options() {
               <div className="space-y-4 text-sm text-gray-600">
                 <div>
                   <h4 className="font-medium text-gray-900 mb-1">Keyboard Shortcut</h4>
-                  <p>Press <kbd className="px-2 py-1 bg-gray-100 rounded text-xs font-mono border border-gray-200">{settings.features.aiSearch.keybind}</kbd> on any webpage to open Sol search</p>
+                  <p>Press <kbd className="px-2 py-1 bg-gray-100 rounded text-xs font-mono border border-gray-200">{settings.features.askBar.keybind}</kbd> on any webpage to open Sol search</p>
                 </div>
                 <div>
                   <h4 className="font-medium text-gray-900 mb-1">Privacy</h4>
                   <p>All settings are stored locally in your browser. Sol never sees your API keys or data.</p>
+                </div>
+                <div className="pt-2">
+                  <button
+                    onClick={handleResetStorage}
+                    className="w-full py-2 px-4 bg-red-50 text-red-700 rounded-lg hover:bg-red-100 transition-all text-sm border border-red-200"
+                  >
+                    Reset All Settings
+                  </button>
+                  <p className="text-xs text-red-500 mt-1">This will clear all settings and conversations</p>
                 </div>
               </div>
             </div>

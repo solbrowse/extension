@@ -3,7 +3,7 @@
   "name": "Sol",
   "description": "Improve your browsing experience with the power of AI",
   "background": {
-    "scripts": ["src/background/index.ts"],
+    "service_worker": "src/pages/background/index.ts",
     "type": "module"
   },
   "options_ui": {
@@ -31,13 +31,21 @@
   "content_scripts": [
     {
       "matches": [
-        "http://*/*",
-        "https://*/*",
         "<all_urls>"
       ],
       "js": [
         "src/pages/content/index.tsx"
       ]
+    }
+  ],
+  "web_accessible_resources": [
+    {
+      "resources": [
+        "src/pages/askview/index.html",
+        "src/pages/askview/*",
+        "askview/*"
+      ],
+      "matches": ["<all_urls>"]
     }
   ]
 }

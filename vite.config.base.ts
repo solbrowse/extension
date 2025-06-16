@@ -13,6 +13,8 @@ const isDev = process.env.__DEV__ === 'true';
 // set this flag to true, if you want localization support
 const localize = false;
 
+const pagesDir = resolve(__dirname, 'src', 'pages');
+
 export const baseManifest = {
     ...manifest,
     version: pkg.version,
@@ -26,7 +28,15 @@ export const baseManifest = {
 
 export const baseBuildOptions: BuildOptions = {
   sourcemap: isDev,
-  emptyOutDir: !isDev
+  emptyOutDir: !isDev,
+  rollupOptions: {
+    input: {
+      askview: resolve(pagesDir, "askview", "index.html"),
+    },
+    output: {
+      entryFileNames: (chunk) => `src/pages/${chunk.name}/index.js`,
+    },
+  },
 }
 
 export default defineConfig({

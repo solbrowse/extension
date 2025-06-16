@@ -1,14 +1,13 @@
 import { get } from '@src/utils/storage';
-import { injectComponent } from '@src/utils/inject';
 import { parseKeybind, matchesKeybind } from '@src/utils/keybind';
-import AskBar from './AskBar';
-import askBarStyles from './askBarStyles.css?inline';
 import { Message } from '@src/utils/storage';
+import { ContentScraperService } from '@src/services/contentScraper';
 
-let askBarVisible = false;
+let iframeAskBarVisible = false;
 
-// Tab-specific conversation storage
-const TAB_CONVERSATION_KEY = 'sol-tab-conversation';
+// Tab-specific conversation storage with unique tab identifier
+const TAB_ID = `tab_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+const TAB_CONVERSATION_KEY = `sol-tab-conversation-${TAB_ID}`;
 
 function getTabConversation(): { messages: Message[], conversationId: string | null } {
   try {
@@ -35,29 +34,170 @@ function clearTabConversation() {
   }
 }
 
-async function main() {
-  const settings = await get();
+async function injectIframeAskBar(settings: any) {
+  const iframeUrl = chrome.runtime.getURL('src/pages/askview/index.html');
   
-  if (!settings.features.aiSearch.isEnabled) {
+  // Pre-load existing conversation for this tab/URL combination
+  let existingConversation = null;
+  try {
+    // First check tab-specific session storage (same tab only)
+    const tabConversation = getTabConversation();
+    if (tabConversation.messages.length > 0) {
+      existingConversation = {
+        id: tabConversation.conversationId,
+        messages: tabConversation.messages,
+        url: window.location.href,
+        title: document.title,
+        createdAt: Date.now(),
+        updatedAt: Date.now()
+      };
+    }
+  } catch (error) {
+    console.error('Sol: Failed to pre-load tab conversation:', error);
+  }
+  
+  const iframe = document.createElement('iframe');
+  iframe.id = 'sol-askview-container';
+  iframe.src = iframeUrl;
+  
+  // Full-size iframe with smart pointer events
+  iframe.style.cssText = `
+    position: fixed !important;
+    top: 0 !important;
+    left: 0 !important;
+    width: 100vw !important;
+    height: 100vh !important;
+    border: none !important;
+    background: transparent !important;
+    z-index: 2147483647 !important;
+    pointer-events: auto !important;
+    overflow: hidden !important;
+  `;
+  
+  // Allow iframe to communicate pointer events properly
+  iframe.setAttribute('allowtransparency', 'true');
+  
+  // Scrape content and send to iframe when it loads
+  iframe.onload = async () => {
+    try {
+      const contentScraper = ContentScraperService.getInstance();
+      const scrapedContent = await contentScraper.scrapePageContent();
+      
+      iframe.contentWindow?.postMessage({
+        type: 'sol-page-content',
+        content: scrapedContent,
+        url: window.location.href,
+        title: document.title,
+        position: settings.features?.askBar?.position || 'top-right',
+        existingConversation: existingConversation
+      }, '*');
+      
+    } catch (error) {
+    }
+  };
+  
+  iframe.onerror = (error) => {
+  };
+  
+  document.body.appendChild(iframe);
+  
+  return iframe;
+}
+
+function removeIframeAskBar() {
+  const existingIframe = document.getElementById('sol-askview-container');
+  if (existingIframe) {
+    existingIframe.remove();
+    console.log('Sol Content Script: AskView iframe removed');
+  }
+}
+
+async function main() {
+  console.log('Sol Content Script: Starting main function...');
+  
+  const settings = await get();
+  console.log('Sol Content Script: Loaded settings:', settings);
+  
+  if (!settings.features.askBar.isEnabled) {
+    console.log('Sol Content Script: AskBar is disabled, exiting');
     return;
   }
   
-  const targetKeybind = parseKeybind(settings.features.aiSearch.keybind);
+  console.log('Sol Content Script: AskBar is enabled, setting up listener');
+  const targetKeybind = parseKeybind(settings.features.askBar.keybind);
+  console.log('Sol Content Script: Parsed keybind:', targetKeybind, 'from:', settings.features.askBar.keybind);
 
   // Clear conversation when navigating to a new page/site
   let currentUrl = window.location.href;
+  let currentHost = window.location.hostname;
   
   const handleNavigation = () => {
-    if (window.location.href !== currentUrl) {
-      currentUrl = window.location.href;
+    const newUrl = window.location.href;
+    const newHost = window.location.hostname;
+    
+    // Clear conversation if URL or hostname changes
+    if (newUrl !== currentUrl || newHost !== currentHost) {
+      currentUrl = newUrl;
+      currentHost = newHost;
       clearTabConversation();
       
-      // Simply hide the AskBar if it's visible
-      if (askBarVisible) {
-        askBarVisible = false;
+      // Hide iframe AskBar if it's visible
+      if (iframeAskBarVisible) {
+        iframeAskBarVisible = false;
+        removeIframeAskBar();
       }
     }
   };
+
+  // Listen for messages from iframe (e.g., close requests)
+  window.addEventListener('message', (event) => {
+    if (event.data?.type === 'sol-close-askbar') {
+      if (iframeAskBarVisible) {
+        iframeAskBarVisible = false;
+        // Remove iframe after animation completes
+        setTimeout(() => {
+          removeIframeAskBar();
+        }, 350); // Wait for full animation to complete (300ms + buffer)
+      }
+    } else if (event.data?.type === 'sol-click-through') {
+      // Handle click-through by finding the element at the coordinates
+      try {
+        const iframe = document.getElementById('sol-askview-container') as HTMLIFrameElement;
+        if (iframe) {
+          // Temporarily hide iframe to get element behind it
+          iframe.style.pointerEvents = 'none';
+          const elementBelow = document.elementFromPoint(event.data.x, event.data.y);
+          iframe.style.pointerEvents = 'auto';
+          
+          // Click the element behind the iframe
+          if (elementBelow && elementBelow !== iframe) {
+            (elementBelow as HTMLElement).click();
+          }
+        }
+      } catch (error) {
+        // Ignore errors
+      }
+    } else if (event.data?.type === 'sol-update-tab-conversation') {
+      // Update tab-specific conversation storage
+      setTabConversation(event.data.messages, event.data.conversationId);
+    } else if (event.data?.type === 'sol-request-content') {
+      const iframe = document.getElementById('sol-askview-container') as HTMLIFrameElement;
+      if (iframe) {
+        // Re-scrape and send fresh content
+        ContentScraperService.getInstance().scrapePageContent()
+          .then(scrapedContent => {
+            iframe.contentWindow?.postMessage({
+              type: 'sol-page-content',
+              content: scrapedContent,
+              url: window.location.href,
+              title: document.title
+            }, '*');
+          })
+          .catch(error => {
+          });
+      }
+    }
+  });
 
   // Listen for navigation changes
   window.addEventListener('popstate', handleNavigation);
@@ -76,34 +216,17 @@ async function main() {
     setTimeout(handleNavigation, 0);
   };
 
-  document.addEventListener('keydown', (event) => {
+  document.addEventListener('keydown', async (event) => {
+    console.log('Sol Content Script: Keydown event:', event.key, event);
     if (matchesKeybind(event, targetKeybind)) {
-      if (!askBarVisible) {
-        askBarVisible = true;
-        
-        // Get existing conversation for this tab
-        const tabConversation = getTabConversation();
-        
-        injectComponent({
-          id: "sol-ask-bar",
-          Component: AskBar,
-          props: {
-            position: settings.features.aiSearch.position,
-            initialConversation: tabConversation.messages,
-            initialConversationId: tabConversation.conversationId,
-            onConversationUpdate: (messages: Message[], conversationId: string | null) => {
-              setTabConversation(messages, conversationId);
-            }
-          },
-          styles: askBarStyles,
-          fontLinks: [
-            "https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap"
-          ],
-          onUnmount: () => {
-            askBarVisible = false;
-          }
-        });
+      console.log('Sol Content Script: Keybind matched! Opening AskBar');
+      
+      // Only open AskBar, don't toggle
+      if (!iframeAskBarVisible) {
+        iframeAskBarVisible = true;
+        await injectIframeAskBar(settings);
       }
+      // If already visible, do nothing (keybind only opens)
     }
   });
 

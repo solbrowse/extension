@@ -17,9 +17,9 @@ export default function Popup() {
   const loadSettings = async () => {
     try {
       const data = await get();
-      setIsEnabled(data.features.aiSearch.isEnabled);
+      setIsEnabled(data.features.askBar.isEnabled);
       setIsConfigured(!!data.apiKey);
-      setKeybind(data.features.aiSearch.keybind);
+      setKeybind(data.features.askBar.keybind);
     } catch (error) {
       console.error('Error loading settings:', error);
     } finally {
@@ -34,8 +34,8 @@ export default function Popup() {
       await set({ 
         features: { 
           ...currentSettings.features,
-          aiSearch: {
-            ...currentSettings.features.aiSearch,
+          askBar: {
+            ...currentSettings.features.askBar,
             isEnabled: newState 
           }
         } 
@@ -79,7 +79,7 @@ export default function Popup() {
             <div className="text-center space-y-8">
                 <div className="space-y-3">
                     <h2 className="text-3xl font-light text-gray-900 tracking-tight">
-                    AI Search
+                    Ask
                     </h2>
                     <p className="text-sm text-gray-500 leading-relaxed px-4">
                     Press <kbd className="inline-flex items-center px-2 py-1 bg-gray-100 text-gray-700 rounded-md text-xs font-mono border border-gray-200 shadow-sm">{keybind}</kbd> to ask questions about any webpage
@@ -101,7 +101,7 @@ export default function Popup() {
                         isEnabled ? 'translate-x-8' : 'translate-x-1.5'
                         }`}
                     />
-                    <span className="sr-only">Toggle AI search</span>
+                    <span className="sr-only">Toggle Ask</span>
                     </button>
                 </div>
             </div>
