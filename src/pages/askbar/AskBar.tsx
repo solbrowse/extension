@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback, useLayoutEffect } from 'react';
-import { HiXMark, HiClipboardDocument, HiArrowRight, HiCheck } from 'react-icons/hi2';
+import { HiXMark, HiOutlineClipboard, HiArrowRight, HiCheck } from 'react-icons/hi2';
 import browser from 'webextension-polyfill';
+import ReactMarkdown from 'react-markdown';
 import { get, saveConversation, updateConversation, Message } from '@src/utils/storage';
 import { createSystemPrompt } from '@src/services/prompts';
 import { ContentScraperService, ScrapedContent } from '@src/services/contentScraper';
@@ -40,16 +41,17 @@ export default function AskBar({
   const askBarRef = useRef<HTMLDivElement>(null);
   const mountTimeRef = useRef<number>(Date.now());
   const contentScraper = ContentScraperService.getInstance();
+  const hasAnimatedRef = useRef(false);
 
-  // Animation and visibility effects
+  // Animation and visibility effects – run once on mount
   useEffect(() => {
-    // Trigger entrance animation
+    if (hasAnimatedRef.current) return; // already animated
+    hasAnimatedRef.current = true;
+    // Trigger entrance animation on next tick
     setTimeout(() => {
       setIsVisible(true);
       inputRef.current?.focus();
     }, 10);
-
-    // Content script proactively sends page data on iframe load, so no need to request it here.
   }, []);
 
   // Conversation loading is now handled via pre-loaded data from parent (no async loading needed)
@@ -173,10 +175,65 @@ export default function AskBar({
     }
   }, [scrapedContent, contentScraper]);
 
-  const parseResponseForQuotes = useCallback((text: string): string => {
-    return text.replace(/<quote>(.*?)<\/quote>/g, (_match, quoteText) => {
-      return `<blockquote class="sol-quote">${quoteText}</blockquote>`;
-    });
+  const MarkdownRenderer = useCallback(({ content }: { content: string }) => {
+    return (
+      <ReactMarkdown
+        components={{
+          // Style headings with minimal design
+          h1: ({ children }) => <h3 className="text-base font-semibold text-gray-900 mt-4 mb-2 first:mt-0">{children}</h3>,
+          h2: ({ children }) => <h4 className="text-sm font-semibold text-gray-900 mt-3 mb-2 first:mt-0">{children}</h4>,
+          h3: ({ children }) => <h5 className="text-sm font-medium text-gray-900 mt-3 mb-1 first:mt-0">{children}</h5>,
+          h4: ({ children }) => <h6 className="text-sm font-medium text-gray-800 mt-2 mb-1 first:mt-0">{children}</h6>,
+          h5: ({ children }) => <h6 className="text-sm text-gray-800 mt-2 mb-1 first:mt-0">{children}</h6>,
+          h6: ({ children }) => <span className="text-sm text-gray-700 font-medium">{children}</span>,
+          
+          // Clean list styling
+          ul: ({ children }) => <ul className="list-disc list-inside space-y-1 ml-2 my-2">{children}</ul>,
+          ol: ({ children }) => <ol className="list-decimal list-inside space-y-1 ml-2 my-2">{children}</ol>,
+          li: ({ children }) => <li className="text-sm leading-relaxed">{children}</li>,
+          
+          // Inline code and code blocks
+          code: ({ node, children, className, ...props }) => {
+            const isInline = !className?.includes('language-');
+            return isInline ? (
+              <code className="bg-gray-100 text-gray-800 px-1.5 py-0.5 rounded text-xs font-mono" {...props}>{children}</code>
+            ) : (
+              <pre className="bg-gray-100 p-3 rounded-lg my-2 overflow-x-auto">
+                <code className="text-xs font-mono text-gray-800">{children}</code>
+              </pre>
+            );
+          },
+          
+          // Blockquotes (including custom quote tags)
+          blockquote: ({ children }) => (
+            <blockquote className="border-l-3 border-gray-200 pl-3 my-2 italic text-gray-700">
+              {children}
+            </blockquote>
+          ),
+          
+          // Clean paragraph styling
+          p: ({ children }) => <p className="text-sm leading-relaxed mb-2 last:mb-0">{children}</p>,
+          
+          // Strong and emphasis
+          strong: ({ children }) => <strong className="font-semibold">{children}</strong>,
+          em: ({ children }) => <em className="italic">{children}</em>,
+          
+          // Links with external indicator
+          a: ({ href, children }) => (
+            <a 
+              href={href} 
+              target="_blank" 
+              rel="noopener noreferrer"
+              className="text-blue-600 hover:text-blue-800 underline decoration-1 underline-offset-2"
+            >
+              {children}
+            </a>
+          ),
+        }}
+      >
+        {content.replace(/<quote>(.*?)<\/quote>/g, '> $1')}
+      </ReactMarkdown>
+    );
   }, []);
 
   const saveConversationToStorage = useCallback(async () => {
@@ -224,7 +281,8 @@ export default function AskBar({
   }, []);
 
   const expandToConversation = useCallback(() => {
-    setIsExpanded(true);
+    // Only expand if not already expanded to prevent double animations
+    setIsExpanded(prev => prev ? prev : true);
   }, []);
 
   const handleSubmit = useCallback(async () => {
@@ -404,28 +462,7 @@ export default function AskBar({
     }
   }, [handleSubmit, handleClose]);
 
-  const buildContext = useCallback((): string => {
-    if (!scrapedContent) return '';
-    
-    const context = [`You are an AI assistant integrated into a web browser extension named "Sol".`];
-    
-    // Use parent page URL and title if available, fallback to current context
-    const contextUrl = pageUrl || window.location.href;
-    const contextTitle = pageTitle || document.title;
-    
-    context.push(`Current webpage: ${contextTitle} (${contextUrl})`);
-    
-    if (scrapedContent.text && scrapedContent.text.trim()) {
-      context.push('Page content:');
-      context.push(scrapedContent.text.trim());
-    } else {
-      context.push('Note: No meaningful content was extracted from this page.');
-    }
-    
-    context.push('\nPlease provide helpful, accurate responses based on this context. If you reference specific information from the page, you can wrap it in <quote></quote> tags to highlight it.');
-    
-    return context.join('\n\n');
-  }, [scrapedContent, pageUrl, pageTitle]);
+
 
   // ---------------------
   // Expose AskBar bounds to parent so content script can enable pointer-events
@@ -506,8 +543,8 @@ export default function AskBar({
     <div className={`askbar-container ${currentPosition}`}>
       <div 
         ref={askBarRef}
-        className={`sol-ask-bar bg-white/70 backdrop-blur-md rounded-2xl transition-all duration-300 ${
-          isClosing ? 'animate-out' : isVisible ? 'sol-visible' : ''
+        className={`sol-ask-bar bg-white/70 backdrop-blur-md rounded-2xl ${
+          isClosing ? 'animate-out' : isVisible ? 'opacity-100 scale-100 translate-y-0 transition-all duration-300 ease-out' : 'opacity-0 scale-95 -translate-y-2'
         } ${isExpanded ? 'w-[500px] p-3' : 'w-[400px] p-2'}`}
         style={{ 
           pointerEvents: 'auto'
@@ -530,14 +567,10 @@ export default function AskBar({
               key={index}
               className={`
                 mb-3 last:mb-0 relative group
-                ${isNew ? 'opacity-0 translate-y-2 animate-in' : ''}
+                ${isNew && false ? 'opacity-0 translate-y-2 animate-in' : ''}
                 transition-all duration-300 ease-out
                 ${message.type === 'user' ? 'text-right' : 'text-left'}
               `}
-              style={isNew ? {
-                animationDelay: `${index * 50}ms`,
-                animationFillMode: 'forwards'
-              } : {}}
             >
               {message.type === 'user' ? (
                 <div className="text-gray-900 font-semibold text-sm leading-relaxed">
@@ -550,10 +583,9 @@ export default function AskBar({
                       text-gray-700 text-sm font-normal leading-relaxed pb-4
                       ${isStreaming && index === conversationHistory.length - 1 ? 'sol-streaming' : ''}
                     `}
-                    dangerouslySetInnerHTML={{ 
-                      __html: parseResponseForQuotes(message.content) 
-                    }}
-                  />
+                  >
+                    <MarkdownRenderer content={message.content} />
+                  </div>
                   {message.content && (
                     <button
                       onClick={() => handleCopyMessage(message.content, index)}
@@ -569,7 +601,7 @@ export default function AskBar({
                       {copiedMessageIndex === index ? (
                         <HiCheck className="w-3 h-3 text-gray-600" />
                       ) : (
-                        <HiClipboardDocument className="w-3 h-3" />
+                        <HiOutlineClipboard className="w-3 h-3" />
                       )}
                     </button>
                   )}

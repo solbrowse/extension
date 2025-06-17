@@ -72,7 +72,12 @@ browser.runtime.onMessage.addListener((request: any, sender: browser.Runtime.Mes
   const abortController = new AbortController();
   activeStreams.set(tabId, abortController);
 
-  const { provider, apiKey, model, messages, customEndpoint } = request.data;
+  let { provider, apiKey, model, messages, customEndpoint } = request.data;
+  if (!model || model.trim() === '') {
+    const fallback = ApiService.getDefaultModels(provider)[0]?.id;
+    console.log('Sol Background: No model provided, using fallback', fallback);
+    model = fallback || model;
+  }
   console.log(`Sol Background: Starting stream for provider: ${provider}, model: ${model}, tab: ${tabId}`);
 
   const streamRequest = async () => {

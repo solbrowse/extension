@@ -41,9 +41,9 @@
   "web_accessible_resources": [
     {
       "resources": [
-        "src/pages/askview/index.html",
-        "src/pages/askview/*",
-        "askview/*"
+        "src/pages/askbar/index.html",
+        "src/pages/askbar/*",
+        "askbar/*"
       ],
       "matches": ["<all_urls>"]
     }

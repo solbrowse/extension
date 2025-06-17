@@ -36,7 +36,7 @@ function clearTabConversation() {
 }
 
 async function injectIframeAskBar(settings: any) {
-  const iframeUrl = chrome.runtime.getURL('src/pages/askview/index.html');
+  const iframeUrl = chrome.runtime.getURL('src/pages/askbar/index.html');
   
   // Pre-load existing conversation for this tab/URL combination
   let existingConversation = null;
@@ -58,7 +58,7 @@ async function injectIframeAskBar(settings: any) {
   }
   
   const iframe = document.createElement('iframe');
-  iframe.id = 'sol-askview-container';
+  iframe.id = 'sol-askbar-container';
   iframe.src = iframeUrl;
   
   // Smart overlay: start with pointer-events: none for full hover/cursor preservation
@@ -165,14 +165,14 @@ async function injectIframeAskBar(settings: any) {
 }
 
 function removeIframeAskBar() {
-  const existingIframe = document.getElementById('sol-askview-container') as HTMLIFrameElement & { __solCleanup?: () => void };
+  const existingIframe = document.getElementById('sol-askbar-container') as HTMLIFrameElement & { __solCleanup?: () => void };
   if (existingIframe) {
     // Clean up event listeners
     if (existingIframe.__solCleanup) {
       existingIframe.__solCleanup();
     }
     existingIframe.remove();
-    console.log('Sol Content Script: AskView iframe removed');
+    console.log('Sol Content Script: Ask Bar iframe removed');
   }
 }
 
@@ -217,7 +217,7 @@ async function main() {
   window.addEventListener('message', (event) => {
     if (event.data?.type === 'sol-askbar-bounds') {
       // Store AskBar bounds for smart pointer-events toggling
-      const iframe = document.getElementById('sol-askview-container') as HTMLIFrameElement & { __askBarBounds?: DOMRect };
+      const iframe = document.getElementById('sol-askbar-container') as HTMLIFrameElement & { __askBarBounds?: DOMRect };
       if (iframe && iframe.__askBarBounds !== event.data.bounds) {
         iframe.__askBarBounds = event.data.bounds;
       }
@@ -233,7 +233,7 @@ async function main() {
       // Update tab-specific conversation storage
       setTabConversation(event.data.messages, event.data.conversationId);
     } else if (event.data?.type === 'sol-request-content') {
-      const iframe = document.getElementById('sol-askview-container') as HTMLIFrameElement;
+      const iframe = document.getElementById('sol-askbar-container') as HTMLIFrameElement;
       if (iframe) {
         // Re-scrape and send fresh content
         ContentScraperService.getInstance().scrapePageContent()

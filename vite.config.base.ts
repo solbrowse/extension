@@ -31,7 +31,7 @@ export const baseBuildOptions: BuildOptions = {
   emptyOutDir: !isDev,
   rollupOptions: {
     input: {
-      askview: resolve(pagesDir, "askview", "index.html"),
+      askbar: resolve(pagesDir, "askbar", "index.html"),
     },
     output: {
       entryFileNames: (chunk) => `src/pages/${chunk.name}/index.js`,

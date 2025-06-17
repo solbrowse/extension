@@ -9,6 +9,7 @@ export default function Popup() {
   const [isLoading, setIsLoading] = useState(true);
   const [isConfigured, setIsConfigured] = useState(false);
   const [keybind, setKeybind] = useState('');
+  const [needsPermissions, setNeedsPermissions] = useState(false);
 
   useEffect(() => {
     loadSettings();
@@ -18,8 +19,18 @@ export default function Popup() {
     try {
       const data = await get();
       setIsEnabled(data.features.askBar.isEnabled);
-      setIsConfigured(!!data.apiKey);
+      setIsConfigured(!!data.apiKey || data.provider === 'custom');
       setKeybind(data.features.askBar.keybind);
+
+      // Check if permissions are granted (Firefox MV3 fix)
+      try {
+        const hasPermissions = await browser.permissions.contains({
+          origins: ['<all_urls>']
+        });
+        setNeedsPermissions(!hasPermissions);
+      } catch (err) {
+        console.log('Permission check failed:', err);
+      }
     } catch (error) {
       console.error('Error loading settings:', error);
     } finally {
@@ -51,6 +62,19 @@ export default function Popup() {
     window.close();
   };
 
+  const requestPermissions = async () => {
+    try {
+      const granted = await browser.permissions.request({
+        origins: ['<all_urls>']
+      });
+      if (granted) {
+        setNeedsPermissions(false);
+      }
+    } catch (error) {
+      console.error('Error requesting permissions:', error);
+    }
+  };
+
   if (isLoading) {
     return (
       <div className="w-80 flex flex-col relative overflow-hidden">
@@ -75,7 +99,22 @@ export default function Popup() {
 
       {/* Content */}
       <div className="relative flex-1 px-8 pb-12 flex flex-col justify-center">
-        {isConfigured ? (
+        {needsPermissions ? (
+          <div className="text-center space-y-6">
+            <h2 className="text-2xl font-light text-gray-900 tracking-tight">
+              Permission Required
+            </h2>
+            <p className="text-sm text-gray-500 leading-relaxed">
+              Firefox requires explicit permission for Sol to work on all websites. Click below to grant access.
+            </p>
+            <button
+              onClick={requestPermissions}
+              className="w-full py-3 bg-gray-900 text-white rounded-xl hover:bg-gray-800 transition-all font-medium"
+            >
+              Grant Permissions
+            </button>
+          </div>
+        ) : isConfigured ? (
             <div className="text-center space-y-8">
                 <div className="space-y-3">
                     <h2 className="text-3xl font-light text-gray-900 tracking-tight">

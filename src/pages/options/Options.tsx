@@ -70,13 +70,20 @@ export default function Options() {
   }, [settings]);
 
   const loadModels = async (provider: string, apiKey: string, endpoint?: string) => {
-    if (!apiKey) return;
+    // For custom endpoints, API key may not be required (e.g., Ollama)
+    if (!apiKey && provider !== 'custom') return;
     console.log(`Sol Dashboard: Loading models for ${provider}...`);
     setIsLoadingModels(true);
     try {
       const fetchedModels = await ApiService.fetchModels(provider, apiKey, endpoint);
       console.log(`Sol Dashboard: Loaded ${fetchedModels.length} models for ${provider}:`, fetchedModels);
       setModels(fetchedModels);
+      
+      // Auto-select first model if none selected and models were loaded
+      if (fetchedModels.length > 0 && (!settings?.model || settings.model === '')) {
+        console.log('Sol Dashboard: Auto-selecting first model:', fetchedModels[0].id);
+        setSettings(prev => prev ? { ...prev, model: fetchedModels[0].id } : null);
+      }
     } catch (error) {
       console.error(`Sol Dashboard: Error loading models for ${provider}:`, error);
       // Show default models as fallback
@@ -95,12 +102,17 @@ export default function Options() {
       if (key === 'provider') {
         newSettings.model = ApiService.getDefaultModels(value)[0]?.id || '';
         setModels([]);
-        if (newSettings.apiKey) {
-          loadModels(newSettings.provider, newSettings.apiKey, newSettings.customEndpoint);
+        // Auto-load models for custom endpoints or when API key is available
+        if (newSettings.apiKey || value === 'custom') {
+          loadModels(value, newSettings.apiKey, newSettings.customEndpoint);
         }
       }
       if (key === 'apiKey' && value) {
         loadModels(newSettings.provider, value, newSettings.customEndpoint);
+      }
+      if (key === 'customEndpoint' && newSettings.provider === 'custom') {
+        // Auto-load models when custom endpoint changes
+        loadModels(newSettings.provider, newSettings.apiKey, value);
       }
       return newSettings;
     });
@@ -139,7 +151,9 @@ export default function Options() {
   };
 
   const testConnection = async () => {
-    if (!settings?.apiKey || !settings?.provider) return;
+    if (!settings?.provider) return;
+    // For custom endpoints, API key is optional
+    if (settings.provider !== 'custom' && !settings?.apiKey) return;
     await loadModels(settings.provider, settings.apiKey, settings.customEndpoint);
   };
 
@@ -311,7 +325,7 @@ export default function Options() {
                     />
                   </div>
                   <p className="text-xs text-gray-500 mt-2">
-                    Enter the base URL for your OpenAI-compatible API endpoint. Format your endpoint as https://your-api-endpoint.com/v1. Make sure /models and /chat/completions are available.
+                    Enter the base URL for your OpenAI-compatible API endpoint. Check our <a href="https://solbrowse.notion.site/" target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:text-blue-800 underline">help center</a> for detailed setup instructions.
                   </p>
                 </div>
               )}
@@ -322,6 +336,7 @@ export default function Options() {
                     Model Selection
                 </label>
                 <div className="bg-gray-50 rounded-xl p-4 border border-gray-200 space-y-4">
+                    {ApiService.getDefaultModels(settings.provider).length > 0 && (
                     <div>
                         <label className="block text-xs font-medium text-gray-500 mb-2">
                             Recommended
@@ -342,6 +357,7 @@ export default function Options() {
                           ))}
                         </div>
                     </div>
+                    )}
                      <div>
                         <label className="block text-xs font-medium text-gray-500 mb-2">
                             All Models
@@ -349,12 +365,17 @@ export default function Options() {
                         <div className="relative">
                           <select
                             value={settings.model}
-                            onChange={(e) => handleInputChange('model', e.target.value)}
-                            disabled={!settings.apiKey || models.length === 0}
+                            onChange={(e) => {
+                              console.log('Sol Dashboard: Model selected:', e.target.value);
+                              handleInputChange('model', e.target.value);
+                            }}
+                            disabled={models.length === 0 || (settings.provider !== 'custom' && !settings.apiKey)}
                             className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-gray-900 focus:border-transparent transition-all bg-white disabled:opacity-50 appearance-none"
                           >
                             {models.length === 0 ? (
-                              <option>Add your API key first</option>
+                              <option value="">
+                                {settings.provider === 'custom' ? 'Configure your endpoint to load models' : 'Add your API key to load models'}
+                              </option>
                             ) : (
                               models.map((model) => (
                                 <option key={model.id} value={model.id}>
@@ -368,23 +389,17 @@ export default function Options() {
                 </div>
               </div>
 
-              {/* Save & Test Buttons */}
-              <div className="flex items-center justify-between pt-4 border-t border-gray-100">
-                <button
-                  onClick={testConnection}
-                  disabled={!settings.apiKey || isLoadingModels}
-                  className="flex items-center space-x-2 px-6 py-3 bg-white text-gray-900 rounded-xl hover:bg-gray-100 border border-gray-200 focus:ring-2 focus:ring-gray-900 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-all font-medium"
-                >
-                  {isLoadingModels ? (
+              {/* Save Status */}
+              <div className="flex items-center justify-between pt-4 border-gray-100">
+                <div className="flex items-center space-x-2">
+                  {isLoadingModels && (
                     <>
                       <div className="w-4 h-4 border-2 border-gray-900 border-t-transparent rounded-full animate-spin"></div>
-                      <span>Loading Models...</span>
+                      <span className="text-sm text-gray-600">Loading models...</span>
                     </>
-                  ) : (
-                    <span>Load Model List</span>
                   )}
-                </button>
-                 <div className="text-sm text-gray-500">
+                </div>
+                <div className="text-sm text-gray-500">
                   {saveStatus === 'syncing' && <span>Saving...</span>}
                   {saveStatus === 'synced' && <span className="flex items-center space-x-2 text-green-600"><HiCheckCircle className="w-5 h-5" /> <span>Saved</span></span>}
                 </div>

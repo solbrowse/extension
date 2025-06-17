@@ -53,7 +53,8 @@ export class ApiService {
         'Content-Type': 'application/json',
       };
 
-      if (provider !== 'custom') {
+      // Add authorization header if API key is provided
+      if (apiKey && (provider !== 'custom' || apiKey.trim())) {
         headers['Authorization'] = `Bearer ${apiKey}`;
       }
 
@@ -183,12 +184,22 @@ export class ApiService {
     const url = `${baseUrl}/chat/completions`;
 
     try {
+      // Prepare headers
+      const headers: Record<string, string> = {
+        'Content-Type': 'application/json',
+      };
+
+      // Add authorization header - use 'ollama' as dummy key for Ollama
+      if (apiKey) {
+        headers['Authorization'] = `Bearer ${apiKey}`;
+      } else if (baseUrl.includes('localhost:11434')) {
+        // Ollama requires a dummy API key
+        headers['Authorization'] = 'Bearer ollama';
+      }
+
       const response = await fetch(url, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${apiKey}`,
-        },
+        headers,
         body: JSON.stringify({
           model: model,
           messages: messages,
@@ -199,7 +210,13 @@ export class ApiService {
 
       if (!response.ok) {
         const errorText = await response.text();
-        console.error(`Sol API: OpenAI-compatible API error response:`, errorText);
+        console.error(`Sol API: OpenAI-compatible API error response:`, {
+          status: response.status,
+          statusText: response.statusText,
+          url: url,
+          model: model,
+          errorText: errorText
+        });
         throw new Error(`API error: ${response.status} ${errorText}`);
       }
 
