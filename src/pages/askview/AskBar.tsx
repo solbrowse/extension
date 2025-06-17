@@ -506,7 +506,7 @@ export default function AskBar({
     <div className={`askbar-container ${currentPosition}`}>
       <div 
         ref={askBarRef}
-        className={`sol-ask-bar bg-white/95 backdrop-blur-md rounded-2xl transition-all duration-300 ${
+        className={`sol-ask-bar bg-white/70 backdrop-blur-md rounded-2xl transition-all duration-300 ${
           isClosing ? 'animate-out' : isVisible ? 'sol-visible' : ''
         } ${isExpanded ? 'w-[500px] p-3' : 'w-[400px] p-2'}`}
         style={{ 

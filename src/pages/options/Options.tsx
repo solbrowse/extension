@@ -354,7 +354,7 @@ export default function Options() {
                             className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-gray-900 focus:border-transparent transition-all bg-white disabled:opacity-50 appearance-none"
                           >
                             {models.length === 0 ? (
-                              <option>Test connection to load all models</option>
+                              <option>Add your API key first</option>
                             ) : (
                               models.map((model) => (
                                 <option key={model.id} value={model.id}>
@@ -378,10 +378,10 @@ export default function Options() {
                   {isLoadingModels ? (
                     <>
                       <div className="w-4 h-4 border-2 border-gray-900 border-t-transparent rounded-full animate-spin"></div>
-                      <span>Testing...</span>
+                      <span>Loading Models...</span>
                     </>
                   ) : (
-                    <span>Test Connection</span>
+                    <span>Load Model List</span>
                   )}
                 </button>
                  <div className="text-sm text-gray-500">
