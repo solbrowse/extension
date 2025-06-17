@@ -248,7 +248,7 @@ export default function Options() {
         <div className="max-w-5xl mx-auto px-8 py-2">
           <div className="flex flex-col justify-center items-center">
             <img src={logo} alt="Sol" className="w-24 h-24" />
-            <p className="text-sm text-gray-500">Alpha Build 2</p>
+            <p className="text-sm text-gray-500">Alpha Build 3</p>
           </div>
         </div>
       </div>
