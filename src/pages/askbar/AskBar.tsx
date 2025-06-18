@@ -29,7 +29,7 @@ export default function AskBar({
   const [isVisible, setIsVisible] = useState(false);
   const [isClosing, setIsClosing] = useState(false);
   const [copiedMessageIndex, setCopiedMessageIndex] = useState<number | null>(null);
-  const [showDebug, setShowDebug] = useState(false);
+  const [showDebug, setShowDebug] = useState(true);
   const [scrapedContent, setScrapedContent] = useState<ScrapedContent | null>(null);
   const [currentPosition, setCurrentPosition] = useState<string>(position);
   const [pageContent, setPageContent] = useState<any>(null);
@@ -47,11 +47,9 @@ export default function AskBar({
   useEffect(() => {
     if (hasAnimatedRef.current) return; // already animated
     hasAnimatedRef.current = true;
-    // Trigger entrance animation on next tick
-    setTimeout(() => {
-      setIsVisible(true);
-      inputRef.current?.focus();
-    }, 10);
+    // Trigger entrance animation INSTANTLY
+    setIsVisible(true);
+    inputRef.current?.focus();
   }, []);
 
   // Conversation loading is now handled via pre-loaded data from parent (no async loading needed)
@@ -72,9 +70,15 @@ export default function AskBar({
         }
 
       } else if (event.data?.type === 'sol-page-content') {
-        setPageContent(event.data.content);
+        console.log('Sol AskBar: Received page content message');
+        console.log('Sol AskBar: Content data:', event.data.content);
+        console.log('Sol AskBar: URL:', event.data.url);
+        console.log('Sol AskBar: Title:', event.data.title);
+        
+        // Always update URL and title first
         setPageUrl(event.data.url);
         setPageTitle(event.data.title);
+        setPageContent(event.data.content);
         
         // Update position if provided
         if (event.data.position) {
@@ -82,8 +86,12 @@ export default function AskBar({
         }
         
         // Update scraped content state with received content
-        if (event.data.content) {
+        if (event.data.content && event.data.content.text) {
+          console.log('Sol AskBar: Setting scraped content - Text length:', event.data.content.text.length);
+          console.log('Sol AskBar: Content preview:', event.data.content.text.substring(0, 100));
           setScrapedContent(event.data.content);
+        } else {
+          console.warn('Sol AskBar: Received content but no text property');
         }
         
         // Load pre-existing conversation if provided (already pre-loaded, no async needed)
@@ -133,14 +141,38 @@ export default function AskBar({
     if (!pageContent) {
       setScrapedContent({
         text: '',
+        markdown: '',
+        title: '',
+        excerpt: '',
         metadata: {
           hostname: 'iframe-context',
+          url: window.location.href,
+          title: '',
+          byline: null,
+          dir: null,
+          lang: null,
           contentLength: 0,
           wordCount: 0,
+          readingTimeMinutes: 0,
           hasContent: false,
-          hasSiteSpecificSelectors: false,
-          siteSpecificSelectors: [],
-          extractionMethod: 'iframe-pending'
+          extractionMethod: 'iframe-pending',
+          shadowDOMCount: 0,
+          iframeCount: 0,
+          readabilityScore: 0,
+          contentDensity: 0,
+          isArticle: false,
+          publishedTime: null,
+          siteName: null,
+          fallbackUsed: false,
+          debugInfo: {
+            originalLength: 0,
+            cleanedLength: 0,
+            removedElements: [],
+            contentSelectors: ['iframe-pending'],
+            imageCount: 0,
+            linkCount: 0,
+            paragraphCount: 0,
+          }
         }
       });
     }
@@ -150,12 +182,17 @@ export default function AskBar({
     if (!scrapedContent) {
       return {
         hostname: window.location.hostname,
-        hasSiteSpecificSelectors: false,
-        siteSpecificSelectors: [],
+        extractionMethod: 'none',
+        fallbackUsed: false,
+        isArticle: false,
         contentLength: 0,
         wordCount: 0,
         hasContent: false,
-        extractionMethod: 'none'
+        readingTimeMinutes: 0,
+        readabilityScore: 0,
+        contentDensity: '0%',
+        shadowDOMCount: 0,
+        iframeCount: 0
       };
     }
 
@@ -165,12 +202,17 @@ export default function AskBar({
       console.error('Sol: Error getting debug info:', error);
       return {
         hostname: window.location.hostname,
-        hasSiteSpecificSelectors: false,
-        siteSpecificSelectors: [],
+        extractionMethod: scrapedContent.metadata?.extractionMethod || 'unknown',
+        fallbackUsed: scrapedContent.metadata?.fallbackUsed || false,
+        isArticle: scrapedContent.metadata?.isArticle || false,
         contentLength: scrapedContent.text?.length || 0,
         wordCount: scrapedContent.text?.split(/\s+/).length || 0,
         hasContent: Boolean(scrapedContent.text?.length),
-        extractionMethod: scrapedContent.metadata?.extractionMethod || 'unknown'
+        readingTimeMinutes: scrapedContent.metadata?.readingTimeMinutes || 0,
+        readabilityScore: scrapedContent.metadata?.readabilityScore || 0,
+        contentDensity: '0%',
+        shadowDOMCount: scrapedContent.metadata?.shadowDOMCount || 0,
+        iframeCount: scrapedContent.metadata?.iframeCount || 0
       };
     }
   }, [scrapedContent, contentScraper]);
@@ -306,11 +348,24 @@ export default function AskBar({
 
     const settings = await get();
     const pageContent = scrapedContent?.text || '';
+    
+    console.log('Sol: Creating system prompt with:');
+    console.log('- URL:', pageUrl || window.location.href);
+    console.log('- Title:', pageTitle || document.title);
+    console.log('- Content length:', pageContent.length);
+    console.log('- Has markdown:', !!scrapedContent?.markdown);
+    console.log('- Content preview:', pageContent.substring(0, 200));
+    
     const systemPrompt = createSystemPrompt({
       url: pageUrl || window.location.href,
       title: pageTitle || document.title,
-      content: pageContent
+      content: pageContent,
+      markdown: scrapedContent?.markdown,
+      excerpt: scrapedContent?.excerpt,
+      metadata: scrapedContent?.metadata
     });
+    
+    console.log('Sol: Generated system prompt length:', systemPrompt.length);
 
     const messages = [
       { role: 'system', content: systemPrompt },
@@ -660,10 +715,37 @@ export default function AskBar({
         {showDebug && (
           <div className="mt-3 pt-3 border-t border-gray-200/50 text-xs text-gray-500">
             <div className="space-y-1">
-              <div>URL: {pageUrl || window.location.href}</div>
-              <div>Title: {pageTitle || document.title}</div>
+              <div>URL: {pageUrl || '(loading...)'}</div>
+              <div>Title: {pageTitle || '(loading...)'}</div>
               <div>Content Length: {scrapedContent?.text?.length || 0} chars</div>
-              <div>Has Content: {scrapedContent?.text ? 'Yes' : 'No'}</div>
+              <div>Has Content: {scrapedContent?.text && scrapedContent.text.length > 0 ? 'Yes' : 'No'}</div>
+              <div>Method: {scrapedContent?.metadata?.extractionMethod || 'pending'}</div>
+              <div className="flex gap-1">
+                <button
+                  className="px-2 py-1 bg-gray-100 rounded border border-gray-300 text-xs text-gray-700 hover:bg-gray-200 transition"
+                  onClick={async () => {
+                    if (scrapedContent?.text) {
+                      await navigator.clipboard.writeText(scrapedContent.text);
+                    }
+                  }}
+                  disabled={!scrapedContent?.text}
+                  title="Copy the full scraped text to clipboard"
+                >
+                  Copy Text
+                </button>
+                <button
+                  className="px-2 py-1 bg-blue-100 rounded border border-blue-300 text-xs text-blue-700 hover:bg-blue-200 transition"
+                  onClick={() => {
+                    console.log('Sol Debug: scrapedContent:', scrapedContent);
+                    console.log('Sol Debug: text length:', scrapedContent?.text?.length);
+                    console.log('Sol Debug: pageUrl:', pageUrl);
+                    console.log('Sol Debug: pageTitle:', pageTitle);
+                  }}
+                  title="Log debug info to console"
+                >
+                  Debug
+                </button>
+              </div>
             </div>
           </div>
         )}

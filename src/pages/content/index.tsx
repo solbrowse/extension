@@ -112,20 +112,24 @@ async function injectIframeAskBar(settings: any) {
     }
   };
   
-  // Send conversation immediately, then scrape content asynchronously
-  iframe.onload = () => {
-    try {
-      // 1) Send initial conversation + position so AskBar can render instantly
-      iframe.contentWindow?.postMessage({
-        type: 'sol-init',
-        existingConversation,
-        position: settings.features?.askBar?.position || 'top-right'
-      }, '*');
+  // SCRAPE FIRST, THEN inject iframe to avoid including iframe content
+  const contentScraper = ContentScraperService.getInstance();
+  contentScraper.scrapePageContent()
+    .then(scrapedContent => {
+      console.log('Sol: Scraped content BEFORE iframe injection:', scrapedContent.text.length, 'chars');
+      console.log('Sol: Content preview:', scrapedContent.text.substring(0, 200));
+      
+      // NOW inject iframe after scraping is complete
+      iframe.onload = () => {
+        try {
+          // 1) Send initial conversation + position so AskBar can render instantly
+          iframe.contentWindow?.postMessage({
+            type: 'sol-init',
+            existingConversation,
+            position: settings.features?.askBar?.position || 'top-right'
+          }, '*');
 
-      // 2) Start scraping page content in the background
-      const contentScraper = ContentScraperService.getInstance();
-      contentScraper.scrapePageContent()
-        .then(scrapedContent => {
+          // 2) Send the pre-scraped content immediately
           iframe.contentWindow?.postMessage({
             type: 'sol-page-content',
             content: scrapedContent,
@@ -133,21 +137,37 @@ async function injectIframeAskBar(settings: any) {
             title: document.title
           }, '*');
 
-          // Request AskBar bounds once the AskBar has potentially resized after receiving content
+          // Request AskBar bounds
           setTimeout(() => {
             iframe.contentWindow?.postMessage({ type: 'sol-request-askbar-bounds' }, '*');
           }, 100);
-        })
-        .catch(() => {/* ignore scrape errors */});
-    } catch {
-      // ignore
-    }
-  };
+        } catch {
+          // ignore
+        }
+      };
+      
+      // Append iframe to DOM AFTER scraping
+      document.body.appendChild(iframe);
+    })
+    .catch((error) => {
+      console.error('Sol: Content scraping failed:', error);
+      // Still inject iframe even if scraping fails
+      iframe.onload = () => {
+        try {
+          iframe.contentWindow?.postMessage({
+            type: 'sol-init',
+            existingConversation,
+            position: settings.features?.askBar?.position || 'top-right'
+          }, '*');
+        } catch {
+          // ignore
+        }
+      };
+      document.body.appendChild(iframe);
+    });
   
   iframe.onerror = (error) => {
   };
-  
-  document.body.appendChild(iframe);
   
   // Add global mouse move listener
   document.addEventListener('mousemove', handleMouseMove, { passive: true });
@@ -195,11 +215,11 @@ async function main() {
   let currentUrl = window.location.href;
   let currentHost = window.location.hostname;
   
-  const handleNavigation = () => {
+    const handleNavigation = () => {
     const newUrl = window.location.href;
     const newHost = window.location.hostname;
     
-    // Clear conversation if URL or hostname changes
+    // Simple navigation detection
     if (newUrl !== currentUrl || newHost !== currentHost) {
       currentUrl = newUrl;
       currentHost = newHost;
@@ -268,6 +288,8 @@ async function main() {
     setTimeout(handleNavigation, 0);
   };
 
+
+
   document.addEventListener('keydown', async (event) => {
     if (!askBarEnabled) return;
     if (matchesKeybind(event, targetKeybind)) {
@@ -297,6 +319,8 @@ async function main() {
       }
     }
   });
+
+
 
   console.log('Sol AI Search listener active.');
 }

@@ -52,11 +52,9 @@ export class ApiService {
       const headers: Record<string, string> = {
         'Content-Type': 'application/json',
       };
-
-      // Add authorization header if API key is provided
-      if (apiKey && (provider !== 'custom' || apiKey.trim())) {
+      if (apiKey && apiKey.trim()) {
         headers['Authorization'] = `Bearer ${apiKey}`;
-      }
+      }      
 
       const response = await fetch(url, { headers });
 

@@ -17,10 +17,12 @@
   },
   "type": "module",
   "dependencies": {
+    "@mozilla/readability": "^0.6.0",
     "react": "^19.1.0",
     "react-dom": "^19.1.0",
     "react-icons": "^5.5.0",
     "react-markdown": "^10.1.0",
+    "turndown": "^7.2.0",
     "webextension-polyfill": "^0.12.0"
   },
   "devDependencies": {
@@ -30,6 +32,7 @@
     "@types/node": "^24.0.3",
     "@types/react": "^19.1.6",
     "@types/react-dom": "^19.1.1",
+    "@types/turndown": "^5.0.5",
     "@types/webextension-polyfill": "^0.12.3",
     "@typescript-eslint/eslint-plugin": "^8.18.2",
     "@typescript-eslint/parser": "^8.18.2",
