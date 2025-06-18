@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback, useLayoutEffect } from 'react';
-import { HiXMark, HiOutlineClipboard, HiArrowRight, HiCheck } from 'react-icons/hi2';
+import { HiXMark, HiOutlineClipboard, HiArrowUp, HiCheck } from 'react-icons/hi2';
 import browser from 'webextension-polyfill';
 import ReactMarkdown from 'react-markdown';
 import { get, saveConversation, updateConversation, Message } from '@src/utils/storage';
@@ -29,7 +29,7 @@ export default function AskBar({
   const [isVisible, setIsVisible] = useState(false);
   const [isClosing, setIsClosing] = useState(false);
   const [copiedMessageIndex, setCopiedMessageIndex] = useState<number | null>(null);
-  const [showDebug, setShowDebug] = useState(true);
+  const [showDebug, setShowDebug] = useState(false);
   const [scrapedContent, setScrapedContent] = useState<ScrapedContent | null>(null);
   const [currentPosition, setCurrentPosition] = useState<string>(position);
   const [pageContent, setPageContent] = useState<any>(null);
@@ -232,29 +232,29 @@ export default function AskBar({
           // Clean list styling
           ul: ({ children }) => <ul className="list-disc list-inside space-y-1 ml-2 my-2">{children}</ul>,
           ol: ({ children }) => <ol className="list-decimal list-inside space-y-1 ml-2 my-2">{children}</ol>,
-          li: ({ children }) => <li className="text-sm leading-relaxed">{children}</li>,
+          li: ({ children }) => <li className="text-base leading-relaxed">{children}</li>,
           
           // Inline code and code blocks
           code: ({ node, children, className, ...props }) => {
             const isInline = !className?.includes('language-');
             return isInline ? (
-              <code className="bg-gray-100 text-gray-800 px-1.5 py-0.5 rounded text-xs font-mono" {...props}>{children}</code>
+              <code className="bg-black/5 text-black/80 px-1.5 py-0.5 rounded text-sm font-mono" {...props}>{children}</code>
             ) : (
-              <pre className="bg-gray-100 p-3 rounded-lg my-2 overflow-x-auto">
-                <code className="text-xs font-mono text-gray-800">{children}</code>
+              <pre className="bg-black/5 p-3 rounded-lg my-2 overflow-x-auto">
+                <code className="text-sm font-mono text-black/80">{children}</code>
               </pre>
             );
           },
           
           // Blockquotes (including custom quote tags)
           blockquote: ({ children }) => (
-            <blockquote className="border-l-3 border-gray-200 pl-3 my-2 italic text-gray-700">
+            <blockquote className="border-l-3 border-black/10 pl-3 my-2 italic text-black/60">
               {children}
             </blockquote>
           ),
           
           // Clean paragraph styling
-          p: ({ children }) => <p className="text-sm leading-relaxed mb-2 last:mb-0">{children}</p>,
+          p: ({ children }) => <p className="text-base leading-relaxed mb-2 last:mb-0">{children}</p>,
           
           // Strong and emphasis
           strong: ({ children }) => <strong className="font-semibold">{children}</strong>,
@@ -266,7 +266,7 @@ export default function AskBar({
               href={href} 
               target="_blank" 
               rel="noopener noreferrer"
-              className="text-blue-600 hover:text-blue-800 underline decoration-1 underline-offset-2"
+              className="text-gray-600 hover:text-gray-800 underline decoration-1 underline-offset-2"
             >
               {children}
             </a>
@@ -598,9 +598,9 @@ export default function AskBar({
     <div className={`askbar-container ${currentPosition}`}>
       <div 
         ref={askBarRef}
-        className={`sol-ask-bar bg-white/70 backdrop-blur-md rounded-2xl ${
+        className={`sol-ask-bar bg-white/80 backdrop-blur-md rounded-[20px] shadow-[0px_4px_16px_0px_rgba(0,0,0,0.10)] outline outline-1 outline-offset-[-0.5px] outline-black/[0.07] ${
           isClosing ? 'animate-out' : isVisible ? 'opacity-100 scale-100 translate-y-0 transition-all duration-300 ease-out' : 'opacity-0 scale-95 -translate-y-2'
-        } ${isExpanded ? 'w-[500px] p-3' : 'w-[400px] p-2'}`}
+        } ${isExpanded ? 'w-[560px] h-auto' : 'w-[450px] h-[60px] py-3.5 pl-5 pr-3.5'}`}
         style={{ 
           pointerEvents: 'auto'
         }}
@@ -611,7 +611,7 @@ export default function AskBar({
           className={`
             overflow-y-auto scroll-smooth
             transition-all duration-300 cubic-bezier(0.4, 0, 0.2, 1)
-            ${isExpanded ? 'max-h-[300px] mb-3 pb-3 px-1 sol-conversation-divider' : 'max-h-0'}
+            ${isExpanded ? 'max-h-[300px] pt-5 mb-0 pb-3.5 px-5 sol-conversation-divider' : 'max-h-0'}
             sol-conversation
           `}
         >
@@ -628,14 +628,14 @@ export default function AskBar({
               `}
             >
               {message.type === 'user' ? (
-                <div className="text-gray-900 font-semibold text-sm leading-relaxed">
+                <div className="text-black font-medium text-base leading-relaxed text-right pr-0">
                   {message.content}
                 </div>
               ) : (
                 <>
                   <div 
                     className={`
-                      text-gray-700 text-sm font-normal leading-relaxed pb-4
+                      text-black text-base font-normal leading-relaxed pb-4 text-left
                       ${isStreaming && index === conversationHistory.length - 1 ? 'sol-streaming' : ''}
                     `}
                   >
@@ -668,47 +668,59 @@ export default function AskBar({
         </div>
 
         {/* Input Area */}
-        <div className="flex items-center gap-2">
-          <input
-            ref={inputRef}
-            type="text"
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            onKeyDown={handleKeyDown}
-            placeholder={isExpanded ? "Ask a follow-up..." : "Ask anything about this page..."}
-            className="
-              flex-1 bg-transparent border-none outline-none
-              text-sm font-medium text-gray-900 placeholder-gray-500
-              px-1 py-1
-            "
-            disabled={isStreaming}
-          />
+        <div className={`flex justify-between items-center ${isExpanded ? 'py-3.5 pl-5 pr-3.5' : ''}`}>
+          <div className="flex-1 flex justify-start items-center">
+            <input
+              ref={inputRef}
+              type="text"
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              onKeyDown={handleKeyDown}
+              placeholder={isExpanded ? "Ask a follow-up..." : "Ask a question about this page..."}
+              className={`
+                flex-1 bg-transparent border-none outline-none
+                text-base font-medium font-inter min-w-0 transition-all duration-150
+                ${input.trim() 
+                  ? 'text-black tracking-[0%]' 
+                  : 'text-black/40 placeholder-black/40 tracking-[-0.4%]'
+                }
+              `}
+              disabled={false}
+            />
+          </div>
           
-          <button
-            onClick={handleSubmit}
-            disabled={isStreaming || !input.trim()}
-            className="
-              px-3 py-1.5 text-xs font-semibold h-8
-              bg-black/12 hover:bg-black/18 border border-black/15
-              rounded-lg transition-all duration-150
-              disabled:opacity-50 disabled:cursor-not-allowed
-              flex items-center gap-1
-            "
-          >
-            Ask <HiArrowRight className="w-3 h-3 opacity-50" />
-          </button>
-          
-          <button
-            onClick={handleClose}
-            className="
-              w-8 h-8 flex items-center justify-center
-              bg-black/12 hover:bg-black/18 border border-black/15
-              rounded-lg transition-all duration-150
-              text-gray-600 hover:text-gray-800
-            "
-          >
-            <HiXMark className="w-5 h-5" />
-          </button>
+          <div className="flex justify-start items-center" style={{ gap: '14px' }}>
+            <button
+              onClick={handleClose}
+              className="
+                w-5 h-5 flex items-center justify-center
+                text-black/40 hover:text-black/60
+                transition-all duration-150
+              "
+            >
+              <HiXMark className="w-5 h-5" />
+            </button>
+            
+            <button
+              onClick={handleSubmit}
+              disabled={isStreaming || !input.trim()}
+              className={`
+                w-8 h-8 rounded-2xl p-1.5
+                transition-all duration-200 flex items-center justify-center
+                disabled:cursor-not-allowed
+                ${(isStreaming || !input.trim()) 
+                  ? 'bg-black/5' 
+                  : 'bg-black hover:bg-black/90'
+                }
+              `}
+            >
+              <HiArrowUp className={`w-5 h-5 transition-all duration-200 ${
+                (isStreaming || !input.trim()) 
+                  ? 'text-black/30' 
+                  : 'text-white'
+              }`} />
+            </button>
+          </div>
         </div>
 
         {/* Debug Section */}

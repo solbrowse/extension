@@ -1,6 +1,21 @@
 @import "../../assets/styles/tailwind.css";
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@100;200;300;400;500;600;700;800;900&display=swap");
 
 /* Custom styles for iframe-based AskBar */
+
+.font-inter {
+  font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+    sans-serif;
+}
+
+/* Ensure proper font weights */
+.font-medium {
+  font-weight: 500 !important;
+}
+
+.font-normal {
+  font-weight: 400 !important;
+}
 
 .askbar-container {
   position: absolute;
@@ -28,13 +43,10 @@
   right: 24px;
 }
 
-/* Remove fixed positioning since iframe handles positioning */
 .sol-ask-bar {
   position: relative !important;
   pointer-events: auto !important;
   z-index: 1 !important;
-  border: 1px solid rgba(0, 0, 0, 0.15) !important;
-  box-shadow: 0 10px 20px rgba(0, 0, 0, 0.07), 0 2px 6px rgba(0, 0, 0, 0.03) !important;
 }
 
 .sol-ask-bar * {
@@ -57,7 +69,7 @@
 
 /* Dividing line for expanded conversation */
 .sol-conversation-divider {
-  border-bottom: 1px solid rgba(0, 0, 0, 0.08) !important;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.07) !important;
 }
 
 /* Custom scrollbar for conversation area */
