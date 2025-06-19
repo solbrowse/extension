@@ -1,6 +1,6 @@
 import browser from 'webextension-polyfill';
 import { ApiService } from '@src/services/api';
-import { needsSchemaReset, resetToDefaults } from '@src/utils/storage';
+import { needsSchemaReset, resetToDefaults } from '@src/services/storage';
 
 console.log("Sol Background Script Loaded");
 

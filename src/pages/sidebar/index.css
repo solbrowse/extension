@@ -1,0 +1,50 @@
+/* Simple iframe with click-through on background */
+body {
+  margin: 0;
+  padding: 0;
+  background: transparent;
+  overflow: hidden;
+}
+
+#root {
+  width: 100vw;
+  height: 100vh;
+  background: transparent;
+  display: flex;
+  position: relative;
+}
+
+.iframe-container {
+  width: 100%;
+  height: 100%;
+  background: transparent;
+  position: relative;
+  display: flex;
+}
+
+.askbar-container {
+  position: absolute;
+  width: auto;
+  height: auto;
+}
+
+/* Position classes for the AskBar */
+.askbar-container.top-left {
+  top: 20px;
+  left: 20px;
+}
+
+.askbar-container.top-right {
+  top: 20px;
+  right: 20px;
+}
+
+.askbar-container.bottom-left {
+  bottom: 20px;
+  left: 20px;
+}
+
+.askbar-container.bottom-right {
+  bottom: 20px;
+  right: 20px;
+}

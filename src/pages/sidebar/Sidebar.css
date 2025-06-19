@@ -1,0 +1,144 @@
+@import "../../assets/styles/tailwind.css";
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@100;200;300;400;500;600;700;800;900&display=swap");
+
+/* Custom styles for iframe-based AskBar */
+
+.font-inter {
+  font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+    sans-serif;
+}
+
+/* Ensure proper font weights */
+.font-medium {
+  font-weight: 500 !important;
+}
+
+.font-normal {
+  font-weight: 400 !important;
+}
+
+.askbar-container {
+  position: absolute;
+  pointer-events: auto !important;
+  z-index: 10000;
+}
+
+.askbar-container.top-left {
+  top: 24px;
+  left: 24px;
+}
+
+.askbar-container.top-right {
+  top: 24px;
+  right: 24px;
+}
+
+.askbar-container.bottom-left {
+  bottom: 24px;
+  left: 24px;
+}
+
+.askbar-container.bottom-right {
+  bottom: 24px;
+  right: 24px;
+}
+
+.sol-ask-bar {
+  position: relative !important;
+  pointer-events: auto !important;
+  z-index: 1 !important;
+}
+
+.sol-ask-bar * {
+  pointer-events: auto !important;
+}
+
+.sol-ask-bar button {
+  pointer-events: auto !important;
+  cursor: pointer !important;
+}
+
+.sol-ask-bar input {
+  pointer-events: auto !important;
+  cursor: text !important;
+}
+
+.sol-ask-bar.sol-visible {
+  animation: animate-in 0.3s ease-out forwards;
+}
+
+/* Dividing line for expanded conversation */
+.sol-conversation-divider {
+  border-bottom: 1px solid rgba(0, 0, 0, 0.07) !important;
+}
+
+/* Custom scrollbar for conversation area */
+.sol-conversation::-webkit-scrollbar {
+  width: 4px;
+}
+
+.sol-conversation::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.sol-conversation::-webkit-scrollbar-thumb {
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 2px;
+}
+
+.sol-conversation::-webkit-scrollbar-thumb:hover {
+  background: rgba(0, 0, 0, 0.3);
+}
+
+/* Quote styling - matching OG blockquote */
+.sol-quote {
+  border-left: 3px solid rgba(0, 0, 0, 0.1);
+  padding-left: 12px;
+  margin: 8px 0;
+  font-style: italic;
+}
+
+/* Streaming animation for text */
+@keyframes typing {
+  from {
+    opacity: 0.7;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.sol-streaming {
+  animation: typing 1s ease-in-out infinite alternate;
+}
+
+/* Message entrance animation */
+@keyframes animate-in {
+  from {
+    opacity: 0;
+    transform: scale(0.95) translateY(-8px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+@keyframes animate-out {
+  from {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+  to {
+    opacity: 0;
+    transform: scale(0.95) translateY(-8px);
+  }
+}
+
+.animate-in {
+  animation: animate-in 0.3s ease-out forwards;
+}
+
+.animate-out {
+  animation: animate-out 0.3s ease-out forwards;
+}

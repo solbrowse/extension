@@ -1,4 +1,4 @@
-import systemPromptTemplate from '../prompts/system-prompt.txt?raw';
+import systemPromptTemplate from '../assets/prompts/system-prompt.txt?raw';
 
 /**
  * Creates the system prompt for the AI assistant.
@@ -31,7 +31,6 @@ export function createWebsiteContext(context: {
     <extraction_method>${context.metadata.extractionMethod || 'unknown'}</extraction_method>
     <content_type>${context.metadata.isArticle ? 'article' : 'general'}</content_type>
     <word_count>${context.metadata.wordCount || 0}</word_count>
-    <quality_score>${Math.round(context.metadata.readabilityScore || 0)}</quality_score>
   </metadata>` : ''}
   <content format="${context.markdown ? 'markdown' : 'text'}">
 ${contentToUse}

@@ -18,12 +18,12 @@ export interface Conversation {
 /**
  * Get platform-specific default keybind
  */
-function getDefaultKeybind(): string {
+function getDefaultKeybind(key: string): string {
   // Detect platform
   const userAgent = navigator.userAgent.toLowerCase();
   const isMac = userAgent.includes('mac') || userAgent.includes('darwin');
   
-  return isMac ? 'Cmd+F' : 'Ctrl+F';
+  return isMac ? `Cmd+${key}` : `Ctrl+${key}`;
 }
 
 export interface StorageData {
@@ -33,6 +33,11 @@ export interface StorageData {
       isEnabled: boolean;
       keybind: string;
       position: 'top-left' | 'top-right' | 'bottom-left' | 'bottom-right';
+    };
+    sideBar: {
+      isEnabled: boolean;
+      keybind: string;
+      position: 'left' | 'right';
     };
   };
   provider: string;
@@ -47,13 +52,18 @@ export interface StorageData {
  * yet still usable as a value-typed template for `get`.
  */
 export const DEFAULT_STORAGE: Readonly<StorageData> = {
-  version: '2.0.0',
+  version: '2.5.0',
   features: {
     askBar: {
       isEnabled: true,
-      keybind: getDefaultKeybind(),
+      keybind: getDefaultKeybind("F"),
       position: 'top-right',
     },
+    sideBar: {
+      isEnabled: true,
+      keybind: getDefaultKeybind("Enter"),
+      position: 'left',
+    }
   },
   provider: 'openai',
   apiKey: '',
@@ -82,12 +92,24 @@ function withDefaults<T>(
  * for any missing keys.
  */
 export async function get(): Promise<StorageData> {
-  // `get(null)` tells the API "give me everything".
-  // Cast to Partial<StorageData> so we can merge safely.
-  const stored =
-    (await browser.storage.local.get(null)) as Partial<StorageData>;
+  try {
+    // `get(null)` tells the API "give me everything".
+    // Cast to Partial<StorageData> so we can merge safely.
+    const stored =
+      (await browser.storage.local.get(null)) as Partial<StorageData>;
 
-  return withDefaults(DEFAULT_STORAGE, stored);
+    // Ensure conversations is always an array
+    if (stored.conversations && !Array.isArray(stored.conversations)) {
+      console.warn('Sol Storage: Invalid conversations data detected, resetting');
+      stored.conversations = [];
+    }
+
+    return withDefaults(DEFAULT_STORAGE, stored);
+  } catch (error) {
+    console.error('Sol Storage: Error getting data:', error);
+    // Return defaults if storage fails
+    return DEFAULT_STORAGE;
+  }
 }
 
 /**
@@ -257,8 +279,37 @@ export async function updateConversation(id: string, updates: Partial<Pick<Conve
  * Get all conversations
  */
 export async function getConversations(): Promise<Conversation[]> {
-  const data = await get();
-  return data.conversations.sort((a, b) => b.updatedAt - a.updatedAt);
+  try {
+    const data = await get();
+    
+    // Ensure conversations is an array (Chrome compatibility)
+    if (!Array.isArray(data.conversations)) {
+      console.warn('Sol Storage: conversations is not an array, resetting to empty array');
+      await set({ conversations: [] });
+      return [];
+    }
+    
+    // Filter out any invalid conversations and sort
+    const validConversations = data.conversations.filter(conv => 
+      conv && 
+      typeof conv === 'object' && 
+      conv.id && 
+      Array.isArray(conv.messages) &&
+      typeof conv.updatedAt === 'number'
+    );
+    
+    if (validConversations.length !== data.conversations.length) {
+      console.warn(`Sol Storage: Found ${data.conversations.length - validConversations.length} invalid conversations, cleaning up`);
+      await set({ conversations: validConversations });
+    }
+    
+    return validConversations.sort((a, b) => b.updatedAt - a.updatedAt);
+  } catch (error) {
+    console.error('Sol Storage: Error getting conversations:', error);
+    // Reset conversations on error to prevent recurring issues
+    await set({ conversations: [] });
+    return [];
+  }
 }
 
 /**

@@ -1,8 +1,8 @@
 import React from 'react';
 import { createRoot } from 'react-dom/client';
-import AskBar from './AskBar';
+import AskBar from './Sidebar';
 import './index.css';
-import './AskBar.css';
+import './askBarStyles.css';
 
 const App: React.FC = () => {
   const handleClick = (e: React.MouseEvent) => {

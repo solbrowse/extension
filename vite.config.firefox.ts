@@ -5,23 +5,37 @@ import baseConfig, { baseManifest, baseBuildOptions } from './vite.config.base'
 
 const outDir = resolve(__dirname, 'dist_firefox');
 
+const firefoxManifest = {
+  ...baseManifest,
+  permissions: [
+    'storage',
+    'activeTab',
+    'clipboardWrite'
+  ],
+  content_scripts: [
+    {
+      matches: ["<all_urls>"],
+      js: ["src/scripts/content/index.tsx"],
+      all_frames: false
+    }
+  ],
+  background: {
+    scripts: [ 'src/scripts/background/index.ts' ]
+  },
+  browser_specific_settings: {
+    gecko: {
+      id: "santi@domenech.com.mx",
+      strict_min_version: "109.0"
+    }
+  }
+};
+
 export default mergeConfig(
   baseConfig,
   defineConfig({
     plugins: [
       crx({
-        manifest: {
-          ...baseManifest,
-          background: {
-            scripts: [ 'src/pages/background/index.ts' ]
-          },
-          browser_specific_settings: {
-            gecko: {
-              id: "santi@domenech.com.mx",
-              strict_min_version: "109.0"
-            }
-          }
-        } as any,
+        manifest: firefoxManifest as any,
         browser: 'firefox',
       })
     ],

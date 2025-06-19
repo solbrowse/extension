@@ -1,14 +1,17 @@
 import React, { useState, useEffect } from 'react';
-import { HiCog6Tooth } from 'react-icons/hi2';
+import { Cog6ToothIcon, FaceSmileIcon, VariableIcon } from '@heroicons/react/24/outline';
 import browser from 'webextension-polyfill';
-import { get, set } from '@src/utils/storage';
+import { get, set } from '@src/services/storage';
+import { Button } from '@src/components/ui/button';
+import { Switch } from '@src/components/ui/switch';
 import logo from '@assets/img/logo.svg';
 
 export default function Popup() {
-  const [isEnabled, setIsEnabled] = useState(false);
+  const [askEnabled, setAskEnabled] = useState(false);
+  const [sideEnabled, setSideEnabled] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [isConfigured, setIsConfigured] = useState(false);
-  const [keybind, setKeybind] = useState('');
+  const [askKeybind, setAskKeybind] = useState('');
   const [needsPermissions, setNeedsPermissions] = useState(false);
 
   useEffect(() => {
@@ -18,9 +21,10 @@ export default function Popup() {
   const loadSettings = async () => {
     try {
       const data = await get();
-      setIsEnabled(data.features.askBar.isEnabled);
+      setAskEnabled(data.features.askBar.isEnabled);
+      setSideEnabled(data.features.sideBar?.isEnabled || false);
       setIsConfigured(!!data.apiKey || data.provider === 'custom');
-      setKeybind(data.features.askBar.keybind);
+      setAskKeybind(data.features.askBar.keybind);
 
       // Check if permissions are granted (Firefox MV3 fix)
       try {
@@ -38,27 +42,44 @@ export default function Popup() {
     }
   };
 
-  const handleToggle = async () => {
+  const handleAskToggle = async (enabled: boolean) => {
     try {
-      const newState = !isEnabled;
       const currentSettings = await get();
       await set({ 
         features: { 
           ...currentSettings.features,
           askBar: {
             ...currentSettings.features.askBar,
-            isEnabled: newState 
+            isEnabled: enabled 
           }
         } 
       });
-      setIsEnabled(newState);
+      setAskEnabled(enabled);
     } catch (error) {
-      console.error('Error updating settings:', error);
+      console.error('Error updating Ask settings:', error);
+    }
+  };
+
+  const handleSideToggle = async (enabled: boolean) => {
+    try {
+      const currentSettings = await get();
+      await set({ 
+        features: { 
+          ...currentSettings.features,
+          sideBar: {
+            ...currentSettings.features.sideBar,
+            isEnabled: enabled 
+          }
+        } 
+      });
+      setSideEnabled(enabled);
+    } catch (error) {
+      console.error('Error updating Side settings:', error);
     }
   };
 
   const openDashboard = () => {
-    browser.tabs.create({ url: browser.runtime.getURL('src/pages/options/index.html') });
+    browser.tabs.create({ url: browser.runtime.getURL('src/pages/dashboard/index.html') });
     window.close();
   };
 
@@ -77,89 +98,125 @@ export default function Popup() {
 
   if (isLoading) {
     return (
-      <div className="w-80 flex flex-col relative overflow-hidden">
+      <div className="w-80 h-96 flex items-center justify-center">
         <div className="w-6 h-6 border-2 border-gray-200 border-t-gray-900 rounded-full animate-spin"></div>
       </div>
     );
   }
 
+  if (needsPermissions) {
+    return (
+      <div className="w-80 h-96 p-8 flex flex-col justify-center">
+        <div className="text-center space-y-6">
+          <img src={logo} alt="Sol" className="w-16 h-16 mx-auto mb-6" />
+          <h2 className="text-2xl font-light text-gray-900 tracking-tight">
+            Permission Required
+          </h2>
+          <p className="text-sm text-gray-500 leading-relaxed">
+            Firefox requires explicit permission for Sol to work on all websites. Click below to grant access.
+          </p>
+          <Button
+            onClick={requestPermissions}
+            className="w-full h-12 bg-gray-900 text-white rounded-2xl hover:bg-gray-800 transition-all font-medium"
+          >
+            Grant Permissions
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
+  if (!isConfigured) {
+    return (
+      <div className="w-80 h-96 p-8 flex flex-col justify-center">
+        <div className="text-center space-y-6">
+          <img src={logo} alt="Sol" className="w-16 h-16 mx-auto mb-6" />
+          <h2 className="text-2xl font-light text-gray-900 tracking-tight">
+            Setup Required
+          </h2>
+          <p className="text-sm text-gray-500 leading-relaxed">
+            Please configure your AI provider in the dashboard to begin using Sol.
+          </p>
+          <Button
+            onClick={openDashboard}
+            className="w-full h-12 bg-gray-900 text-white rounded-2xl hover:bg-gray-800 transition-all font-medium"
+          >
+            Go to Settings
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <div className="w-80 flex flex-col relative overflow-hidden">
-      {/* Header */}
-      <div className="relative flex items-center justify-between p-6">
+    <div className="w-80 min-h-96 p-8 flex flex-col">
+      {/* Header with Logo */}
+      <div className="flex justify-center mb-8">
         <img src={logo} alt="Sol" className="w-16 h-16" />
-        <button
-          onClick={openDashboard}
-          className="p-2.5 text-gray-400 hover:text-gray-600 hover:bg-gray-50 rounded-xl transition-all duration-200 ease-out"
-          title="Settings"
-        >
-          <HiCog6Tooth className="w-5 h-5" />
-        </button>
       </div>
 
-      {/* Content */}
-      <div className="relative flex-1 px-8 pb-12 flex flex-col justify-center">
-        {needsPermissions ? (
-          <div className="text-center space-y-6">
+      {/* Feature Sections */}
+      <div className="flex-1 space-y-6">
+        {/* Ask Feature */}
+        <div className="space-y-3">
+          <div className="flex items-center justify-between">
             <h2 className="text-2xl font-light text-gray-900 tracking-tight">
-              Permission Required
+              Ask
             </h2>
-            <p className="text-sm text-gray-500 leading-relaxed">
-              Firefox requires explicit permission for Sol to work on all websites. Click below to grant access.
-            </p>
-            <button
-              onClick={requestPermissions}
-              className="w-full py-3 bg-gray-900 text-white rounded-xl hover:bg-gray-800 transition-all font-medium"
-            >
-              Grant Permissions
-            </button>
+            <Switch
+              checked={askEnabled}
+              onCheckedChange={handleAskToggle}
+            />
           </div>
-        ) : isConfigured ? (
-            <div className="text-center space-y-8">
-                <div className="space-y-3">
-                    <h2 className="text-3xl font-light text-gray-900 tracking-tight">
-                    Ask
-                    </h2>
-                    <p className="text-sm text-gray-500 leading-relaxed px-4">
-                    Press <kbd className="inline-flex items-center px-2 py-1 bg-gray-100 text-gray-700 rounded-md text-xs font-mono border border-gray-200 shadow-sm">{keybind}</kbd> to ask questions about any webpage
-                    </p>
-                </div>
+          <p className="text-sm text-gray-500 leading-relaxed">
+            Press <kbd className="inline-flex items-center px-2 py-1 bg-gray-100 text-gray-700 rounded-md text-xs font-mono border border-gray-200 shadow-sm">{askKeybind}</kbd> to ask questions about a website
+          </p>
+        </div>
 
-                {/* Toggle Switch */}
-                <div className="flex items-center justify-center">
-                    <button
-                    onClick={handleToggle}
-                    className={`relative inline-flex h-10 w-16 items-center rounded-full transition-colors duration-300 ease-in-out focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:ring-offset-white ${
-                        isEnabled 
-                        ? 'bg-gray-900' 
-                        : 'bg-gray-200'
-                    }`}
-                    >
-                    <span
-                        className={`inline-block h-7 w-7 transform rounded-full bg-white shadow-lg transition-transform duration-300 ease-in-out ${
-                        isEnabled ? 'translate-x-8' : 'translate-x-1.5'
-                        }`}
-                    />
-                    <span className="sr-only">Toggle Ask</span>
-                    </button>
-                </div>
-            </div>
-        ) : (
-            <div className="text-center space-y-6">
-                <h2 className="text-2xl font-light text-gray-900 tracking-tight">
-                    Setup Required
-                </h2>
-                <p className="text-sm text-gray-500 leading-relaxed">
-                    Please configure your AI provider in the dashboard to begin using Sol.
-                </p>
-                <button
-                    onClick={openDashboard}
-                    className="w-full py-3 bg-gray-900 text-white rounded-xl hover:bg-gray-800 transition-all font-medium"
-                >
-                    Go to Settings
-                </button>
-            </div>
-        )}
+        {/* Side Feature */}
+        <div className="space-y-3">
+          <div className="flex items-center justify-between">
+            <h2 className="text-2xl font-light text-gray-900 tracking-tight">
+              Side
+            </h2>
+            <Switch
+              checked={sideEnabled}
+              onCheckedChange={handleSideToggle}
+            />
+          </div>
+          <p className="text-sm text-gray-500 leading-relaxed">
+            Press enter on an Ask Bar or <kbd className="inline-flex items-center px-2 py-1 bg-gray-100 text-gray-700 rounded-md text-xs font-mono border border-gray-200 shadow-sm">Cmd+Soon!</kbd> to chat with multiple tabs
+          </p>
+        </div>
+      </div>
+
+      {/* Action Buttons */}
+      <div className="mt-8 space-y-3">
+        <Button
+          onClick={openDashboard}
+          variant="outline"
+          className="w-full h-12 rounded-2xl border-gray-200 hover:bg-gray-50 transition-all font-medium flex items-center justify-center gap-3"
+        >
+          <FaceSmileIcon className="w-5 h-5" />
+          Personalize
+        </Button>
+        
+        <Button
+          onClick={openDashboard}
+          variant="outline"
+          className="w-full h-12 rounded-2xl border-gray-200 hover:bg-gray-50 transition-all font-medium flex items-center justify-center gap-3"
+        >
+          <VariableIcon className="w-5 h-5" />
+          Abilities
+        </Button>
+        
+        <Button
+          onClick={openDashboard}
+          className="w-full h-12 rounded-2xl bg-gray-900 text-white hover:bg-gray-800 transition-all font-medium flex items-center justify-center gap-3"
+        >
+          <Cog6ToothIcon className="w-5 h-5" />
+          Dashboard
+        </Button>
       </div>
     </div>
   );

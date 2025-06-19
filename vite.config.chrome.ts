@@ -5,18 +5,35 @@ import baseConfig, { baseManifest, baseBuildOptions } from './vite.config.base'
 
 const outDir = resolve(__dirname, 'dist_chrome');
 
+const chromeManifest = {
+  ...baseManifest,
+  permissions: [
+    'storage',
+    'activeTab', 
+    'clipboardWrite'
+  ],
+  content_scripts: [
+    {
+      matches: ["<all_urls>"],
+      js: ["src/scripts/content/index.tsx"],
+      all_frames: false
+    }
+  ],
+  background: {
+    service_worker: 'src/scripts/background/index.ts',
+    type: 'module'
+  },
+  content_security_policy: {
+    extension_pages: "script-src 'self'; object-src 'self';"
+  }
+};
+
 export default mergeConfig(
   baseConfig,
   defineConfig({
     plugins: [
       crx({
-        manifest: {
-          ...baseManifest,
-          background: {
-            service_worker: 'src/pages/background/index.ts',
-            type: 'module'
-          },
-        } as ManifestV3Export,
+        manifest: chromeManifest as ManifestV3Export,
         browser: 'chrome',
       })
     ],
