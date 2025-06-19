@@ -3,7 +3,7 @@ import { HiXMark, HiOutlineClipboard, HiArrowUp, HiCheck } from 'react-icons/hi2
 import browser from 'webextension-polyfill';
 import ReactMarkdown from 'react-markdown';
 import { get, saveConversation, updateConversation, Message } from '@src/utils/storage';
-import { createSystemPrompt } from '@src/services/prompts';
+import { createSystemPrompt, createWebsiteContext } from '@src/services/prompts';
 import { ContentScraperService, ScrapedContent } from '@src/services/contentScraper';
 
 interface AskBarProps {
@@ -349,14 +349,15 @@ export default function AskBar({
     const settings = await get();
     const pageContent = scrapedContent?.text || '';
     
-    console.log('Sol: Creating system prompt with:');
+    console.log('Sol: Creating website context with:');
     console.log('- URL:', pageUrl || window.location.href);
     console.log('- Title:', pageTitle || document.title);
     console.log('- Content length:', pageContent.length);
     console.log('- Has markdown:', !!scrapedContent?.markdown);
     console.log('- Content preview:', pageContent.substring(0, 200));
     
-    const systemPrompt = createSystemPrompt({
+    const systemPrompt = createSystemPrompt();
+    const websiteContext = createWebsiteContext({
       url: pageUrl || window.location.href,
       title: pageTitle || document.title,
       content: pageContent,
@@ -366,9 +367,12 @@ export default function AskBar({
     });
     
     console.log('Sol: Generated system prompt length:', systemPrompt.length);
+    console.log('Sol: Generated website context length:', websiteContext.length);
+    console.log('Sol: Website context:', websiteContext);
 
     const messages = [
       { role: 'system', content: systemPrompt },
+      { role: 'user', content: websiteContext },
       ...conversationHistory.map(item => ({ role: item.type, content: item.content })),
       { role: 'user', content: query }
     ];

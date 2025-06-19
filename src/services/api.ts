@@ -143,6 +143,8 @@ export class ApiService {
 
     try {
       console.log(`Sol API: Starting stream completion for provider: ${provider}, model: ${model}`);
+      console.log('Sol API: Messages being sent:', messages);
+      console.log('Sol API: System message content length:', messages[0]?.content?.length);
       
       await this.streamOpenAICompletion({
         baseUrl,

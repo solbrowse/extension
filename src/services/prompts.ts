@@ -1,10 +1,18 @@
 import systemPromptTemplate from '../prompts/system-prompt.txt?raw';
 
 /**
- * Creates a structured system prompt for the AI assistant.
- * This prompt defines the AI's role, rules, and the context it should use.
+ * Creates the system prompt for the AI assistant.
+ * This prompt defines the AI's role and rules.
  */
-export function createSystemPrompt(context: { 
+export function createSystemPrompt(): string {
+  return systemPromptTemplate;
+}
+
+/**
+ * Creates a website context message to be sent as a separate user message.
+ * This contains all the webpage data in a structured format.
+ */
+export function createWebsiteContext(context: { 
   url: string; 
   title: string; 
   content: string; 
@@ -15,24 +23,18 @@ export function createSystemPrompt(context: {
   // Use markdown version if available for better LLM processing
   const contentToUse = context.markdown || context.content;
   
-  const pageContext = `
-<context>
-  <website>${context.url}</website>
+  return `<website>
+  <url>${context.url}</url>
   <title>${context.title}</title>
-  <content format="${context.markdown ? 'markdown' : 'text'}">
-    ${contentToUse}
-  </content>
   ${context.excerpt ? `<excerpt>${context.excerpt}</excerpt>` : ''}
   ${context.metadata ? `<metadata>
-    extraction_method: ${context.metadata.extractionMethod || 'unknown'}
-    content_type: ${context.metadata.isArticle ? 'article' : 'general'}
-    reading_time: ${context.metadata.readingTimeMinutes || 0} minutes
-    word_count: ${context.metadata.wordCount || 0}
-    quality_score: ${Math.round(context.metadata.readabilityScore || 0)}/100
+    <extraction_method>${context.metadata.extractionMethod || 'unknown'}</extraction_method>
+    <content_type>${context.metadata.isArticle ? 'article' : 'general'}</content_type>
+    <word_count>${context.metadata.wordCount || 0}</word_count>
+    <quality_score>${Math.round(context.metadata.readabilityScore || 0)}</quality_score>
   </metadata>` : ''}
-</context>
-  `.trim();
-
-  // Return the prompt with the page context (no placeholders to replace)
-  return `${systemPromptTemplate}\n\n${pageContext}`;
+  <content format="${context.markdown ? 'markdown' : 'text'}">
+${contentToUse}
+  </content>
+</website>`;
 }

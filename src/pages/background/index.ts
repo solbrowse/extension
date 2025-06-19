@@ -79,6 +79,8 @@ browser.runtime.onMessage.addListener((request: any, sender: browser.Runtime.Mes
     model = fallback || model;
   }
   console.log(`Sol Background: Starting stream for provider: ${provider}, model: ${model}, tab: ${tabId}`);
+  console.log('Sol Background: Messages array:', messages);
+  console.log('Sol Background: System message:', messages[0]);
 
   const streamRequest = async () => {
     try {
