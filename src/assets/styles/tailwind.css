@@ -4,219 +4,308 @@
 @custom-variant dark (&:is(.dark *));
 
 @theme {
+  /* Arc-inspired spacing system (8px grid) */
+  --spacing-micro: 2px;
+  --spacing-xs: 4px;
+  --spacing-sm: 8px;
+  --spacing-md: 16px;
+  --spacing-lg: 24px;
+  --spacing-xl: 32px;
+  --spacing-2xl: 48px;
+  --spacing-3xl: 64px;
 
+  /* Arc-inspired modern radius system */
+  --radius-xs: 4px;
+  --radius-sm: 6px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  --radius-xl: 16px;
+  --radius-2xl: 20px;
+
+  /* Typography scale inspired by Arc */
+  --font-size-xs: 11px;
+  --font-size-sm: 13px;
+  --font-size-base: 14px;
+  --font-size-md: 15px;
+  --font-size-lg: 16px;
+  --font-size-xl: 18px;
+  --font-size-2xl: 20px;
+  --font-size-3xl: 24px;
+
+  /* Arc-inspired subtle shadows (no glass, just depth) */
+  --shadow-subtle: 0 1px 2px 0 rgb(0 0 0 / 0.03);
+  --shadow-soft: 0 1px 3px 0 rgb(0 0 0 / 0.06), 0 1px 2px 0 rgb(0 0 0 / 0.04);
+  --shadow-card: 0 4px 6px -1px rgb(0 0 0 / 0.08),
+    0 2px 4px -1px rgb(0 0 0 / 0.03);
+  --shadow-elevated: 0 10px 15px -3px rgb(0 0 0 / 0.08),
+    0 4px 6px -2px rgb(0 0 0 / 0.03);
+
+  /* Arc-inspired animation timing */
+  --timing-fast: 150ms;
+  --timing-normal: 200ms;
+  --timing-slow: 300ms;
+  --ease-smooth: cubic-bezier(0.4, 0, 0.2, 1);
+  --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
 @theme inline {
+  /* Override shadcn radius with Arc-inspired values - consistent with main theme */
 
-  --radius-sm: calc(var(--radius) - 4px);
-
-  --radius-md: calc(var(--radius) - 2px);
-
-  --radius-lg: var(--radius);
-
-  --radius-xl: calc(var(--radius) + 4px);
-
-  --color-background: var(--background);
-
-  --color-foreground: var(--foreground);
-
-  --color-card: var(--card);
-
-  --color-card-foreground: var(--card-foreground);
-
-  --color-popover: var(--popover);
-
-  --color-popover-foreground: var(--popover-foreground);
-
-  --color-primary: var(--primary);
-
-  --color-primary-foreground: var(--primary-foreground);
-
-  --color-secondary: var(--secondary);
-
-  --color-secondary-foreground: var(--secondary-foreground);
-
-  --color-muted: var(--muted);
-
-  --color-muted-foreground: var(--muted-foreground);
-
-  --color-accent: var(--accent);
-
-  --color-accent-foreground: var(--accent-foreground);
-
-  --color-destructive: var(--destructive);
-
-  --color-border: var(--border);
-
-  --color-input: var(--input);
-
-  --color-ring: var(--ring);
-
-  --color-chart-1: var(--chart-1);
-
-  --color-chart-2: var(--chart-2);
-
-  --color-chart-3: var(--chart-3);
-
-  --color-chart-4: var(--chart-4);
-
-  --color-chart-5: var(--chart-5);
-
-  --color-sidebar: var(--sidebar);
-
-  --color-sidebar-foreground: var(--sidebar-foreground);
-
-  --color-sidebar-primary: var(--sidebar-primary);
-
-  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
-
-  --color-sidebar-accent: var(--sidebar-accent);
-
-  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
-
-  --color-sidebar-border: var(--sidebar-border);
-
-  --color-sidebar-ring: var(--sidebar-ring);
+  /* Enhanced color palette for cleaner UI */
+  --color-background: hsl(0 0% 100%);
+  --color-foreground: hsl(0 0% 3.9%);
+  --color-card: hsl(0 0% 100%);
+  --color-card-foreground: hsl(0 0% 3.9%);
+  --color-popover: hsl(0 0% 100%);
+  --color-popover-foreground: hsl(0 0% 3.9%);
+  --color-primary: hsl(0 0% 9%);
+  --color-primary-foreground: hsl(0 0% 98%);
+  --color-secondary: hsl(0 0% 96.1%);
+  --color-secondary-foreground: hsl(0 0% 9%);
+  --color-muted: hsl(0 0% 96.1%);
+  --color-muted-foreground: hsl(0 0% 45.1%);
+  --color-accent: hsl(0 0% 96.1%);
+  --color-accent-foreground: hsl(0 0% 9%);
+  --color-destructive: hsl(0 84.2% 60.2%);
+  --color-border: hsl(0 0% 89.8%);
+  --color-input: hsl(0 0% 89.8%);
+  --color-ring: hsl(0 0% 3.9%);
 }
 
-:root {
-
-  --radius: 0.625rem;
-
-  --background: oklch(1 0 0);
-
-  --foreground: oklch(0.145 0 0);
-
-  --card: oklch(1 0 0);
-
-  --card-foreground: oklch(0.145 0 0);
-
-  --popover: oklch(1 0 0);
-
-  --popover-foreground: oklch(0.145 0 0);
-
-  --primary: oklch(0.205 0 0);
-
-  --primary-foreground: oklch(0.985 0 0);
-
-  --secondary: oklch(0.97 0 0);
-
-  --secondary-foreground: oklch(0.205 0 0);
-
-  --muted: oklch(0.97 0 0);
-
-  --muted-foreground: oklch(0.556 0 0);
-
-  --accent: oklch(0.97 0 0);
-
-  --accent-foreground: oklch(0.205 0 0);
-
-  --destructive: oklch(0.577 0.245 27.325);
-
-  --border: oklch(0.922 0 0);
-
-  --input: oklch(0.922 0 0);
-
-  --ring: oklch(0.708 0 0);
-
-  --chart-1: oklch(0.646 0.222 41.116);
-
-  --chart-2: oklch(0.6 0.118 184.704);
-
-  --chart-3: oklch(0.398 0.07 227.392);
-
-  --chart-4: oklch(0.828 0.189 84.429);
-
-  --chart-5: oklch(0.769 0.188 70.08);
-
-  --sidebar: oklch(0.985 0 0);
-
-  --sidebar-foreground: oklch(0.145 0 0);
-
-  --sidebar-primary: oklch(0.205 0 0);
-
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-
-  --sidebar-accent: oklch(0.97 0 0);
-
-  --sidebar-accent-foreground: oklch(0.205 0 0);
-
-  --sidebar-border: oklch(0.922 0 0);
-
-  --sidebar-ring: oklch(0.708 0 0);
+/* Popup and Dashboard shared styles */
+.sol-popup-body {
+  font-family: "SF Pro Display", -apple-system, BlinkMacSystemFont, "Inter",
+    "Segoe UI", system-ui, sans-serif;
+  font-size: 14px;
+  line-height: 1.5;
+  font-weight: 400;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  background: #fefefe;
+  border: 0.5px solid rgba(0, 0, 0, 0.06);
 }
 
-.dark {
-
-  --background: oklch(0.145 0 0);
-
-  --foreground: oklch(0.985 0 0);
-
-  --card: oklch(0.205 0 0);
-
-  --card-foreground: oklch(0.985 0 0);
-
-  --popover: oklch(0.205 0 0);
-
-  --popover-foreground: oklch(0.985 0 0);
-
-  --primary: oklch(0.922 0 0);
-
-  --primary-foreground: oklch(0.205 0 0);
-
-  --secondary: oklch(0.269 0 0);
-
-  --secondary-foreground: oklch(0.985 0 0);
-
-  --muted: oklch(0.269 0 0);
-
-  --muted-foreground: oklch(0.708 0 0);
-
-  --accent: oklch(0.269 0 0);
-
-  --accent-foreground: oklch(0.985 0 0);
-
-  --destructive: oklch(0.704 0.191 22.216);
-
-  --border: oklch(1 0 0 / 10%);
-
-  --input: oklch(1 0 0 / 15%);
-
-  --ring: oklch(0.556 0 0);
-
-  --chart-1: oklch(0.488 0.243 264.376);
-
-  --chart-2: oklch(0.696 0.17 162.48);
-
-  --chart-3: oklch(0.769 0.188 70.08);
-
-  --chart-4: oklch(0.627 0.265 303.9);
-
-  --chart-5: oklch(0.645 0.246 16.439);
-
-  --sidebar: oklch(0.205 0 0);
-
-  --sidebar-foreground: oklch(0.985 0 0);
-
-  --sidebar-primary: oklch(0.488 0.243 264.376);
-
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-
-  --sidebar-accent: oklch(0.269 0 0);
-
-  --sidebar-accent-foreground: oklch(0.985 0 0);
-
-  --sidebar-border: oklch(1 0 0 / 10%);
-
-  --sidebar-ring: oklch(0.556 0 0);
+.sol-dashboard-body {
+  font-family: "SF Pro Display", -apple-system, BlinkMacSystemFont, "Inter",
+    "Segoe UI", system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  background: #fafafa;
 }
 
-@layer base {
-  * {
-    @apply border-border outline-ring/50;
-  }
-  body {
-    @apply bg-background text-foreground;
-  }
+/* Global button base - Apple-inspired animations */
+.sol-button,
+.sol-button-primary,
+.sol-button-secondary,
+.sol-button-small,
+.sol-button-danger,
+.sol-button-external {
+  transition: all 200ms cubic-bezier(0.25, 0.46, 0.45, 0.94);
+}
+
+.sol-button:hover,
+.sol-button-primary:hover,
+.sol-button-secondary:hover {
+  transform: translateY(-0.5px) scale(1.005);
+}
+
+.sol-button-small:hover,
+.sol-button-danger:hover,
+.sol-button-external:hover {
+  transform: translateY(-0.5px) scale(1.003);
+}
+
+.sol-button:active,
+.sol-button-primary:active,
+.sol-button-secondary:active {
+  transform: translateY(0px) scale(0.995);
+  transition-duration: 100ms;
+}
+
+.sol-button-small:active,
+.sol-button-danger:active,
+.sol-button-external:active {
+  transform: translateY(0px) scale(0.997);
+  transition-duration: 100ms;
+}
+
+/* Global shadow removal for clean Arc-inspired design */
+*,
+*:hover,
+*:focus,
+*:active {
+  box-shadow: none !important;
+}
+
+/* Ensure no shadows on any interactive elements */
+button,
+[role="button"],
+.btn,
+.card,
+[data-radix-popper-content-wrapper],
+[data-radix-select-content],
+[data-radix-dropdown-menu-content],
+[data-radix-popover-content],
+[data-radix-tooltip-content],
+[data-radix-dialog-content],
+[data-radix-sheet-content] {
+  box-shadow: none !important;
+}
+
+/* Select component specific styling - clean Arc-inspired design */
+[data-slot="select-trigger"] {
+  box-shadow: none !important;
+  border: 1px solid rgba(0, 0, 0, 0.1) !important;
+  background: transparent !important;
+  border-radius: 12px !important;
+  transition: all 200ms cubic-bezier(0.25, 0.46, 0.45, 0.94);
+}
+
+[data-slot="select-trigger"]:hover {
+  background: rgba(0, 0, 0, 0.05) !important;
+  border-color: rgba(0, 0, 0, 0.15) !important;
+}
+
+[data-slot="select-trigger"]:focus {
+  background: transparent !important;
+  border-color: rgba(0, 0, 0, 0.2) !important;
+  outline: none !important;
+  box-shadow: none !important;
+}
+
+[data-slot="select-content"] {
+  box-shadow: none !important;
+  border: 1px solid rgba(0, 0, 0, 0.1) !important;
+  background: white !important;
+  border-radius: 12px !important;
+}
+
+/* Input component specific styling - consistent with select and button design */
+[data-slot="input"] {
+  border-radius: 12px !important;
+  box-shadow: none !important;
+}
+
+/* New button styles for the updated design system - Apple-like animations */
+.sol-button-primary {
+  @apply bg-black text-white px-4 py-2 rounded-lg font-medium truncate;
+  @apply hover:bg-gray-800;
+  box-shadow: none;
+}
+
+.sol-button-secondary {
+  @apply text-gray-900 px-4 py-2 rounded-lg font-medium truncate;
+  background-color: rgba(0, 0, 0, 0.05);
+  @apply hover:bg-black/10;
+  box-shadow: none;
+}
+
+.sol-button-small {
+  @apply text-gray-900 px-3 py-2 rounded-lg font-medium truncate;
+  background-color: rgba(0, 0, 0, 0.05);
+  @apply hover:bg-black/10;
+  box-shadow: none;
+}
+
+.sol-button-danger {
+  @apply text-red-600 px-3 py-2 rounded-lg font-medium truncate;
+  background-color: rgba(239, 68, 68, 0.1);
+  @apply hover:bg-red-100;
+  box-shadow: none;
+}
+
+.sol-button-external {
+  @apply text-blue-600 px-3 py-2 rounded-lg font-medium truncate;
+  background-color: rgba(59, 130, 246, 0.1);
+  @apply hover:bg-blue-100;
+  box-shadow: none;
+}
+
+/* Large buttons with extra rounding for special UI contexts */
+.sol-large-button {
+  border-radius: 16px !important;
+  box-shadow: none !important;
+}
+
+/* Arc-style focus states */
+.sol-focus:focus-visible {
+  outline: 2px solid #007aff;
+  outline-offset: 2px;
+  border-radius: 6px;
+}
+
+/* Feature card styling - clean shadowless design */
+.sol-feature-card {
+  background: white;
+  border: 1px solid rgba(0, 0, 0, 0.06);
+  border-radius: 12px;
+  padding: 16px;
+  transition: all 200ms cubic-bezier(0.25, 0.46, 0.45, 0.94);
+}
+
+.sol-feature-card:hover {
+  border-color: rgba(0, 0, 0, 0.1);
+  transform: translateY(-1px);
+}
+
+/* Custom styling for Shadcn tabs to match Sol design */
+[data-slot="tabs-list"] {
+  background: rgba(0, 0, 0, 0.04) !important;
+  border-radius: 12px !important;
+  padding: 4px !important;
+  height: auto !important;
+  box-shadow: none !important;
+}
+
+[data-slot="tabs-trigger"] {
+  border-radius: 8px !important;
+  transition: all 200ms cubic-bezier(0.25, 0.46, 0.45, 0.94) !important;
+  background: transparent !important;
+  color: rgb(107, 114, 128) !important;
+  font-weight: 500 !important;
+  box-shadow: none !important;
+  border: none !important;
+  padding: 8px 16px !important;
+}
+
+[data-slot="tabs-trigger"]:hover {
+  color: rgb(55, 65, 81) !important;
+  transform: translateY(-0.5px) scale(1.003) !important;
+}
+
+[data-slot="tabs-trigger"][data-state="active"] {
+  background: rgba(0, 0, 0, 0.08) !important;
+  color: rgb(17, 24, 39) !important;
+  box-shadow: none !important;
+}
+
+[data-slot="tabs-trigger"]:active {
+  transform: translateY(0px) scale(0.997) !important;
+}
+
+/* Fixed save indicator */
+.sol-save-indicator {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  z-index: 50;
+  padding: 8px 16px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 500;
+  transition: all 300ms cubic-bezier(0.25, 0.46, 0.45, 0.94);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+
+.sol-save-indicator.syncing {
+  background-color: rgba(59, 130, 246, 0.1);
+  color: #3b82f6;
+  border: 1px solid rgba(59, 130, 246, 0.2);
+}
+
+.sol-save-indicator.synced {
+  background-color: rgba(34, 197, 94, 0.1);
+  color: #22c55e;
+  border: 1px solid rgba(34, 197, 94, 0.2);
 }

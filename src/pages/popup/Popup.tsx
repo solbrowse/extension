@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Cog6ToothIcon, FaceSmileIcon, VariableIcon } from '@heroicons/react/24/outline';
+import { Cog6ToothIcon, FaceSmileIcon, VariableIcon, AdjustmentsHorizontalIcon } from '@heroicons/react/24/outline';
 import browser from 'webextension-polyfill';
 import { get, set } from '@src/services/storage';
 import { Button } from '@src/components/ui/button';
@@ -78,8 +78,10 @@ export default function Popup() {
     }
   };
 
-  const openDashboard = () => {
-    browser.tabs.create({ url: browser.runtime.getURL('src/pages/dashboard/index.html') });
+  const openDashboard = (hash?: string) => {
+    const baseUrl = browser.runtime.getURL('src/pages/dashboard/index.html');
+    const url = hash ? `${baseUrl}#${hash}` : baseUrl;
+    browser.tabs.create({ url });
     window.close();
   };
 
@@ -98,26 +100,30 @@ export default function Popup() {
 
   if (isLoading) {
     return (
-      <div className="w-80 h-96 flex items-center justify-center">
-        <div className="w-6 h-6 border-2 border-gray-200 border-t-gray-900 rounded-full animate-spin"></div>
+      <div className="h-96 flex items-center justify-center">
+        <div className="w-5 h-5 border-2 border-gray-300 border-t-gray-700 rounded-full animate-spin"></div>
       </div>
     );
   }
 
   if (needsPermissions) {
     return (
-      <div className="w-80 h-96 p-8 flex flex-col justify-center">
-        <div className="text-center space-y-6">
-          <img src={logo} alt="Sol" className="w-16 h-16 mx-auto mb-6" />
-          <h2 className="text-2xl font-light text-gray-900 tracking-tight">
-            Permission Required
-          </h2>
-          <p className="text-sm text-gray-500 leading-relaxed">
-            Firefox requires explicit permission for Sol to work on all websites. Click below to grant access.
-          </p>
+      <div className="h-96 p-6 flex flex-col justify-center">
+        <div className="text-center space-y-5">
+          <div className="w-14 h-14 mx-auto mb-4 flex items-center justify-center bg-amber-50 rounded-xl">
+            <img src={logo} alt="Sol" className="w-8 h-8" />
+          </div>
+          <div className="space-y-2">
+            <h2 className="text-xl font-semibold text-gray-900 tracking-tight">
+              Permission Required
+            </h2>
+            <p className="text-[13px] text-gray-600 leading-relaxed px-2">
+              Firefox requires explicit permission for Sol to work on all websites. Click below to grant access.
+            </p>
+          </div>
           <Button
             onClick={requestPermissions}
-            className="w-full h-12 bg-gray-900 text-white rounded-2xl hover:bg-gray-800 transition-all font-medium"
+            className="sol-button-primary sol-large-button w-full h-11"
           >
             Grant Permissions
           </Button>
@@ -128,20 +134,24 @@ export default function Popup() {
 
   if (!isConfigured) {
     return (
-      <div className="w-80 h-96 p-8 flex flex-col justify-center">
-        <div className="text-center space-y-6">
-          <img src={logo} alt="Sol" className="w-16 h-16 mx-auto mb-6" />
-          <h2 className="text-2xl font-light text-gray-900 tracking-tight">
-            Setup Required
-          </h2>
-          <p className="text-sm text-gray-500 leading-relaxed">
-            Please configure your AI provider in the dashboard to begin using Sol.
-          </p>
+      <div className="h-96 p-6 flex flex-col justify-center">
+        <div className="text-center space-y-5">
+          <div className="w-14 h-14 mx-auto mb-4 flex items-center justify-center bg-blue-50 rounded-xl">
+            <img src={logo} alt="Sol" className="w-8 h-8" />
+          </div>
+          <div className="space-y-2">
+            <h2 className="text-xl font-semibold text-gray-900 tracking-tight">
+              Setup Required
+            </h2>
+            <p className="text-[13px] text-gray-600 leading-relaxed px-2">
+              Please configure your AI provider in the dashboard to begin using Sol.
+            </p>
+          </div>
           <Button
-            onClick={openDashboard}
-            className="w-full h-12 bg-gray-900 text-white rounded-2xl hover:bg-gray-800 transition-all font-medium"
+            onClick={() => openDashboard('ai-provider')}
+            className="sol-button-primary sol-large-button w-full h-11"
           >
-            Go to Settings
+            Setup AI Provider
           </Button>
         </div>
       </div>
@@ -149,10 +159,10 @@ export default function Popup() {
   }
 
   return (
-    <div className="w-80 min-h-96 p-8 flex flex-col">
+    <div className="min-h-96 p-6 flex flex-col">
       {/* Header with Logo */}
-      <div className="flex justify-center mb-8">
-        <img src={logo} alt="Sol" className="w-16 h-16" />
+      <div className="flex items-center justify-center mb-8">
+        <img src={logo} alt="Sol" className="w-20 h-20" />
       </div>
 
       {/* Feature Sections */}
@@ -160,7 +170,7 @@ export default function Popup() {
         {/* Ask Feature */}
         <div className="space-y-3">
           <div className="flex items-center justify-between">
-            <h2 className="text-2xl font-light text-gray-900 tracking-tight">
+            <h2 className="text-xl font-semibold text-gray-900">
               Ask
             </h2>
             <Switch
@@ -168,15 +178,15 @@ export default function Popup() {
               onCheckedChange={handleAskToggle}
             />
           </div>
-          <p className="text-sm text-gray-500 leading-relaxed">
-            Press <kbd className="inline-flex items-center px-2 py-1 bg-gray-100 text-gray-700 rounded-md text-xs font-mono border border-gray-200 shadow-sm">{askKeybind}</kbd> to ask questions about a website
+          <p className="text-[14px] text-gray-600 leading-relaxed">
+            Press <kbd className="inline-flex items-center px-2 py-1 bg-gray-100 text-gray-700 rounded text-[12px] font-mono border border-gray-200 mx-1">{askKeybind}</kbd> to ask questions about a website
           </p>
         </div>
 
         {/* Side Feature */}
         <div className="space-y-3">
           <div className="flex items-center justify-between">
-            <h2 className="text-2xl font-light text-gray-900 tracking-tight">
+            <h2 className="text-xl font-semibold text-gray-900">
               Side
             </h2>
             <Switch
@@ -184,37 +194,37 @@ export default function Popup() {
               onCheckedChange={handleSideToggle}
             />
           </div>
-          <p className="text-sm text-gray-500 leading-relaxed">
-            Press enter on an Ask Bar or <kbd className="inline-flex items-center px-2 py-1 bg-gray-100 text-gray-700 rounded-md text-xs font-mono border border-gray-200 shadow-sm">Cmd+Soon!</kbd> to chat with multiple tabs
+          <p className="text-[14px] text-gray-600 leading-relaxed">
+            Press enter on an Ask Bar or <kbd className="inline-flex items-center px-2 py-1 bg-gray-100 text-gray-700 rounded text-[12px] font-mono border border-gray-200 mx-1">cmd+enter</kbd> for more...
           </p>
         </div>
       </div>
 
       {/* Action Buttons */}
       <div className="mt-8 space-y-3">
-        <Button
-          onClick={openDashboard}
-          variant="outline"
-          className="w-full h-12 rounded-2xl border-gray-200 hover:bg-gray-50 transition-all font-medium flex items-center justify-center gap-3"
-        >
-          <FaceSmileIcon className="w-5 h-5" />
-          Personalize
-        </Button>
+        <div className="grid grid-cols-2 gap-3">
+          <Button
+            onClick={() => openDashboard('general')}
+            className="sol-button-secondary sol-large-button h-12 font-medium text-[14px] flex items-center justify-center gap-2"
+          >
+            <FaceSmileIcon className="w-4 h-4" />
+            Personalize
+          </Button>
+          
+          <Button
+            onClick={() => openDashboard('general')}
+            className="sol-button-secondary sol-large-button h-12 font-medium text-[14px] flex items-center justify-center gap-2"
+          >
+            <VariableIcon className="w-4 h-4" />
+            Abilities
+          </Button>
+        </div>
         
         <Button
-          onClick={openDashboard}
-          variant="outline"
-          className="w-full h-12 rounded-2xl border-gray-200 hover:bg-gray-50 transition-all font-medium flex items-center justify-center gap-3"
+          onClick={() => openDashboard()}
+          className="sol-button-primary sol-large-button w-full h-12 font-medium text-[14px] flex items-center justify-center gap-2"
         >
-          <VariableIcon className="w-5 h-5" />
-          Abilities
-        </Button>
-        
-        <Button
-          onClick={openDashboard}
-          className="w-full h-12 rounded-2xl bg-gray-900 text-white hover:bg-gray-800 transition-all font-medium flex items-center justify-center gap-3"
-        >
-          <Cog6ToothIcon className="w-5 h-5" />
+          <Cog6ToothIcon className="w-4 h-4" />
           Dashboard
         </Button>
       </div>

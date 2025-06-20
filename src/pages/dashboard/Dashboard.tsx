@@ -8,15 +8,15 @@ import {
   DocumentArrowDownIcon,
   ClipboardDocumentIcon
 } from '@heroicons/react/24/outline';
-import { get, set, StorageData, getConversations, deleteConversation, deleteAllConversations, exportConversationToMarkdown, exportAllConversationsToMarkdown, Conversation, resetToDefaults } from '../../services/storage';
+import { get, set, StorageData, getConversations, deleteConversation, deleteAllConversations as deleteAllConversationsStorage, exportConversationToMarkdown, exportAllConversationsToMarkdown, Conversation, resetToDefaults } from '../../services/storage';
 import { ApiService, PROVIDERS, Model } from '@src/services/api';
 import { Button } from '@src/components/ui/button';
 import { Input } from '@src/components/ui/input';
 import { Label } from '@src/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@src/components/ui/select';
 import { Switch } from '@src/components/ui/switch';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@src/components/ui/tabs';
 import logo from '@assets/img/logo.svg';
-import './Dashboard.css';
 
 export default function Dashboard() {
   const [settings, setSettings] = useState<StorageData | null>(null);
@@ -26,152 +26,162 @@ export default function Dashboard() {
   const [saveStatus, setSaveStatus] = useState<'idle' | 'syncing' | 'synced'>('idle');
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [isLoadingConversations, setIsLoadingConversations] = useState(false);
+  const [activeTab, setActiveTab] = useState('general');
 
-  const loadSettings = useCallback(async () => {
+  // Handle URL hash routing
+  useEffect(() => {
+    const handleHashChange = () => {
+      const hash = window.location.hash.replace('#', '');
+      if (['general', 'features', 'ai-provider', 'history'].includes(hash)) {
+        setActiveTab(hash);
+      }
+    };
+    
+    // Set initial tab from URL
+    handleHashChange();
+    
+    window.addEventListener('hashchange', handleHashChange);
+    return () => window.removeEventListener('hashchange', handleHashChange);
+  }, []);
+
+  // Update URL when tab changes
+  const handleTabChange = (value: string) => {
+    setActiveTab(value);
+    window.location.hash = value;
+  };
+
+  // Simplified data loading
+  const loadData = useCallback(async () => {
     try {
-      const data = await get();
-      setSettings(data);
-      if (data.apiKey && data.provider) {
-        await loadModels(data.provider, data.apiKey, data.customEndpoint, data.model);
+      const [settingsData, conversationsData] = await Promise.all([
+        get(),
+        getConversations()
+      ]);
+      
+      setSettings(settingsData);
+      setConversations(conversationsData);
+      
+      if (settingsData.apiKey && settingsData.provider) {
+        loadModels(settingsData.provider, settingsData.apiKey, settingsData.customEndpoint, settingsData.model);
       }
     } catch (error) {
-      console.error('Error loading settings:', error);
-    }
-  }, []);
-
-  const loadConversations = useCallback(async () => {
-    setIsLoadingConversations(true);
-    try {
-      console.log('Sol Dashboard: Loading conversations...');
-      const convs = await getConversations();
-      console.log('Sol Dashboard: Loaded conversations:', convs.length, convs);
-      setConversations(convs);
-    } catch (error) {
-      console.error('Sol Dashboard: Error loading conversations:', error);
-    } finally {
-      setIsLoadingConversations(false);
+      console.error('Error loading data:', error);
     }
   }, []);
 
   useEffect(() => {
-    loadSettings();
-    loadConversations();
-  }, [loadSettings, loadConversations]);
+    loadData();
+  }, [loadData]);
 
+  // Simplified save handling
   useEffect(() => {
-    if (settings) {
-      setSaveStatus('syncing');
-      const handler = setTimeout(() => {
-        set(settings).then(() => {
-          setSaveStatus('synced');
-          setTimeout(() => setSaveStatus('idle'), 2000);
-        });
-      }, 500);
+    if (!settings) return;
+    
+    setSaveStatus('syncing');
+    const timeoutId = setTimeout(async () => {
+      try {
+        await set(settings);
+        setSaveStatus('synced');
+        setTimeout(() => setSaveStatus('idle'), 2000);
+      } catch (error) {
+        console.error('Error saving settings:', error);
+        setSaveStatus('idle');
+      }
+    }, 500);
 
-      return () => {
-        clearTimeout(handler);
-      };
-    }
+    return () => clearTimeout(timeoutId);
   }, [settings]);
 
+  // Simplified model loading
   const loadModels = async (provider: string, apiKey: string, endpoint?: string, savedModel?: string) => {
-    // For custom endpoints, API key may not be required (e.g., Ollama)
     if (!apiKey && provider !== 'custom') return;
-    console.log(`Sol Dashboard: Loading models for ${provider}...`);
+    
     setIsLoadingModels(true);
     try {
       const fetchedModels = await ApiService.fetchModels(provider, apiKey, endpoint);
-      console.log(`Sol Dashboard: Loaded ${fetchedModels.length} models for ${provider}:`, fetchedModels);
       setModels(fetchedModels);
       
-      // Only auto-select first model if no model is saved AND no valid saved model exists
-      const savedModelExists = savedModel && fetchedModels.some(m => m.id === savedModel);
-      if (fetchedModels.length > 0 && !savedModel && !savedModelExists) {
-        console.log('Sol Dashboard: Auto-selecting first model:', fetchedModels[0].id);
-        setSettings(prev => prev ? { ...prev, model: fetchedModels[0].id } : null);
-      } else if (savedModel && !savedModelExists) {
-        // If saved model doesn't exist in fetched models, select first available
-        console.log('Sol Dashboard: Saved model not found, selecting first available:', fetchedModels[0].id);
+      // Auto-select model if needed
+      if (fetchedModels.length > 0 && (!savedModel || !fetchedModels.some(m => m.id === savedModel))) {
         setSettings(prev => prev ? { ...prev, model: fetchedModels[0].id } : null);
       }
     } catch (error) {
-      console.error(`Sol Dashboard: Error loading models for ${provider}:`, error);
-      // Show default models as fallback
-      const defaultModels = ApiService.getDefaultModels(provider);
-      console.log(`Sol Dashboard: Using ${defaultModels.length} default models for ${provider}:`, defaultModels);
-      setModels(defaultModels);
+      console.error('Error loading models:', error);
+      setModels(ApiService.getDefaultModels(provider));
     } finally {
       setIsLoadingModels(false);
     }
   };
 
-  const handleInputChange = (key: keyof StorageData, value: any) => {
+  // Simplified handlers
+  const updateSetting = (key: keyof StorageData, value: any) => {
     setSettings(prev => {
       if (!prev) return null;
+      
       const newSettings = { ...prev, [key]: value };
+      
+      // Handle provider changes
       if (key === 'provider') {
         newSettings.model = ApiService.getDefaultModels(value)[0]?.id || '';
         setModels([]);
-        // Auto-load models for custom endpoints or when API key is available
         if (newSettings.apiKey || value === 'custom') {
           loadModels(value, newSettings.apiKey, newSettings.customEndpoint);
         }
       }
+      
+      // Handle API key changes
       if (key === 'apiKey' && value) {
         loadModels(newSettings.provider, value, newSettings.customEndpoint, newSettings.model);
       }
+      
+      // Handle custom endpoint changes
       if (key === 'customEndpoint' && newSettings.provider === 'custom') {
-        // Auto-load models when custom endpoint changes
         loadModels(newSettings.provider, newSettings.apiKey, value, newSettings.model);
       }
+      
       return newSettings;
     });
   };
 
-  const handleFeatureToggle = (feature: keyof StorageData['features']) => {
-    setSettings(prev => {
-      if (!prev) return null;
-      return {
-        ...prev,
-        features: {
-          ...prev.features,
-          [feature]: {
-            ...prev.features[feature],
-            isEnabled: !prev.features[feature].isEnabled,
-          },
+  const toggleFeature = (feature: keyof StorageData['features']) => {
+    setSettings(prev => prev ? {
+      ...prev,
+      features: {
+        ...prev.features,
+        [feature]: {
+          ...prev.features[feature],
+          isEnabled: !prev.features[feature].isEnabled,
         },
-      };
-    });
+      },
+    } : null);
   };
 
-  const handleFeatureConfigChange = (feature: keyof StorageData['features'], key: string, value: any) => {
-    setSettings(prev => {
-      if (!prev) return null;
-      return {
-        ...prev,
-        features: {
-          ...prev.features,
-          [feature]: {
-            ...prev.features[feature],
-            [key]: value,
-          },
+  const updateFeatureConfig = (feature: keyof StorageData['features'], key: string, value: any) => {
+    setSettings(prev => prev ? {
+      ...prev,
+      features: {
+        ...prev.features,
+        [feature]: {
+          ...prev.features[feature],
+          [key]: value,
         },
-      };
-    });
+      },
+    } : null);
   };
 
-  const handleDeleteConversation = async (id: string) => {
-    if (confirm('Are you sure you want to delete this conversation?')) {
-      try {
-        await deleteConversation(id);
-        await loadConversations();
-      } catch (error) {
-        console.error('Error deleting conversation:', error);
-      }
+  // Simplified async handlers
+  const deleteConversationHandler = async (id: string) => {
+    if (!confirm('Are you sure you want to delete this conversation?')) return;
+    
+    try {
+      await deleteConversation(id);
+      setConversations(prev => prev.filter(c => c.id !== id));
+    } catch (error) {
+      console.error('Error deleting conversation:', error);
     }
   };
 
-  const handleExportConversation = async (conversation: Conversation) => {
+  const exportConversation = async (conversation: Conversation) => {
     try {
       const markdown = exportConversationToMarkdown(conversation);
       const blob = new Blob([markdown], { type: 'text/markdown' });
@@ -188,7 +198,7 @@ export default function Dashboard() {
     }
   };
 
-  const handleExportAllConversations = async () => {
+  const exportAllConversations = async () => {
     try {
       const markdown = await exportAllConversationsToMarkdown();
       const blob = new Blob([markdown], { type: 'text/markdown' });
@@ -205,70 +215,170 @@ export default function Dashboard() {
     }
   };
 
-  const handleCopyConversation = async (conversation: Conversation) => {
+  const copyConversation = async (conversation: Conversation) => {
     try {
       const markdown = exportConversationToMarkdown(conversation);
       await navigator.clipboard.writeText(markdown);
-      // You could add a toast notification here
     } catch (error) {
       console.error('Error copying conversation:', error);
     }
   };
 
-  const handleDeleteAllConversations = async () => {
-    if (confirm('Are you sure you want to delete ALL conversations? This action cannot be undone.')) {
-      try {
-        await deleteAllConversations();
-        await loadConversations();
-      } catch (error) {
-        console.error('Error deleting all conversations:', error);
-      }
+  const deleteAllConversationsHandler = async () => {
+    if (!confirm('Are you sure you want to delete ALL conversations? This action cannot be undone.')) return;
+    
+    try {
+      await deleteAllConversationsStorage();
+      setConversations([]);
+    } catch (error) {
+      console.error('Error deleting all conversations:', error);
     }
   };
 
-  const handleResetStorage = async () => {
-    if (confirm('Are you sure you want to reset ALL settings and conversations? This will clear everything and cannot be undone.')) {
-      try {
-        await resetToDefaults();
-        window.location.reload();
-      } catch (error) {
-        console.error('Error resetting storage:', error);
-      }
+  const resetStorage = async () => {
+    if (!confirm('Are you sure you want to reset ALL settings and conversations? This will clear everything and cannot be undone.')) return;
+    
+    try {
+      await resetToDefaults();
+      window.location.reload();
+    } catch (error) {
+      console.error('Error resetting storage:', error);
     }
   };
 
   if (!settings) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+      <div className="min-h-screen flex items-center justify-center">
         <div className="w-6 h-6 border-2 border-gray-200 border-t-gray-900 rounded-full animate-spin"></div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <div className="bg-white border-b border-gray-100">
-        <div className="max-w-6xl mx-auto px-8 py-8">
-          <div className="flex flex-col items-center space-y-4">
-            <img src={logo} alt="Sol" className="w-20 h-20" />
-            <div className="text-center">
-              <h1 className="text-2xl font-light text-gray-900">Sol Dashboard</h1>
-              <p className="text-sm text-gray-500">Alpha Build 3</p>
-            </div>
+    <div className="min-h-screen">
+      {/* Fixed Save Indicator */}
+      {saveStatus === 'syncing' && (
+        <div className="sol-save-indicator syncing">
+          Saving...
+        </div>
+      )}
+      {saveStatus === 'synced' && (
+        <div className="sol-save-indicator synced">
+          <CheckCircleIcon className="w-4 h-4 inline mr-2" />
+          Saved
+        </div>
+      )}
+
+      {/* Big Logo Header */}
+      <div className="bg-white/80 backdrop-blur-sm border-b border-gray-200/50 sticky top-0 z-10">
+        <div className="max-w-4xl mx-auto px-6">
+          <div className="flex flex-col items-center">
+            <img src={logo} alt="Sol" className="w-32 h-32" />
           </div>
         </div>
       </div>
 
-      <div className="max-w-6xl mx-auto px-8 py-12">
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          {/* Main Content */}
-          <div className="lg:col-span-2 space-y-8">
-            {/* AI Configuration */}
-            <div className="bg-white rounded-2xl border border-gray-100 p-8">
-              <div className="space-y-8">
+      <div className="max-w-4xl mx-auto px-6 py-8">
+        <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">
+          <TabsList className="grid w-full grid-cols-4 mb-8">
+            <TabsTrigger value="general" className="text-sm font-medium">General</TabsTrigger>
+            <TabsTrigger value="features" className="text-sm font-medium">Features</TabsTrigger>
+            <TabsTrigger value="ai-provider" className="text-sm font-medium">AI Provider</TabsTrigger>
+            <TabsTrigger value="history" className="text-sm font-medium">History</TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="general" className="space-y-6">
+            {/* Personalization */}
+            <div className="bg-white rounded-xl border border-gray-200/60 p-6 shadow-sm">
+              <div className="space-y-4">
                 <div>
-                  <h2 className="text-xl font-semibold text-gray-900 mb-2">AI Configuration</h2>
+                  <h2 className="text-lg font-semibold text-gray-900 mb-1">Personalization</h2>
+                  <p className="text-sm text-gray-600">Customize Sol to match your preferences</p>
+                </div>
+                <div className="text-center py-12 text-gray-500">
+                  <p>Personalization settings coming soon...</p>
+                </div>
+              </div>
+            </div>
+
+            {/* Abilities */}
+            <div className="bg-white rounded-xl border border-gray-200/60 p-6 shadow-sm">
+              <div className="space-y-4">
+                <div>
+                  <h2 className="text-lg font-semibold text-gray-900 mb-1">Abilities</h2>
+                  <p className="text-sm text-gray-600">Enhance Sol with additional capabilities</p>
+                </div>
+                <div className="text-center py-12 text-gray-500">
+                  <p>Ability configuration coming soon...</p>
+                </div>
+              </div>
+            </div>
+          </TabsContent>
+
+          <TabsContent value="features" className="space-y-6">
+            {/* Features */}
+            <div className="bg-white rounded-xl border border-gray-200/60 p-6 shadow-sm">
+              <div className="space-y-6">
+                <div>
+                  <h2 className="text-lg font-semibold text-gray-900 mb-1">Features</h2>
+                  <p className="text-sm text-gray-600">Configure Sol features</p>
+                </div>
+                
+                <div className="space-y-6">
+                  <div className="space-y-4">
+                    <div className="flex items-center justify-between">
+                      <Label htmlFor="ask-toggle" className="text-base font-medium">Ask Bar</Label>
+                      <Switch
+                        id="ask-toggle"
+                        checked={settings.features.askBar.isEnabled}
+                        onCheckedChange={() => toggleFeature('askBar')}
+                      />
+                    </div>
+                    
+                    {settings.features.askBar.isEnabled && (
+                      <div className="space-y-4 pl-4 border-l-2 border-gray-100">
+                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                          <div className="space-y-2">
+                            <Label htmlFor="shortcut">Shortcut Key</Label>
+                            <Input
+                              id="shortcut"
+                              value={settings.features.askBar.keybind}
+                              onChange={(e) => updateFeatureConfig('askBar', 'keybind', e.target.value)}
+                              placeholder="e.g., Cmd+J"
+                              className="text-sm"
+                            />
+                          </div>
+                          <div className="space-y-2">
+                            <Label htmlFor="position">Position</Label>
+                            <Select 
+                              value={settings.features.askBar.position} 
+                              onValueChange={(value) => updateFeatureConfig('askBar', 'position', value)}
+                            >
+                              <SelectTrigger>
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="top-left">Top Left</SelectItem>
+                                <SelectItem value="top-right">Top Right</SelectItem>
+                                <SelectItem value="bottom-left">Bottom Left</SelectItem>
+                                <SelectItem value="bottom-right">Bottom Right</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </div>
+          </TabsContent>
+
+          <TabsContent value="ai-provider" className="space-y-6">
+            <div className="bg-white rounded-xl border border-gray-200/60 p-6 shadow-sm">
+              <div className="space-y-6">
+                <div>
+                  <h2 className="text-lg font-semibold text-gray-900 mb-1">AI Configuration</h2>
                   <p className="text-sm text-gray-600">Configure your AI provider and model settings</p>
                 </div>
 
@@ -276,7 +386,7 @@ export default function Dashboard() {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div className="space-y-3">
                     <Label htmlFor="provider">Provider</Label>
-                    <Select value={settings.provider} onValueChange={(value) => handleInputChange('provider', value)}>
+                    <Select value={settings.provider} onValueChange={(value) => updateSetting('provider', value)}>
                       <SelectTrigger>
                         <SelectValue placeholder="Select provider" />
                       </SelectTrigger>
@@ -297,7 +407,7 @@ export default function Dashboard() {
                         id="apikey"
                         type={isApiKeyVisible ? 'text' : 'password'}
                         value={settings.apiKey}
-                        onChange={(e) => handleInputChange('apiKey', e.target.value)}
+                        onChange={(e) => updateSetting('apiKey', e.target.value)}
                         placeholder="Enter your API key"
                         className="pr-10 font-mono text-sm"
                         autoComplete="new-password"
@@ -323,7 +433,7 @@ export default function Dashboard() {
                       id="endpoint"
                       type="url"
                       value={settings.customEndpoint || ''}
-                      onChange={(e) => handleInputChange('customEndpoint', e.target.value)}
+                      onChange={(e) => updateSetting('customEndpoint', e.target.value)}
                       placeholder="https://your-api-endpoint.com"
                     />
                     <p className="text-xs text-gray-500">
@@ -351,11 +461,15 @@ export default function Dashboard() {
                         {ApiService.getDefaultModels(settings.provider).map((model) => (
                           <Button
                             key={model.id}
-                            onClick={() => handleInputChange('model', model.id)}
-                            variant={settings.model === model.id ? "default" : "outline"}
-                            className="h-auto p-4 text-left justify-start"
+                            onClick={() => updateSetting('model', model.id)}
+                            className={`h-auto p-4 text-left justify-start rounded-lg font-medium text-sm transition-all duration-200 hover:scale-[1.02] active:scale-[0.98] ${
+                              settings.model === model.id 
+                                ? 'bg-black text-white hover:bg-gray-800' 
+                                : 'text-gray-900 hover:bg-black/10'
+                            }`}
+                            style={settings.model !== model.id ? { backgroundColor: 'rgba(0, 0, 0, 0.05)' } : {}}
                           >
-                            <span className="text-sm font-medium">{model.name}</span>
+                            <span className="text-sm font-medium truncate">{model.name}</span>
                           </Button>
                         ))}
                       </div>
@@ -367,7 +481,7 @@ export default function Dashboard() {
                     <Label className="text-xs font-medium text-gray-500">All Models</Label>
                     <Select 
                       value={settings.model} 
-                      onValueChange={(value) => handleInputChange('model', value)}
+                      onValueChange={(value) => updateSetting('model', value)}
                       disabled={models.length === 0 || (settings.provider !== 'custom' && !settings.apiKey)}
                     >
                       <SelectTrigger>
@@ -393,46 +507,52 @@ export default function Dashboard() {
                     )}
                   </div>
                 </div>
-
-                {/* Save Status */}
-                <div className="flex justify-end">
-                  <div className="text-sm text-gray-500">
-                    {saveStatus === 'syncing' && <span>Saving...</span>}
-                    {saveStatus === 'synced' && (
-                      <span className="flex items-center space-x-2 text-green-600">
-                        <CheckCircleIcon className="w-4 h-4" />
-                        <span>Saved</span>
-                      </span>
-                    )}
-                  </div>
-                </div>
               </div>
             </div>
 
-            {/* Conversations Section */}
-            <div className="bg-white rounded-2xl border border-gray-100 p-8">
+            {/* Get API Key */}
+            <div className="bg-white rounded-xl border border-gray-200/60 p-6 shadow-sm">
+              <div className="space-y-4">
+                <div>
+                  <h2 className="text-lg font-semibold text-gray-900">Get API Key</h2>
+                  <p className="text-sm text-gray-600">Get your OpenAI API key</p>
+                </div>
+                <Button asChild className="sol-button-external w-full">
+                  <a
+                    href="https://platform.openai.com/api-keys"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center justify-center space-x-2"
+                  >
+                    <span>OpenAI Platform</span>
+                    <ArrowTopRightOnSquareIcon className="w-4 h-4" />
+                  </a>
+                </Button>
+              </div>
+            </div>
+          </TabsContent>
+
+          <TabsContent value="history" className="space-y-6">
+            <div className="bg-white rounded-xl border border-gray-200/60 p-6 shadow-sm">
               <div className="space-y-6">
                 <div className="flex items-center justify-between">
                   <div>
-                    <h2 className="text-xl font-semibold text-gray-900">Conversation History</h2>
+                    <h2 className="text-lg font-semibold text-gray-900">Conversation History</h2>
                     <p className="text-sm text-gray-600">Manage your past conversations</p>
                   </div>
                   <div className="flex gap-2">
                     <Button
-                      onClick={handleExportAllConversations}
+                      onClick={exportAllConversations}
                       disabled={conversations.length === 0}
-                      variant="outline"
-                      size="sm"
+                      className="sol-button-small"
                     >
                       <DocumentArrowDownIcon className="w-4 h-4 mr-2" />
                       Export All
                     </Button>
                     <Button
-                      onClick={handleDeleteAllConversations}
+                      onClick={deleteAllConversationsHandler}
                       disabled={conversations.length === 0}
-                      variant="outline"
-                      size="sm"
-                      className="text-red-600 border-red-200 hover:bg-red-50"
+                      className="sol-button-danger"
                     >
                       <TrashIcon className="w-4 h-4 mr-2" />
                       Delete All
@@ -451,7 +571,7 @@ export default function Dashboard() {
                 ) : (
                   <div className="space-y-3">
                     {conversations.map((conversation) => (
-                      <div key={conversation.id} className="border border-gray-200 rounded-xl p-4 hover:bg-gray-50 transition-colors">
+                      <div key={conversation.id} className="border border-gray-200/60 rounded-lg p-4 hover:bg-gray-50/50 hover:border-gray-300/60 transition-all duration-200 hover:shadow-sm">
                         <div className="flex items-start justify-between">
                           <div className="flex-1 min-w-0 space-y-2">
                             <h3 className="font-medium text-gray-900 truncate">{conversation.title}</h3>
@@ -463,26 +583,23 @@ export default function Dashboard() {
                           </div>
                           <div className="flex items-center space-x-1 ml-4">
                             <Button
-                              onClick={() => handleCopyConversation(conversation)}
-                              variant="ghost"
-                              size="sm"
-                              className="h-8 w-8 p-0"
+                              onClick={() => copyConversation(conversation)}
+                              className="h-8 w-8 p-0 text-gray-600 hover:bg-black/5 rounded-lg transition-all duration-200 hover:scale-[1.05] active:scale-[0.95] truncate"
+                              style={{ backgroundColor: 'rgba(0, 0, 0, 0.05)' }}
                             >
                               <ClipboardDocumentIcon className="w-4 h-4" />
                             </Button>
                             <Button
-                              onClick={() => handleExportConversation(conversation)}
-                              variant="ghost"
-                              size="sm"
-                              className="h-8 w-8 p-0"
+                              onClick={() => exportConversation(conversation)}
+                              className="h-8 w-8 p-0 text-gray-600 hover:bg-black/5 rounded-lg transition-all duration-200 hover:scale-[1.05] active:scale-[0.95] truncate"
+                              style={{ backgroundColor: 'rgba(0, 0, 0, 0.05)' }}
                             >
                               <DocumentArrowDownIcon className="w-4 h-4" />
                             </Button>
                             <Button
-                              onClick={() => handleDeleteConversation(conversation.id)}
-                              variant="ghost"
-                              size="sm"
-                              className="h-8 w-8 p-0 text-red-500 hover:text-red-700 hover:bg-red-50"
+                              onClick={() => deleteConversationHandler(conversation.id)}
+                              className="h-8 w-8 p-0 text-red-500 hover:text-red-700 rounded-lg transition-all duration-200 hover:scale-[1.05] active:scale-[0.95] truncate"
+                              style={{ backgroundColor: 'rgba(239, 68, 68, 0.1)' }}
                             >
                               <TrashIcon className="w-4 h-4" />
                             </Button>
@@ -494,91 +611,12 @@ export default function Dashboard() {
                 )}
               </div>
             </div>
-          </div>
 
-          {/* Sidebar */}
-          <div className="space-y-6">
-            {/* Features */}
-            <div className="bg-white rounded-2xl border border-gray-100 p-6">
+            {/* Help & Settings for History Tab */}
+            <div className="bg-white rounded-xl border border-gray-200/60 p-6 shadow-sm">
               <div className="space-y-6">
                 <div>
-                  <h3 className="text-lg font-semibold text-gray-900">Features</h3>
-                  <p className="text-sm text-gray-600">Configure Sol features</p>
-                </div>
-                
-                <div className="space-y-6">
-                  <div className="space-y-4">
-                    <div className="flex items-center justify-between">
-                      <Label htmlFor="ask-toggle" className="text-base font-medium">Ask Bar</Label>
-                      <Switch
-                        id="ask-toggle"
-                        checked={settings.features.askBar.isEnabled}
-                        onCheckedChange={() => handleFeatureToggle('askBar')}
-                      />
-                    </div>
-                    
-                    {settings.features.askBar.isEnabled && (
-                      <div className="space-y-4 pl-4 border-l-2 border-gray-100">
-                        <div className="space-y-2">
-                          <Label htmlFor="shortcut">Shortcut Key</Label>
-                          <Input
-                            id="shortcut"
-                            value={settings.features.askBar.keybind}
-                            onChange={(e) => handleFeatureConfigChange('askBar', 'keybind', e.target.value)}
-                            placeholder="e.g., Cmd+J"
-                            className="text-sm"
-                          />
-                        </div>
-                        <div className="space-y-2">
-                          <Label htmlFor="position">Position</Label>
-                          <Select 
-                            value={settings.features.askBar.position} 
-                            onValueChange={(value) => handleFeatureConfigChange('askBar', 'position', value)}
-                          >
-                            <SelectTrigger>
-                              <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="top-left">Top Left</SelectItem>
-                              <SelectItem value="top-right">Top Right</SelectItem>
-                              <SelectItem value="bottom-left">Bottom Left</SelectItem>
-                              <SelectItem value="bottom-right">Bottom Right</SelectItem>
-                            </SelectContent>
-                          </Select>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Get API Key */}
-            <div className="bg-white rounded-2xl border border-gray-100 p-6">
-              <div className="space-y-4">
-                <div>
-                  <h3 className="text-lg font-semibold text-gray-900">Get API Key</h3>
-                  <p className="text-sm text-gray-600">Get your OpenAI API key</p>
-                </div>
-                <Button asChild variant="outline" className="w-full">
-                  <a
-                    href="https://platform.openai.com/api-keys"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="flex items-center justify-center space-x-2"
-                  >
-                    <span>OpenAI Platform</span>
-                    <ArrowTopRightOnSquareIcon className="w-4 h-4" />
-                  </a>
-                </Button>
-              </div>
-            </div>
-
-            {/* Help & Settings */}
-            <div className="bg-white rounded-2xl border border-gray-100 p-6">
-              <div className="space-y-6">
-                <div>
-                  <h3 className="text-lg font-semibold text-gray-900">Help & Settings</h3>
+                  <h2 className="text-lg font-semibold text-gray-900">Help & Settings</h2>
                   <p className="text-sm text-gray-600">Information and advanced options</p>
                 </div>
                 
@@ -594,17 +632,16 @@ export default function Dashboard() {
                 </div>
                 
                 <Button
-                  onClick={handleResetStorage}
-                  variant="outline"
-                  className="w-full text-red-600 border-red-200 hover:bg-red-50"
+                  onClick={resetStorage}
+                  className="sol-button-danger w-full"
                 >
                   Reset All Settings
                 </Button>
                 <p className="text-xs text-red-500">This will clear all settings and conversations</p>
               </div>
             </div>
-          </div>
-        </div>
+          </TabsContent>
+        </Tabs>
       </div>
     </div>
   );
