@@ -3,20 +3,6 @@
 
 /* Custom styles for iframe-based AskBar */
 
-.font-inter {
-  font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
-    sans-serif;
-}
-
-/* Ensure proper font weights */
-.font-medium {
-  font-weight: 500 !important;
-}
-
-.font-normal {
-  font-weight: 400 !important;
-}
-
 html {
   background: transparent !important;
 }
@@ -62,7 +48,8 @@ html {
   cursor: pointer !important;
 }
 
-.sol-ask-bar input {
+.sol-ask-bar input,
+.sol-ask-bar textarea {
   pointer-events: auto !important;
   cursor: text !important;
 }
@@ -71,9 +58,14 @@ html {
   animation: animate-in 0.3s ease-out forwards;
 }
 
-/* Dividing line for expanded conversation */
-.sol-conversation-divider {
-  border-bottom: 1px solid rgba(0, 0, 0, 0.07) !important;
+/* Hide scrollbar for horizontal tab chips scroll */
+.scrollbar-hide {
+  -ms-overflow-style: none; /* Internet Explorer 10+ */
+  scrollbar-width: none; /* Firefox */
+}
+
+.scrollbar-hide::-webkit-scrollbar {
+  display: none; /* Safari and Chrome */
 }
 
 /* Custom scrollbar for conversation area */
@@ -94,26 +86,21 @@ html {
   background: rgba(0, 0, 0, 0.3);
 }
 
-/* Quote styling - matching OG blockquote */
-.sol-quote {
-  border-left: 3px solid rgba(0, 0, 0, 0.1);
-  padding-left: 12px;
-  margin: 8px 0;
-  font-style: italic;
-}
-
 /* Streaming animation for text */
-@keyframes typing {
-  from {
-    opacity: 0.7;
+@keyframes solPulse {
+  0% {
+    opacity: 0.6;
   }
-  to {
+  50% {
     opacity: 1;
+  }
+  100% {
+    opacity: 0.6;
   }
 }
 
 .sol-streaming {
-  animation: typing 1s ease-in-out infinite alternate;
+  animation: solPulse 1.4s ease-in-out infinite;
 }
 
 /* Message entrance animation */
@@ -147,38 +134,175 @@ html {
   animation: animate-out 0.3s ease-out forwards;
 }
 
-/* Input area styling */
-.input-area {
-  position: relative;
+/* Enhanced focus states */
+.sol-ask-bar textarea:focus {
+  outline: none !important;
+  border: none !important;
+  box-shadow: none !important;
 }
 
-.input-area .absolute {
-  z-index: 10;
-}
-
-/* Multi-tab mode indicator */
-.sol-multi-tab-mode {
-  border-left: 3px solid #3b82f6;
-}
-
-/* Tab mention styles */
-.tab-mention-input {
-  position: relative;
-}
-
-.mentioned-tabs {
-  border-radius: 8px;
-}
-
-/* Override some Tailwind styles in iframe context */
-.sol-ask-bar .tab-mention-input textarea {
+/* Ensure Inter font is applied consistently */
+.font-inter,
+.font-inter * {
   font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
     sans-serif !important;
-  font-size: 14px !important;
-  line-height: 1.5 !important;
 }
 
-.sol-ask-bar .mentioned-tabs {
+/* Placeholder styling override */
+.sol-ask-bar textarea::placeholder {
   font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
     sans-serif !important;
+  font-size: 16px !important;
+  font-weight: 500 !important;
+  letter-spacing: -0.025em !important;
+  color: rgba(0, 0, 0, 0.4) !important;
+  opacity: 1 !important;
+}
+
+/* Dividing line for expanded conversation */
+.sol-conversation-divider {
+  border-bottom: 1px solid rgba(0, 0, 0, 0.07) !important;
+}
+
+/* Mode transition animations */
+@keyframes expand-mode {
+  from {
+    width: 420px;
+    height: 128px;
+  }
+  to {
+    width: 436px;
+    max-height: 600px;
+  }
+}
+
+@keyframes collapse-mode {
+  from {
+    width: 436px;
+    max-height: 600px;
+  }
+  to {
+    width: 420px;
+    height: 128px;
+  }
+}
+
+.mode-expanding {
+  animation: expand-mode 0.3s ease-in-out forwards;
+}
+
+.mode-collapsing {
+  animation: collapse-mode 0.3s ease-in-out forwards;
+}
+
+/* Button hover states */
+.sol-ask-bar button:hover {
+  transition: all 0.2s ease-in-out !important;
+}
+
+/* Tab chip hover effects - matching SwiftUI behavior */
+.tab-chip-title,
+.tab-chip-url {
+  transition: opacity 0.2s ease-in-out !important;
+}
+
+/* Improved tab chip container styling */
+.sol-ask-bar button:hover .tab-chip-title,
+.sol-ask-bar button:hover .tab-chip-url {
+  opacity: 0.8 !important;
+}
+
+/* Responsive behavior for no tagged tabs */
+.sol-ask-bar .tab-chips-container {
+  display: flex;
+  flex-wrap: nowrap;
+  overflow-x: auto;
+  gap: 8px;
+}
+
+.sol-ask-bar .tab-chips-container:empty {
+  display: none;
+}
+
+/* Shadow adjustments to match SwiftUI specifications */
+.sol-ask-bar .expanded-container {
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1) !important;
+}
+
+.sol-ask-bar .input-container {
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1) !important;
+}
+
+/* Ensure proper border radius matching SwiftUI */
+.sol-ask-bar .rounded-container {
+  border-radius: 20px !important;
+}
+
+.sol-ask-bar .rounded-chip {
+  border-radius: 12px !important;
+}
+
+/* Border styling matching SwiftUI stroke */
+.sol-ask-bar .border-container {
+  border: 0.5px solid rgba(0, 0, 0, 0.07) !important;
+}
+
+/* Background blur matching SwiftUI */
+.sol-ask-bar .backdrop-blur-container {
+  backdrop-filter: blur(16px) !important;
+  -webkit-backdrop-filter: blur(16px) !important;
+}
+
+/* Proper spacing and alignment */
+.sol-ask-bar .input-field-container {
+  padding-top: 16px;
+  padding-left: 16px;
+  padding-right: 14px;
+  padding-bottom: 14px;
+}
+
+.sol-ask-bar .input-field-container.with-chips {
+  padding-top: 8px;
+}
+
+/* Button states matching SwiftUI */
+.sol-ask-bar .submit-button-active {
+  background-color: black !important;
+}
+
+.sol-ask-bar .submit-button-inactive {
+  background-color: rgba(0, 0, 0, 0.05) !important;
+}
+
+/* Improved X indicator styling */
+.sol-ask-bar .x-indicator {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  width: 16px;
+  height: 16px;
+  background-color: rgba(0, 0, 0, 0.2);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  transition: opacity 0.2s ease-in-out;
+}
+
+.sol-ask-bar button:hover .x-indicator {
+  opacity: 1;
+}
+
+/* Drop Shadow Classes - SwiftUI Specifications */
+.sol-conversation-shadow {
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1) !important;
+}
+
+.sol-input-shadow {
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1) !important;
+}
+
+.sol-input-shadow-large {
+  box-shadow: 0 4px 32px rgba(0, 0, 0, 0.1) !important;
 }

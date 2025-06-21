@@ -1,16 +1,17 @@
 import '@src/utils/logger';
-import React, { useState, useEffect, useRef, useLayoutEffect } from 'react';
+import React, { useState, useEffect, useRef, useLayoutEffect, KeyboardEvent } from 'react';
 import { Message } from '@src/services/storage';
 import { ScrapedContent } from '@src/services/contentScraper';
 import {
   ConversationList,
-  TabMentionInput,
   useCopyMessage,
   useConversationStorage
 } from '@src/components/index';
 import { useSimpleChat } from '@src/components/hooks/useSimpleChat';
-import { UiPortService } from '@src/services/messaging/uiPortService';
+import { UiPortService, TabInfo } from '@src/services/messaging/uiPortService';
 import { get } from '@src/services/storage';
+import TabChipRow from './components/TabChipRow';
+import InputArea from './components/InputArea';
 
 interface AskBarProps {
   position?: string;
@@ -18,6 +19,20 @@ interface AskBarProps {
   initialConversation?: Message[];
   initialConversationId?: string | null;
   onConversationUpdate?: (messages: Message[], conversationId: string | null) => void;
+}
+
+interface TabChip {
+  id: number;
+  title: string;
+  url: string;
+  favIconUrl?: string;
+}
+
+interface TabMention {
+  id: number;
+  title: string;
+  url: string;
+  favIconUrl?: string;
 }
 
 export const AskBar: React.FC<AskBarProps> = ({
@@ -40,9 +55,20 @@ export const AskBar: React.FC<AskBarProps> = ({
   const [selectedTabIds, setSelectedTabIds] = useState<number[]>([]);
   const [currentTabId, setCurrentTabId] = useState<number | null>(null);
   const [debugEnabled, setDebugEnabled] = useState<boolean>(false);
+  const [availableTabs, setAvailableTabs] = useState<TabChip[]>([]);
+  const [inputHasFocus, setInputHasFocus] = useState(false);
+
+  // @ mention state
+  const [showDropdown, setShowDropdown] = useState(false);
+  const [filteredTabs, setFilteredTabs] = useState<TabInfo[]>([]);
+  const [dropdownSelectedIndex, setDropdownSelectedIndex] = useState(0);
+  const [mentionStartPos, setMentionStartPos] = useState(-1);
+  const [mentionedTabs, setMentionedTabs] = useState<TabMention[]>([]);
 
   // Refs
   const askBarRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLTextAreaElement>(null);
+  const dropdownRef = useRef<HTMLDivElement>(null);
   const mountTimeRef = useRef<number>(Date.now());
   const uiPortService = useRef<UiPortService>(UiPortService.getInstance());
 
@@ -56,10 +82,27 @@ export const AskBar: React.FC<AskBarProps> = ({
     pageUrl
   );
 
-  // Chat system with conversation history support
+  // Chat system
   const [chatState, chatActions] = useSimpleChat(
     (message: Message) => {
-      setConversationHistory(prev => [...prev, message]);
+      // Finalize the last assistant message (keep existing content, just mark as complete)
+      if (message.type === 'assistant') {
+        setConversationHistory(prev => {
+          const updated = [...prev];
+          const lastMessage = updated[updated.length - 1];
+          if (lastMessage && lastMessage.type === 'assistant') {
+            // Keep the content we built during streaming, just update timestamp to mark as final
+            updated[updated.length - 1] = {
+              ...lastMessage,
+              timestamp: message.timestamp // Use the completion timestamp
+            };
+          } else {
+            // Add new assistant message if none exists (fallback)
+            updated.push(message);
+          }
+          return updated;
+        });
+      }
     },
     (delta: string) => {
       // Update the last assistant message with streaming content
@@ -67,7 +110,21 @@ export const AskBar: React.FC<AskBarProps> = ({
         const updated = [...prev];
         const lastMessage = updated[updated.length - 1];
         if (lastMessage && lastMessage.type === 'assistant') {
-          lastMessage.content += delta;
+          const prevContent = lastMessage.content;
+          // Detect if delta is cumulative or incremental
+          // If the new delta already includes the previous content as a prefix, treat it as cumulative and replace
+          // Otherwise, treat it as incremental and append
+          if (delta.startsWith(prevContent)) {
+            updated[updated.length - 1] = {
+              ...lastMessage,
+              content: delta
+            };
+          } else {
+            updated[updated.length - 1] = {
+              ...lastMessage,
+              content: prevContent + delta
+            };
+          }
         } else {
           // Create new assistant message if none exists
           updated.push({
@@ -139,12 +196,43 @@ export const AskBar: React.FC<AskBarProps> = ({
     initializeCurrentTab();
   }, []);
 
+  // Load available tabs for tab chips
+  useEffect(() => {
+    const loadAvailableTabs = async () => {
+      try {
+        const tabs = await uiPortService.current.listTabs();
+        const tabChips: TabChip[] = tabs.map(tab => ({
+          id: tab.id,
+          title: tab.title || 'Untitled',
+          url: tab.url || '',
+          favIconUrl: tab.favIconUrl
+        }));
+        setAvailableTabs(tabChips);
+      } catch (error) {
+        console.error('Sol AskBar: Failed to load available tabs:', error);
+      }
+    };
+
+    loadAvailableTabs();
+  }, []);
+
   // Auto-select current tab when available and no tabs selected
   useEffect(() => {
     if (currentTabId && selectedTabIds.length === 0) {
       setSelectedTabIds([currentTabId]);
     }
   }, [currentTabId]);
+
+  // Sync mentioned tabs with selected tabs
+  useEffect(() => {
+    const mentionedTabIds = mentionedTabs.map(tab => tab.id);
+    if (mentionedTabIds.length > 0) {
+      const newSelectedTabIds = [...new Set([...selectedTabIds, ...mentionedTabIds])];
+      if (newSelectedTabIds.length !== selectedTabIds.length) {
+        setSelectedTabIds(newSelectedTabIds);
+      }
+    }
+  }, [mentionedTabs]);
 
   // Validate and clean up selected tabs (remove closed tabs)
   useEffect(() => {
@@ -159,7 +247,7 @@ export const AskBar: React.FC<AskBarProps> = ({
         // Filter out closed tabs
         const validTabIds = selectedTabIds.filter(id => liveTabIds.has(id));
         
-        // Update selection if any tabs were closed
+        // Update selection if any tags were closed
         if (validTabIds.length !== selectedTabIds.length) {
           console.log(`Sol AskBar: Removed ${selectedTabIds.length - validTabIds.length} closed tabs from selection`);
           setSelectedTabIds(validTabIds);
@@ -287,45 +375,179 @@ export const AskBar: React.FC<AskBarProps> = ({
     setTimeout(() => {
       window.parent.postMessage({ type: 'sol-close-askbar' }, '*');
       onUnmount?.();
-    }, 200); // Shorter delay for better responsiveness
+    }, 300); // Match animation duration
   };
 
   const handleTabsChange = (tabIds: number[]) => {
     setSelectedTabIds(tabIds);
   };
 
-  const handleSubmit = () => {
+  const handleTabRemove = (tabId: number) => {
+    setSelectedTabIds(prev => prev.filter(id => id !== tabId));
+  };
+
+  // @ mention helper functions
+  const parseTabMentions = (text: string): TabMention[] => {
+    const mentions: TabMention[] = [];
+    const mentionRegex = /@tab:(\d+):([^@]*?):/g;
+    let match;
+
+    while ((match = mentionRegex.exec(text)) !== null) {
+      const tabId = parseInt(match[1]);
+      const title = match[2];
+      const tab = availableTabs.find(t => t.id === tabId);
+      if (tab) {
+        mentions.push({
+          id: tabId,
+          title: title || tab.title,
+          url: tab.url,
+          favIconUrl: tab.favIconUrl
+        });
+      }
+    }
+
+    return mentions;
+  };
+
+  const insertTabMention = (tab: TabChip) => {
+    if (mentionStartPos === -1) return;
+
+    const before = input.substring(0, mentionStartPos);
+    const after = input.substring(inputRef.current?.selectionStart || mentionStartPos);
+    const mention = `@tab:${tab.id}:${tab.title}:`;
+    const newValue = before + mention + after;
+    
+    setInput(newValue);
+    setShowDropdown(false);
+    setMentionStartPos(-1);
+    
+    // Focus back to input
+    setTimeout(() => {
+      inputRef.current?.focus();
+      const newPos = before.length + mention.length;
+      inputRef.current?.setSelectionRange(newPos, newPos);
+    }, 0);
+  };
+
+  const handleInputChange = (newValue: string) => {
+    setInput(newValue);
+    
+    // Update mentioned tabs
+    const newMentions = parseTabMentions(newValue);
+    setMentionedTabs(newMentions);
+
+    // Check for @ mentions
+    const cursorPos = inputRef.current?.selectionStart || 0;
+    const textBeforeCursor = newValue.substring(0, cursorPos);
+    const atIndex = textBeforeCursor.lastIndexOf('@');
+    
+    if (atIndex !== -1) {
+      const afterAt = textBeforeCursor.substring(atIndex + 1);
+      
+      // Show dropdown if we have @ and it's not already a complete mention
+      if (!afterAt.includes(':')) {
+        setMentionStartPos(atIndex);
+        setShowDropdown(true);
+        setDropdownSelectedIndex(0);
+        
+        // Filter tabs based on search after @
+        const searchTerm = afterAt.toLowerCase();
+        const filtered = availableTabs.filter(tab => 
+          tab.title.toLowerCase().includes(searchTerm) ||
+          tab.url.toLowerCase().includes(searchTerm)
+        );
+        setFilteredTabs(filtered);
+      } else {
+        setShowDropdown(false);
+      }
+    } else {
+      setShowDropdown(false);
+      setMentionStartPos(-1);
+    }
+  };
+
+  const handleInputKeyDown = (e: KeyboardEvent<HTMLTextAreaElement>) => {
+    // Prevent parent handlers from receiving this key event
+    e.stopPropagation();
+
+    if (showDropdown && filteredTabs.length > 0) {
+      if (e.key === 'ArrowDown') {
+        e.preventDefault();
+        setDropdownSelectedIndex(prev => (prev + 1) % filteredTabs.length);
+      } else if (e.key === 'ArrowUp') {
+        e.preventDefault();
+        setDropdownSelectedIndex(prev => (prev - 1 + filteredTabs.length) % filteredTabs.length);
+      } else if (e.key === 'Enter') {
+        e.preventDefault();
+        insertTabMention(filteredTabs[dropdownSelectedIndex]);
+      } else if (e.key === 'Escape') {
+        setShowDropdown(false);
+        setMentionStartPos(-1);
+      }
+    } else if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      handleSubmit();
+    }
+  };
+
+  const handleSubmit = async () => {
     if (!input.trim()) return;
 
-    // Create user message
-    const userMessage: Message = {
+    // Parse mentioned tabs and update selected tabs if any mentions exist
+    const mentionRegex = /@tab:(\d+):([^@]*?):/g;
+    const mentionedTabIds = new Set<number>();
+    let match;
+    
+    while ((match = mentionRegex.exec(input)) !== null) {
+      const tabId = parseInt(match[1]);
+      if (!isNaN(tabId)) {
+        mentionedTabIds.add(tabId);
+      }
+    }
+
+    // Calculate tabs to use BEFORE state update (combine existing + mentioned)
+    const allTabIds = [...new Set([...selectedTabIds, ...Array.from(mentionedTabIds)])];
+    let tabsToUse = allTabIds.length > 0 ? allTabIds : (currentTabId ? [currentTabId] : []);
+    
+    // Update selected tabs for UI display
+    if (mentionedTabIds.size > 0) {
+      setSelectedTabIds(allTabIds);
+    }
+
+    // Prevent duplicate consecutive user messages
+    setConversationHistory(prev => {
+      const last = prev[prev.length - 1];
+      if (last && last.type === 'user' && last.content === input.trim()) {
+        return prev; // Skip duplicate
+      }
+      return [...prev, {
       type: 'user',
       content: input.trim(),
-      timestamp: Date.now()
-    };
-    setConversationHistory(prev => [...prev, userMessage]);
+        timestamp: Date.now(),
+      }];
+    });
 
-    // Determine which tabs to include
-    let tabsToUse = selectedTabIds;
-    
-    // If no tabs selected but we have current tab, auto-include it
+    // Fallback to current tab if no tabs selected
     if (tabsToUse.length === 0 && currentTabId) {
       tabsToUse = [currentTabId];
       setSelectedTabIds([currentTabId]);
     }
 
-    // Add empty assistant message placeholder for streaming
-    const assistantMessage: Message = {
-      type: 'assistant',
-      content: '',
-      timestamp: Date.now()
-    };
-    setConversationHistory(prev => [...prev, assistantMessage]);
+    console.log('Sol AskBar: Ensuring content for tabs', tabsToUse);
+
+    try {
+      // Ensure background has scraped content for all tabs before asking question
+      await uiPortService.current.getContent(tabsToUse);
+    } catch (err) {
+      console.warn('Sol AskBar: getContent failed', err);
+    }
+
+    console.log('Sol AskBar: Sending message with tabs:', tabsToUse);
     
-    // Send message with conversation context
+    // Send message via chat system
     chatActions.sendMessage(input.trim(), tabsToUse, currentConversationId || 'new');
 
-    // Clear input and expand
+    // Clear input & expand
     setInput('');
     setIsExpanded(true);
   };
@@ -333,6 +555,9 @@ export const AskBar: React.FC<AskBarProps> = ({
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Escape') {
       handleClose();
+    } else if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      handleSubmit();
     }
   };
 
@@ -350,84 +575,162 @@ export const AskBar: React.FC<AskBarProps> = ({
     return () => window.removeEventListener('message', handler);
   }, []);
 
+  // Helper function to get base domain from URL
+  const getBaseDomain = (url: string): string => {
+    try {
+      const urlObj = new URL(url);
+      return urlObj.hostname;
+    } catch {
+      return url;
+    }
+  };
+
+  // Helper function to truncate title
+  const truncateTitle = (title: string, maxLength: number = 20): string => {
+    return title.length > maxLength ? title.substring(0, maxLength) + '...' : title;
+  };
+
+  // Get selected tab chips for display
+  const selectedTabChips = availableTabs.filter(tab => selectedTabIds.includes(tab.id));
+
+  // Calculate conversation container height based on content
+  const getConversationHeight = () => {
+    const baseHeight = 200; // Minimum height
+    const messageHeight = conversationHistory.length * 80; // Rough estimate per message
+    const maxHeight = 600;
+    return Math.min(Math.max(baseHeight, messageHeight), maxHeight);
+  };
+
   return (
     <div 
       ref={askBarRef}
-      className="fixed top-4 right-4 z-[2147483647] transition-all duration-300 ease-out"
+      className="fixed top-4 right-4 z-[2147483647] transition-all duration-300 ease-in-out font-inter"
       style={{
         opacity: isVisible ? 1 : 0,
-        transform: `scale(${isVisible && !isClosing ? 1 : 0.95})`,
+        transform: `scale(${isVisible && !isClosing ? 1 : 0.9}) translateY(${isVisible && !isClosing ? 0 : 10}px)`,
         maxWidth: '90vw',
-        maxHeight: '70vh',
-        minHeight: 'auto'
+        maxHeight: '90vh',
+        fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif'
       }}
       onKeyDown={handleKeyDown}
       tabIndex={0}
     >
-      <div className="bg-white rounded-xl shadow-2xl border border-gray-200 overflow-visible" 
+      {isExpanded ? (
+        // Expanded Mode - Full Conversation Container  
+        <div 
+          className="backdrop-blur-[16px] rounded-[28px] border-[0.5px] border-black/[0.07] transition-all duration-300 ease-in-out sol-conversation-shadow"
            style={{ 
-             width: isExpanded ? '480px' : '360px',
-             minHeight: '60px'
-           }}>
-        {/* Header */}
-        <div className="bg-gradient-to-r from-blue-500 to-purple-600 text-white p-3 flex items-center justify-between">
-          <div className="flex items-center space-x-2">
-            <div className="w-6 h-6 bg-white bg-opacity-20 rounded-full flex items-center justify-center">
-              <span className="text-xs font-bold">S</span>
-            </div>
-            <span className="font-medium">Sol</span>
-            {selectedTabIds.length > 0 && (
-              <span className="text-xs bg-white bg-opacity-20 px-2 py-1 rounded-full">
-                {selectedTabIds.length} tab{selectedTabIds.length !== 1 ? 's' : ''}
-              </span>
-            )}
-          </div>
-          <button
-            onClick={handleClose}
-            className="w-6 h-6 hover:bg-white hover:bg-opacity-20 rounded-full flex items-center justify-center transition-colors"
-          >
-            <span className="text-sm">×</span>
-          </button>
+            width: '436px',
+            maxHeight: '600px',
+            minHeight: '200px',
+            height: 'auto',
+            backgroundColor: 'rgba(255, 255, 255, 0.8)',
+            fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif'
+          }}
+        >
+          {/* Header space */}
+          <div className="p-2">
         </div>
 
-        {/* Conversation */}
-        {isExpanded && conversationHistory.length > 0 && (
-          <div className="max-h-64 overflow-y-auto">
+          {/* Conversation Messages */}
+          <div className="px-[14px] pb-2 max-h-[400px] overflow-y-auto">
             <ConversationList
               messages={conversationHistory}
               copiedMessageIndex={copiedMessageIndex}
               onCopyMessage={handleCopyMessage}
+              isStreaming={chatState.isStreaming}
             />
           </div>
-        )}
 
-        {/* Input */}
-        <div className="p-3 border-t border-gray-100">
-          <TabMentionInput
-            value={input}
-            onChange={setInput}
+          {/* Input Area within conversation container */}
+          <div className="p-2">
+            <div 
+              className="rounded-[20px] border-[0.5px] border-black/[0.07] sol-input-shadow"
+              style={{ 
+                width: '420px',
+                backgroundColor: 'white',
+                fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif'
+              }}
+            >
+              {/* Tab Chips */}
+              <TabChipRow tabs={selectedTabChips} onRemove={handleTabRemove} />
+
+              {/* Input & buttons */}
+              <div
+                style={{
+                  paddingTop: selectedTabChips.length > 0 ? '8px' : '16px',
+                  paddingLeft: '16px',
+                  paddingRight: '14px',
+                  paddingBottom: '14px'
+                }}
+              >
+                <InputArea
+                  input={input}
+                  onInputChange={handleInputChange}
+                  onInputKeyDown={handleInputKeyDown}
+                  inputRef={inputRef}
+                  showDropdown={showDropdown}
+                  filteredTabs={filteredTabs}
+                  dropdownSelectedIndex={dropdownSelectedIndex}
+                  insertTabMention={insertTabMention as any}
+                  dropdownRef={dropdownRef}
+                  setDropdownSelectedIndex={setDropdownSelectedIndex}
+                  truncateTitle={truncateTitle}
+                  onClose={handleClose}
             onSubmit={handleSubmit}
-            onSelectedTabsChange={handleTabsChange}
-            initialSelectedTabs={selectedTabIds}
-            placeholder="Ask about this page or @mention other tabs..."
-            disabled={chatState.isStreaming}
-            showDebug={debugEnabled}
-          />
-          
+                  isStreaming={chatState.isStreaming}
+                />
           {chatState.error && (
-            <div className="mt-2 text-red-600 text-sm">
-              {chatState.error}
+                  <div className="mt-2 text-red-600 text-sm">{chatState.error}</div>
+                )}
+              </div>
             </div>
-          )}
-          
-          {chatState.isStreaming && (
-            <div className="mt-2 text-blue-600 text-sm flex items-center">
-              <div className="animate-spin w-3 h-3 border border-blue-600 border-t-transparent rounded-full mr-2"></div>
-              Sol is thinking...
-            </div>
-          )}
+          </div>
         </div>
-      </div>
+      ) : (
+        // Initial Mode - Just Input Container
+        <div 
+          className="rounded-[20px] border-[0.5px] border-black/[0.07] transition-all duration-300 ease-in-out transform sol-input-shadow-large"
+          style={{ 
+            width: '420px',
+            backgroundColor: 'white',
+            fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif'
+          }}
+        >
+          {/* Tab Chips */}
+          <TabChipRow tabs={selectedTabChips} onRemove={handleTabRemove} />
+
+          {/* Input Area */}
+          <div
+            style={{
+              paddingTop: selectedTabChips.length > 0 ? '8px' : '16px',
+              paddingLeft: '16px',
+              paddingRight: '14px',
+              paddingBottom: '14px'
+            }}
+          >
+            <InputArea
+              input={input}
+              onInputChange={handleInputChange}
+              onInputKeyDown={handleInputKeyDown}
+              inputRef={inputRef}
+              showDropdown={showDropdown}
+              filteredTabs={filteredTabs}
+              dropdownSelectedIndex={dropdownSelectedIndex}
+              insertTabMention={insertTabMention as any}
+              dropdownRef={dropdownRef}
+              setDropdownSelectedIndex={setDropdownSelectedIndex}
+              truncateTitle={truncateTitle}
+              onClose={handleClose}
+              onSubmit={handleSubmit}
+              isStreaming={chatState.isStreaming}
+            />
+            {chatState.error && (
+              <div className="mt-2 text-red-600 text-sm">{chatState.error}</div>
+            )}
+            </div>
+        </div>
+      )}
     </div>
   );
 };

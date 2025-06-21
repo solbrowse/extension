@@ -92,11 +92,6 @@ export class ScraperController {
   // -------------------------------------------
 
   private async performInitialScrape(): Promise<void> {
-    // Only scrape if Ask Bar is open or callback not set (for backward compatibility)
-    if (this.askBarOpenCallback && !this.askBarOpenCallback()) {
-      console.log('Sol ScraperController: Skipping initial scrape - Ask Bar not open');
-      return;
-    }
 
     if (!this.canScrape()) {
       console.log('Sol ScraperController: Skipping initial scrape - rate limited');
@@ -119,11 +114,7 @@ export class ScraperController {
   }
 
   private performDeltaScrape = debounce(async (changeType: 'mutation' | 'navigation' | 'manual') => {
-    // Only scrape if Ask Bar is open or callback not set (for backward compatibility)
-    if (this.askBarOpenCallback && !this.askBarOpenCallback()) {
-      console.log('Sol ScraperController: Skipping delta scrape - Ask Bar not open');
-      return;
-    }
+    // Removed Ask Bar visibility check for delta scrapes as well
 
     if (!this.canScrape()) {
       console.log('Sol ScraperController: Skipping delta scrape - rate limited');

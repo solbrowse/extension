@@ -5,19 +5,8 @@ import './index.css';
 import './AskBar.css';
 
 const App: React.FC = () => {
-  const handleClick = (e: React.MouseEvent) => {
-    // Only handle clicks on the container itself, not child elements
-    if (e.target === e.currentTarget) {
-      window.parent.postMessage({
-        type: 'sol-click-through',
-        x: e.clientX,
-        y: e.clientY
-      }, '*');
-    }
-  };
-
   return (
-    <div className="iframe-container" onClick={handleClick}>
+    <div className="iframe-container sol-ask-bar">
       <AskBar />
     </div>
   );
