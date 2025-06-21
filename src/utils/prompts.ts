@@ -26,7 +26,6 @@ export function createWebsiteContext(context: {
   return `<website>
   <url>${context.url}</url>
   <title>${context.title}</title>
-  ${context.excerpt ? `<excerpt>${context.excerpt}</excerpt>` : ''}
   ${context.metadata ? `<metadata>
     <extraction_method>${context.metadata.extractionMethod || 'unknown'}</extraction_method>
     <content_type>${context.metadata.isArticle ? 'article' : 'general'}</content_type>

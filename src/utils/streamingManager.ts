@@ -135,3 +135,66 @@ export function createStreamingSession(
 
   return { config, messages };
 } 
+
+// Enhanced multi-tab streaming session with better role separation
+export function createMultiTabStreamingSession(
+  conversationHistory: Message[],
+  userQuery: string,
+  settings: any,
+  systemPrompt: string,
+  tabContents: { url: string; title: string; content: string; metadata?: any }[]
+): { config: StreamingConfig; messages: any[] } {
+  // Build context message with proper role separation
+  const contextMessage = createContextMessage(tabContents);
+  
+  const messages = [
+    { role: 'system', content: systemPrompt },
+    { role: 'system', content: contextMessage }, // Website content as system context
+    ...conversationHistory.map(item => ({ role: item.type, content: item.content })),
+    { role: 'user', content: userQuery }
+  ];
+
+  const config: StreamingConfig = {
+    provider: settings.provider,
+    apiKey: settings.apiKey,
+    model: settings.model || 'default',
+    messages,
+    customEndpoint: settings.customEndpoint
+  };
+
+  return { config, messages };
+}
+
+// Create well-structured context message from multiple tabs
+function createContextMessage(tabContents: { url: string; title: string; content: string; metadata?: any }[]): string {
+  if (tabContents.length === 0) {
+    return "No content available from selected tabs.";
+  }
+
+  if (tabContents.length === 1) {
+    const tab = tabContents[0];
+    return `Context from ${tab.title}:\n\nURL: ${tab.url}\n\n${tab.content}`;
+  }
+
+  // Multiple tabs - create structured format
+  const contextSections = tabContents.map((tab, index) => {
+    const tabNumber = index + 1;
+    let section = `## Tab ${tabNumber}: ${tab.title}\n\nURL: ${tab.url}\n`;
+    
+    // Add metadata if available
+    if (tab.metadata) {
+      const meta = tab.metadata;
+      if (meta.siteName) section += `Site: ${meta.siteName}\n`;
+      if (meta.byline) section += `Author: ${meta.byline}\n`;
+      if (meta.publishedTime) section += `Published: ${meta.publishedTime}\n`;
+      if (meta.extractionMethod) section += `Extracted via: ${meta.extractionMethod}\n`;
+    }
+    
+    section += `\nContent:\n${tab.content}`;
+    
+    return section;
+  }).join('\n\n---\n\n');
+
+  const tabTitles = tabContents.map(tab => tab.title).join(', ');
+  return `Context from ${tabContents.length} tabs (${tabTitles}):\n\n${contextSections}`;
+} 

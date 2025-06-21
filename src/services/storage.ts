@@ -44,6 +44,8 @@ export interface StorageData {
   apiKey: string;
   model: string;
   customEndpoint?: string;
+  /** General debug flag enabling verbose logging across the extension */
+  debug: boolean;
   conversations: Conversation[];
 }
 
@@ -56,7 +58,7 @@ export const DEFAULT_STORAGE: Readonly<StorageData> = {
   features: {
     askBar: {
       isEnabled: true,
-      keybind: getDefaultKeybind("F"),
+      keybind: getDefaultKeybind("J"),
       position: 'top-right',
     },
     sideBar: {
@@ -69,6 +71,7 @@ export const DEFAULT_STORAGE: Readonly<StorageData> = {
   apiKey: '',
   model: 'gpt-4o-mini',
   customEndpoint: '',
+  debug: false,
   conversations: [],
 };
 

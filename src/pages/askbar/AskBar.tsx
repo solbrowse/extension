@@ -1,13 +1,15 @@
+import '@src/utils/logger';
 import React, { useState, useEffect, useRef, useLayoutEffect } from 'react';
 import { Message } from '@src/services/storage';
 import { ScrapedContent } from '@src/services/contentScraper';
 import {
   ConversationList,
-  ChatInput,
+  TabMentionInput,
   useCopyMessage,
-  useConversationStorage,
-  useStreamingChat
+  useConversationStorage
 } from '@src/components/index';
+import { useSimpleChat } from '@src/components/hooks/useSimpleChat';
+import { UiPortService } from '@src/services/messaging/uiPortService';
 
 interface AskBarProps {
   position?: string;
@@ -32,13 +34,15 @@ export const AskBar: React.FC<AskBarProps> = ({
   const [isVisible, setIsVisible] = useState(false);
   const [isClosing, setIsClosing] = useState(false);
   const [scrapedContent, setScrapedContent] = useState<ScrapedContent | null>(null);
-  const [pageContent, setPageContent] = useState<any>(null);
   const [pageUrl, setPageUrl] = useState<string>('');
   const [pageTitle, setPageTitle] = useState<string>('');
+  const [selectedTabIds, setSelectedTabIds] = useState<number[]>([]);
+  const [currentTabId, setCurrentTabId] = useState<number | null>(null);
 
   // Refs
   const askBarRef = useRef<HTMLDivElement>(null);
   const mountTimeRef = useRef<number>(Date.now());
+  const uiPortService = useRef<UiPortService>(UiPortService.getInstance());
 
   // Custom hooks
   const { copiedMessageIndex, handleCopyMessage } = useCopyMessage();
@@ -50,14 +54,31 @@ export const AskBar: React.FC<AskBarProps> = ({
     pageUrl
   );
 
-  const { isStreaming, handleSubmit: handleStreamingSubmit } = useStreamingChat({
-    conversationHistory,
-    setConversationHistory,
-    scrapedContent,
-    pageUrl,
-    pageTitle,
-    onConversationStart: () => setIsExpanded(true)
-  });
+  // Chat system with conversation history support
+  const [chatState, chatActions] = useSimpleChat(
+    (message: Message) => {
+      setConversationHistory(prev => [...prev, message]);
+    },
+    (delta: string) => {
+      // Update the last assistant message with streaming content
+      setConversationHistory(prev => {
+        const updated = [...prev];
+        const lastMessage = updated[updated.length - 1];
+        if (lastMessage && lastMessage.type === 'assistant') {
+          lastMessage.content += delta;
+        } else {
+          // Create new assistant message if none exists
+          updated.push({
+            type: 'assistant',
+            content: delta,
+            timestamp: Date.now()
+          });
+        }
+        return updated;
+      });
+    },
+    () => conversationHistory // Provide conversation history to the hook
+  );
 
   // Effects
   useEffect(() => {
@@ -65,255 +86,322 @@ export const AskBar: React.FC<AskBarProps> = ({
   }, []);
 
   useEffect(() => {
+    // Send conversation updates to parent content script for persistence
+    window.parent.postMessage({
+      type: 'sol-update-tab-conversation',
+      messages: conversationHistory,
+      conversationId: currentConversationId
+    }, '*');
+    
+    // Also call the optional callback if provided
     if (onConversationUpdate) {
       onConversationUpdate(conversationHistory, currentConversationId);
     }
   }, [conversationHistory, currentConversationId, onConversationUpdate]);
 
-  // Message handling
+  // Initialize current tab and get page content from current tab
   useEffect(() => {
-    let contentReceived = false;
-    const contentTimestamp = Date.now();
-    
-    const handleMessage = (event: MessageEvent) => {
-      if (event.data?.type === 'sol-page-content') {
-        const source = contentReceived ? 'DUPLICATE' : 'FIRST';
-        const timing = Date.now() - contentTimestamp;
-        
-        console.log(`Sol AskBar: [${source}] Received page content after ${timing}ms:`, {
-          url: event.data.url,
-          title: event.data.title,
-          contentLength: event.data.content?.text?.length || 0,
-          source: event.data.source || 'unknown'
-        });
-        
-        if (!contentReceived) {
-          setPageUrl(event.data.url || '');
-          setPageTitle(event.data.title || '');
-          setPageContent(event.data.content);
-          
-          if (event.data.content) {
-            console.log('Sol AskBar: [ACCEPTED] Setting scraped content with', event.data.content.text?.length || 0, 'characters');
-            setScrapedContent(event.data.content);
-            contentReceived = true;
-          }
-        } else {
-          console.log('Sol AskBar: [IGNORED] Content already received, ignoring duplicate');
-        }
-      } else if (event.data?.type === 'sol-init') {
-        console.log('Sol AskBar: Received init message:', event.data);
-        // Handle initialization if needed
-      }
-    };
-
-    window.addEventListener('message', handleMessage);
-    
-    // Request content from parent after iframe is ready
-    const contentRequestTimeout = setTimeout(() => {
-      if (!contentReceived) {
-        console.log('Sol AskBar: [PRIMARY] Requesting content from parent');
-        window.parent.postMessage({ type: 'sol-request-content' }, '*');
-      }
-    }, 100); // Much faster since this is now the primary method
-    
-    return () => {
-      window.removeEventListener('message', handleMessage);
-      clearTimeout(contentRequestTimeout);
-    };
-  }, []);
-
-  // Clear the fallback timeout when content is received
-  useEffect(() => {
-    if (scrapedContent && scrapedContent.text && scrapedContent.text.length > 0) {
-      console.log('Sol AskBar: Content received, no need for fallback');
-      return;
-    }
-    
-    // Only set default content after a delay if we still haven't received any
-    const timeoutId = setTimeout(() => {
-      // Check current state when timeout fires, not when it's set
-      setScrapedContent(current => {
-        if (current && current.text && current.text.length > 0) {
-          console.log('Sol AskBar: Content already exists, skipping fallback');
-          return current; // Don't overwrite existing content
-        }
-        
-        console.log('Sol AskBar: Setting fallback content after timeout');
-        return {
-          text: '',
-          markdown: '',
-          title: '',
-          excerpt: '',
-          metadata: {
-            hostname: 'pending',
-            url: 'pending',
-            title: '',
-            byline: null,
-            dir: null,
-            lang: null,
-            contentLength: 0,
-            wordCount: 0,
-            readingTimeMinutes: 0,
-            hasContent: false,
-            extractionMethod: 'waiting-for-parent',
-            shadowDOMCount: 0,
-            iframeCount: 0,
-            readabilityScore: 0,
-            contentDensity: 0,
-            isArticle: false,
-            publishedTime: null,
-            siteName: null,
-            fallbackUsed: false,
-            debugInfo: {
-              originalLength: 0,
-              cleanedLength: 0,
-              removedElements: [],
-              contentSelectors: ['waiting-for-parent'],
-              imageCount: 0,
-              linkCount: 0,
-              paragraphCount: 0,
-            }
+    const initializeCurrentTab = async () => {
+      try {
+        // Listen for current tab response from parent (content script)
+        const handleCurrentTabResponse = (event: MessageEvent) => {
+          if (event.data?.type === 'sol-current-tab-response' && event.data.tabId) {
+            console.log('Sol AskBar: Received current tab from parent:', event.data.tabId);
+            setCurrentTabId(event.data.tabId);
+            setPageUrl(event.data.url || window.location.href);
+            setPageTitle(event.data.title || document.title);
           }
         };
-      });
-    }, 1000); // Wait 1 second for parent content
 
-    return () => clearTimeout(timeoutId);
-  }, [scrapedContent]);
+        window.addEventListener('message', handleCurrentTabResponse);
+        
+        // Request current tab info from parent (content script)
+        window.parent.postMessage({ type: 'sol-get-current-tab' }, '*');
 
-  // Click-through functionality - expose bounds to parent for pointer events management
-  useLayoutEffect(() => {
-    const sendBounds = () => {
-      if (window.parent === window) return; // Not inside iframe
-      if (!askBarRef.current) return;
-      const rect = askBarRef.current.getBoundingClientRect();
-      window.parent.postMessage({
-        type: 'sol-askbar-bounds',
-        bounds: {
-          left: rect.left,
-          top: rect.top,
-          right: rect.right,
-          bottom: rect.bottom,
-        }
-      }, '*');
+        return () => {
+          window.removeEventListener('message', handleCurrentTabResponse);
+        };
+      } catch (error) {
+        console.error('Sol AskBar: Error initializing current tab:', error);
+      }
     };
 
-    // Send once after mount
-    sendBounds();
+    initializeCurrentTab();
+  }, []);
 
-    // Observe size changes
-    const resizeObserver = new ResizeObserver(() => sendBounds());
+  // Auto-select current tab when available and no tabs selected
+  useEffect(() => {
+    if (currentTabId && selectedTabIds.length === 0) {
+      setSelectedTabIds([currentTabId]);
+    }
+  }, [currentTabId]);
+
+  // Validate and clean up selected tabs (remove closed tabs)
+  useEffect(() => {
+    if (selectedTabIds.length === 0) return;
+
+    const validateSelectedTabs = async () => {
+      try {
+        // Get current live tabs
+        const liveTabs = await uiPortService.current.listTabs();
+        const liveTabIds = new Set(liveTabs.map(tab => tab.id));
+        
+        // Filter out closed tabs
+        const validTabIds = selectedTabIds.filter(id => liveTabIds.has(id));
+        
+        // Update selection if any tabs were closed
+        if (validTabIds.length !== selectedTabIds.length) {
+          console.log(`Sol AskBar: Removed ${selectedTabIds.length - validTabIds.length} closed tabs from selection`);
+          setSelectedTabIds(validTabIds);
+          
+          // Auto-select current tab if no tabs left
+          if (validTabIds.length === 0 && currentTabId) {
+            setSelectedTabIds([currentTabId]);
+          }
+        }
+      } catch (error) {
+        console.error('Sol AskBar: Failed to validate selected tabs:', error);
+      }
+    };
+
+    // Only validate when window gains focus (user might have closed tabs)
+    const handleFocus = () => {
+      validateSelectedTabs();
+    };
+
+    window.addEventListener('focus', handleFocus);
+    
+    // Initial validation (but not on every re-render)
+    const timer = setTimeout(validateSelectedTabs, 1000);
+    
+    return () => {
+      window.removeEventListener('focus', handleFocus);
+      clearTimeout(timer);
+    };
+  }, []); // Empty dependency array - only run once on mount
+
+  // Position and resize logic
+  useLayoutEffect(() => {
+    const sendBounds = () => {
+      if (askBarRef.current) {
+        const rect = askBarRef.current.getBoundingClientRect();
+        // Send bounds in the format expected by iframeInjector
+        window.parent.postMessage({
+          type: 'sol-askbar-bounds',
+          bounds: {
+            left: rect.left,
+            top: rect.top,
+            right: rect.right,
+            bottom: rect.bottom,
+            width: rect.width,
+            height: rect.height
+          }
+        }, '*');
+      }
+    };
+
+    const observer = new ResizeObserver(sendBounds);
     if (askBarRef.current) {
-      resizeObserver.observe(askBarRef.current);
+      observer.observe(askBarRef.current);
     }
 
-    // Listen for explicit requests from parent
     const messageHandler = (event: MessageEvent) => {
       if (event.data?.type === 'sol-request-askbar-bounds') {
         sendBounds();
+      } else if (event.data?.type === 'sol-init') {
+        console.log('Sol AskBar: Received init message:', event.data);
       }
     };
 
     window.addEventListener('message', messageHandler);
-    window.addEventListener('resize', sendBounds);
+    
+    // Send bounds immediately and after a short delay
+    sendBounds();
+    setTimeout(sendBounds, 100);
 
     return () => {
-      resizeObserver.disconnect();
+      observer.disconnect();
       window.removeEventListener('message', messageHandler);
-      window.removeEventListener('resize', sendBounds);
     };
-  }, []);
+  }, [isExpanded, conversationHistory.length]);
 
-  // Pointer events management for hover states
-  useEffect(() => {
-    if (window.parent === window) return; // Not inside iframe
-    const el = askBarRef.current;
-    if (!el) return;
-
+  // Mouse interaction handlers for pointer events
+  useLayoutEffect(() => {
     const handleEnter = () => {
-      try {
-        window.parent.postMessage({ type: 'sol-pointer-lock', enabled: true }, '*');
-      } catch (_) {
-        // Ignore cross-origin errors
-      }
+      // Enable pointer events when mouse enters AskBar
+      window.parent.postMessage({ 
+        type: 'sol-pointer-lock', 
+        enabled: true 
+      }, '*');
     };
 
     const handleLeave = () => {
-      try {
-        window.parent.postMessage({ type: 'sol-pointer-lock', enabled: false }, '*');
-      } catch (_) {
-        // Ignore cross-origin errors
-      }
+      // Disable pointer events when mouse leaves AskBar
+      window.parent.postMessage({ 
+        type: 'sol-pointer-lock', 
+        enabled: false 
+      }, '*');
     };
 
-    el.addEventListener('mouseenter', handleEnter);
-    el.addEventListener('mouseleave', handleLeave);
+    const askBar = askBarRef.current;
+    if (askBar) {
+      askBar.addEventListener('mouseenter', handleEnter);
+      askBar.addEventListener('mouseleave', handleLeave);
 
-    return () => {
-      el.removeEventListener('mouseenter', handleEnter);
-      el.removeEventListener('mouseleave', handleLeave);
-    };
+      return () => {
+        askBar.removeEventListener('mouseenter', handleEnter);
+        askBar.removeEventListener('mouseleave', handleLeave);
+      };
+    }
   }, []);
 
-  // Handlers
   const handleClose = () => {
+    if (Date.now() - mountTimeRef.current < 200) {
+      console.log('Sol AskBar: Ignoring close during mount animation');
+      return;
+    }
+
+    console.log('Sol AskBar: Close button clicked');
+    
+    // Ensure conversation is saved before closing
+    window.parent.postMessage({
+      type: 'sol-update-tab-conversation',
+      messages: conversationHistory,
+      conversationId: currentConversationId
+    }, '*');
+    
     setIsClosing(true);
     setIsVisible(false);
+    
+    // Send close message immediately, but with animation timing
     setTimeout(() => {
-      if (onUnmount) {
-        onUnmount();
-      }
-      if (window.parent !== window) {
-        try {
-          window.parent.postMessage({ type: 'sol-close-askbar' }, '*');
-        } catch (error) {
-          // Ignore cross-origin errors
-        }
-      }
-    }, 300);
+      window.parent.postMessage({ type: 'sol-close-askbar' }, '*');
+      onUnmount?.();
+    }, 200); // Shorter delay for better responsiveness
+  };
+
+  const handleTabsChange = (tabIds: number[]) => {
+    setSelectedTabIds(tabIds);
   };
 
   const handleSubmit = () => {
     if (!input.trim()) return;
-    handleStreamingSubmit(input);
+
+    // Create user message
+    const userMessage: Message = {
+      type: 'user',
+      content: input.trim(),
+      timestamp: Date.now()
+    };
+    setConversationHistory(prev => [...prev, userMessage]);
+
+    // Determine which tabs to include
+    let tabsToUse = selectedTabIds;
+    
+    // If no tabs selected but we have current tab, auto-include it
+    if (tabsToUse.length === 0 && currentTabId) {
+      tabsToUse = [currentTabId];
+      setSelectedTabIds([currentTabId]);
+    }
+
+    // Add empty assistant message placeholder for streaming
+    const assistantMessage: Message = {
+      type: 'assistant',
+      content: '',
+      timestamp: Date.now()
+    };
+    setConversationHistory(prev => [...prev, assistantMessage]);
+    
+    // Send message with conversation context
+    chatActions.sendMessage(input.trim(), tabsToUse, currentConversationId || 'new');
+
+    // Clear input and expand
     setInput('');
+    setIsExpanded(true);
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Escape') {
+      handleClose();
+    }
   };
 
   return (
-    <div className={`askbar-container ${position}`}>
-      <div 
-        ref={askBarRef}
-        className={`sol-ask-bar bg-white/80 backdrop-blur-md rounded-[20px] shadow-[0px_4px_16px_0px_rgba(0,0,0,0.10)] outline outline-1 outline-offset-[-0.5px] outline-black/[0.07] ${
-          isClosing ? 'animate-out' : isVisible ? 'opacity-100 scale-100 translate-y-0 transition-all duration-300 ease-out' : 'opacity-0 scale-95 -translate-y-2'
-        } ${isExpanded ? 'w-[560px] h-auto' : 'w-[450px] h-[60px] py-3.5 pl-5 pr-3.5'}`}
-        style={{ 
-          pointerEvents: 'auto'
-        }}
-      >
-        {/* Conversation History */}
-        <ConversationList
-          messages={conversationHistory}
-          isStreaming={isStreaming}
-          copiedMessageIndex={copiedMessageIndex}
-          onCopyMessage={handleCopyMessage}
-          mountTime={mountTimeRef.current}
-          className={`
-            transition-all duration-300 cubic-bezier(0.4, 0, 0.2, 1)
-            ${isExpanded ? 'max-h-[300px] pt-5 mb-0 pb-3.5 px-5 sol-conversation-divider' : 'max-h-0'}
-            sol-conversation
-          `}
-        />
+    <div 
+      ref={askBarRef}
+      className="fixed top-4 right-4 z-[2147483647] transition-all duration-300 ease-out"
+      style={{
+        opacity: isVisible ? 1 : 0,
+        transform: `scale(${isVisible && !isClosing ? 1 : 0.95})`,
+        maxWidth: '90vw',
+        maxHeight: '70vh',
+        minHeight: 'auto'
+      }}
+      onKeyDown={handleKeyDown}
+      tabIndex={0}
+    >
+      <div className="bg-white rounded-xl shadow-2xl border border-gray-200 overflow-visible" 
+           style={{ 
+             width: isExpanded ? '480px' : '360px',
+             minHeight: '60px'
+           }}>
+        {/* Header */}
+        <div className="bg-gradient-to-r from-blue-500 to-purple-600 text-white p-3 flex items-center justify-between">
+          <div className="flex items-center space-x-2">
+            <div className="w-6 h-6 bg-white bg-opacity-20 rounded-full flex items-center justify-center">
+              <span className="text-xs font-bold">S</span>
+            </div>
+            <span className="font-medium">Sol</span>
+            {selectedTabIds.length > 0 && (
+              <span className="text-xs bg-white bg-opacity-20 px-2 py-1 rounded-full">
+                {selectedTabIds.length} tab{selectedTabIds.length !== 1 ? 's' : ''}
+              </span>
+            )}
+          </div>
+          <button
+            onClick={handleClose}
+            className="w-6 h-6 hover:bg-white hover:bg-opacity-20 rounded-full flex items-center justify-center transition-colors"
+          >
+            <span className="text-sm">×</span>
+          </button>
+        </div>
 
-        {/* Input Area */}
-        <ChatInput
-          value={input}
-          onChange={setInput}
-          onSubmit={handleSubmit}
-          onClose={handleClose}
-          placeholder={isExpanded ? "Ask a follow-up..." : "Ask a question about this page..."}
-          isStreaming={isStreaming}
-          className={isExpanded ? 'py-3.5 pl-5 pr-3.5' : ''}
-        />
+        {/* Conversation */}
+        {isExpanded && conversationHistory.length > 0 && (
+          <div className="max-h-64 overflow-y-auto">
+            <ConversationList
+              messages={conversationHistory}
+              copiedMessageIndex={copiedMessageIndex}
+              onCopyMessage={handleCopyMessage}
+            />
+          </div>
+        )}
+
+        {/* Input */}
+        <div className="p-3 border-t border-gray-100">
+          <TabMentionInput
+            value={input}
+            onChange={setInput}
+            onSubmit={handleSubmit}
+            onSelectedTabsChange={handleTabsChange}
+            initialSelectedTabs={selectedTabIds}
+            placeholder="Ask about this page or @mention other tabs..."
+            disabled={chatState.isStreaming}
+          />
+          
+          {chatState.error && (
+            <div className="mt-2 text-red-600 text-sm">
+              {chatState.error}
+            </div>
+          )}
+          
+          {chatState.isStreaming && (
+            <div className="mt-2 text-blue-600 text-sm flex items-center">
+              <div className="animate-spin w-3 h-3 border border-blue-600 border-t-transparent rounded-full mr-2"></div>
+              Sol is thinking...
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );

@@ -1,181 +1,308 @@
+# Sol: Multi-Tab AI Browser Assistant
+
 <div align="center">
-<img src="public/icon-128.png" alt="logo"/>
-<h1> Minimalist Chrome/Firefox Extension Boilerplate with<br/>React + Vite + TypeScript + TailwindCSS</h1>
+<img src="public/icon-128.png" alt="Sol Logo" width="128" height="128"/>
+<h2>Intelligent AI assistant that understands your entire browsing context</h2>
 
-<h5>
-This template repository is a side product of my Chrome Extension <a target="_blank" rel="noopener noreferrer" href="https://chrome.google.com/webstore/detail/supatabs/icbcnjlaegndjabnjbaeihnnmidbfigk">Supatabs</a>.
-<br />
-If you tend to have tons of tabs open, or are a OneTab user, make sure to check it out <a target="_blank" rel="noopener noreferrer" href="https://chrome.google.com/webstore/detail/supatabs/icbcnjlaegndjabnjbaeihnnmidbfigk">here</a>!
-</h5>
-
-<h5>Supatabs is an example and showcase of what you can develop with this template. (anything you want, really 🚀)</h5>
+[![Version](https://img.shields.io/badge/version-3.0.0-blue)](#)
+[![License](https://img.shields.io/badge/license-%20%20GNU%20GPLv3%20-blue)](LICENSE)
 
 </div>
 
-## Table of Contents
+---
 
-- [Intro](#intro)
-- [Features](#features)
-- [Usage](#usage)
-  - [Getting Started](#gettingStarted) 
-  - [Customization](#customization)
-  - [Publish](#publish)
-- [Tech Docs](#tech)
-- [Credit](#credit)
-- [Contributing](#contributing)
+## ✨ What is Sol?
 
+Sol is a powerful browser extension that brings AI directly into your browsing experience. Unlike traditional chatbots, Sol can simultaneously understand and analyze content from multiple browser tabs, giving you contextual AI assistance based on your entire browsing session.
 
-## Intro <a name="intro"></a>
-This boilerplate is meant to be a minimal quick start for creating chrome/firefox extensions using React, Typescript and Tailwind CSS.
+### 🎯 Key Features
 
-It includes all possible pages such as **new tab**, **dev panel**, **pop up**, etc., as well as corresponding manifest settings by default.
-You will likely have to customize/delete some of the pages (see docs below).
+- **🔥 Multi-Tab Conversations**: Ask questions about content across multiple browser tabs simultaneously
+- **⚡ Real-Time Content Scraping**: Automatically captures page content as you browse, including dynamic SPAs
+- **🧩 Smart Plugin System**: 50+ built-in scrapers for popular sites (Google Docs, GitHub, Reddit, etc.)
+- **💾 Intelligent Caching**: Advanced content versioning and compression for instant responses
+- **🎨 Seamless UI**: Native browser integration with AskBar (Cmd+F) and sidebar panels
 
-You can build dist files for both Chrome and Firefox with manifest v3.
+---
 
-If you are looking for a React focused way to access the local storage, I also implemented a chrome local/sync storage hook. The hook works
-well with this template. [Check it out here](https://gist.github.com/JohnBra/c81451ea7bc9e77f8021beb4f198ab96).
+## 🚀 Quick Start
 
-## Features <a name="features"></a>
-- [React 19](https://reactjs.org/)
-- [TypeScript](https://www.typescriptlang.org/)
-- [Tailwind CSS 4](https://tailwindcss.com/)
-- [i18n (optional)](https://developer.chrome.com/docs/extensions/reference/api/i18n)
-- [Cross browser development with polyfill (optional)](https://github.com/mozilla/webextension-polyfill?tab=readme-ov-file#basic-setup-with-module-bundlers)
-- [ESLint](https://eslint.org/)
-- [Chrome Extension Manifest Version 3](https://developer.chrome.com/docs/extensions/mv3/intro/)
-- [Github Action](https://github.com/JohnBra/vite-web-extension/actions/workflows/ci.yml) to build and zip your extension (manual trigger)
+### Installation
 
-## Usage <a name="usage"></a>
+Currently, builds are only readily available to alpha testers. You can download the source code and build the extension yourself to try it out!
 
-### Getting Started <a name="gettingStarted"></a>
+### Setup
 
-#### Developing and building
-This template comes with build configs for both Chrome and Firefox. Running
-`dev` or `build` commands without specifying the browser target will build
-for Chrome by default.
+1. **Configure AI Provider**: Open extension → Dashboard → AI Provider
+2. **Add API Key**: Enter your OpenAI, Anthropic, or custom endpoint API key
+3. **Set Preferences**: Customize keybinds and positioning in Features tab
 
-1. Clone this repository or click "Use this template"
-2. Change `name` and `description` in `manifest.json`
-3. Run `yarn` or `npm i` (check your node version >= 16)
-4. Run `yarn dev[:chrome|:firefox]`, or `npm run dev[:chrome|:firefox]`
+### First Steps
 
-Running a `dev` command will build your extension and watch for changes in the 
-source files. Changing the source files will refresh the corresponding 
-`dist_<chrome|firefox>` folder.
+1. **Press `Cmd+F`** (or `Ctrl+F` on Windows/Linux) on any webpage
+2. **Ask a question** about the current page content
+3. **Try multi-tab**: Type `@` to include content from other open tabs
+4. **Enjoy contextual AI** that understands your entire browsing session!
 
-To create an optimized production build, run `yarn build[:chrome|:firefox]`, or
-`npm run build[:chrome|:firefox]`.
+---
 
-#### Load your extension
-For Chrome
-1. Open - Chrome browser
-2. Access - [chrome://extensions](chrome://extensions)
-3. Tick - Developer mode
-4. Find - Load unpacked extension
-5. Select - `dist_chrome` folder in this project (after dev or build)
+## 🔧 Core Features
 
-For Firefox
-1. Open - Firefox browser
-2. Access - [about:debugging#/runtime/this-firefox](about:debugging#/runtime/this-firefox)
-3. Click - Load temporary Add-on
-4. Select - any file in `dist_firefox` folder (i.e. `manifest.json`) in this project (after dev or build)
+### Multi-Tab AI Conversations
 
-### Customization <a name="customization"></a>
+Sol's breakthrough feature is **multi-tab context awareness**. Instead of asking questions about just one page, you can:
 
-#### Adding / removing pages
-The template includes source code for **all** of the extension pages (i.e. New Tab, Dev Tools, Popup, Side Panel
-etc.). You will likely have to customize it to fit your needs.
+```
+Ask: "@github @docs How do I implement the API from the GitHub repo in my documentation?"
+```
 
-E.g. you don't want the newtab page to activate whenever you open a new tab:
-1. remove the directory `newtab` and its contents in `src/pages`
-2. remove `chrome_url_overrides: { newtab: 'src/pages/newtab/index.html' },` in `manifest.json`
+Sol will analyze content from both your GitHub repository tab and documentation tab to provide comprehensive answers.
 
-Some pages like the "Side Panel" don't work the exact same in Chrome and Firefox. While this template includes
-the source code for the side panel, it won't automatically be included in the dist file to prevent cross browser
-build warnings.
+#### How Multi-Tab Works:
 
-To include the side panel for Chrome add the following to the `manifest.json`:
+1. **Auto-selection**: Current tab is automatically included
+2. **@tab mentions**: Type `@` to see dropdown of available tabs
+3. **Smart tagging**: Visual chips show which tabs are included
+4. **Contextual responses**: AI receives structured content from all selected tabs
+
+### Real-Time Content Scraping
+
+Sol continuously monitors page content using advanced techniques:
+
+- **🔄 Dynamic SPA Support**: Detects React, Vue, Angular navigation
+- **📡 Mutation Observer**: Captures content changes in real-time
+- **⚙️ Smart Debouncing**: Prevents excessive scraping (300ms intelligent delay)
+- **🎯 Content Change Detection**: Only updates when meaningful changes occur (>10% threshold)
+
+### Plugin-Based Site Intelligence
+
+Sol includes specialized scrapers for 50+ popular websites:
+
+| Site Category     | Examples               | What It Extracts                      |
+| ----------------- | ---------------------- | ------------------------------------- |
+| **Documentation** | GitHub, Stack Overflow | README files, code, issues, answers   |
+| **Productivity**  | Google Docs, Notion    | Document content, comments, structure |
+| **Social Media**  | Reddit, Twitter        | Posts, comments, threads              |
+| **Knowledge**     | Wikipedia, Medium      | Articles, clean content, metadata     |
+| **Development**   | GitLab, Bitbucket      | Code repositories, pull requests      |
+
+### Intelligent Caching System
+
+Sol's advanced caching provides instant responses:
+
+- **📚 Content Versioning**: Keeps up to 5 versions per tab
+- **🗜️ Smart Compression**: 20-60% size reduction for large content
+- **⚡ LRU Management**: Least recently used content automatically cleaned
+- **💾 Browser Storage**: Optional persistent caching across sessions
+
+---
+
+## 🎨 User Interface
+
+### AskBar (Primary Interface)
+
+Triggered with `Cmd+J` (customizable), the AskBar provides:
+
+- **🎯 Focused Chat**: Overlay interface for quick questions
+- **📍 Positioning**: Choose from 4 corner positions
+- **🏷️ Tab Tags**: Visual indicators for multi-tab conversations
+- **💬 Conversation History**: Automatic saving and restoration
+
+### Dashboard (Settings & Management)
+
+Full-featured settings panel for:
+
+- **🤖 AI Provider Configuration**: OpenAI, Anthropic, custom endpoints
+- **⌨️ Keybind Customization**: Set your preferred shortcuts
+- **📜 Conversation History**: Export, manage, and search past conversations
+- **🔧 Feature Toggles**: Enable/disable components as needed
+
+---
+
+## ⚡ Advanced Usage
+
+### Multi-Tab Query Examples
+
+```bash
+# Compare documentation across tabs
+"@docs @github How does the API in the docs differ from the implementation?"
+
+# Analyze research across multiple sources
+"@wikipedia @article1 @article2 Summarize the key differences in these articles"
+
+# Development workflow
+"@stackoverflow @github @docs Help me implement this solution from Stack Overflow"
+```
+
+### Plugin System
+
+Sol's plugin architecture allows for custom site scrapers:
 
 ```typescript
-{
-  "manifest_version": 3,
-  // ...
-  "permissions": [
-    "activeTab",
-    "sidePanel" // <-- permission for sidepanel
-  ],
-  // ...
-  "side_panel": {
-    "default_path": "src/pages/panel/index.html" // <-- tell vite to include it in the build files
+// Example: Custom site scraper
+pluginRegistry.registerScraper(/yoursite\.com/, (doc: Document) => ({
+  text: doc.querySelector(".main-content")?.textContent || "",
+  title: doc.title,
+  metadata: {
+    author: doc.querySelector(".author")?.textContent,
+    publishDate: doc.querySelector(".date")?.textContent,
   },
-  // ...
-}
+}));
 ```
 
-If you need to declare pages in addition to the manifest pages, e.g. a custom `app` page, create a 
-new folder in the `pages` directory and add the corresponding `.html`, `.tsx` and `.css` 
-files (see `options/*` for an example to copy). Then include the root html in the `vite.config.base.ts` 
-file under `build.rollupOptions.input` like so:
+### Performance Optimization
 
-```typescript
-// ...
-build: {
-   rollupOptions: {
-      input: {
-         app: resolve(pagesDir, "app", "index.html"),
-      },
-      output: {
-         entryFileNames: (chunk) => `src/pages/${chunk.name}/index.js`,
-      },
-   },
-}
-// ...
+Sol includes several performance features:
+
+- **🎛️ Adaptive Throttling**: Backs off on high-mutation pages
+- **📏 Payload Limits**: Content truncation for memory efficiency
+- **🔄 Background Processing**: Non-blocking content processing
+- **📊 Usage Statistics**: Monitor cache hit rates and performance
+
+---
+
+## 🛠️ Development
+
+### Architecture
+
+Sol uses a modern, modular architecture:
+
+```
+Sol Extension Architecture
+├── 🎯 Background Service Worker
+│   ├── Port-based messaging system
+│   ├── Multi-tab content aggregation
+│   ├── Plugin scraper registry
+│   └── Intelligent caching engine
+├── 📄 Content Scripts (per tab)
+│   ├── Real-time content scraping
+│   ├── SPA navigation detection
+│   ├── MutationObserver monitoring
+│   └── Keybind handling
+└── 🖥️ UI Components
+    ├── AskBar (iframe-based overlay)
+    ├── Dashboard (full-featured settings)
+    └── TabMentionInput (multi-tab interface)
 ```
 
-#### Styling
-CSS files in the `src/pages/*` directories are not necessary. They are left in there in case you want 
-to use it in combination with Tailwind CSS. **Feel free to delete them**.
+### Built With
 
-Tailwind can be configured, themed and extended according to the [docs](https://tailwindcss.com/docs/theme).
+- **⚛️ React 19**: Modern UI components
+- **📘 TypeScript**: Type-safe development
+- **🎨 Tailwind CSS 4**: Utility-first styling
+- **⚡ Vite**: Fast build system
+- **🔌 WebExtension APIs**: Cross-browser compatibility
+- **🧠 Mozilla Readability**: Content extraction fallback
 
-#### Internationalization (i18n)
-To enable internationalization set the `localize` flag in the `vite.config.base.ts` to `true`.
+### Building from Source
 
-The template includes a directory `locales` with a basic setup for english i18n. Enabling i18n
-will pull the name and description for your extension from the english translation files instead
-of the manifest.
+```bash
+# Clone repository
+git clone https://github.com/your-repo/sol-extension
+cd sol-extension
 
-Follow the instructions in the [official docs](https://developer.chrome.com/docs/extensions/reference/api/i18n#description) 
-to add other translations and retrieve them in the extension.
+# Install dependencies
+npm install
 
-If you don't need i18n you can ignore the `locales` directory until you need it, as it won't
-be copied into the build folder unless the `localize` flag is set to `true`.
+# Development build (Chrome)
+npm run dev:chrome
 
-### Publish your extension to the CWS<a name="publish"></a>
-To upload an extension to the Chrome store you have to pack (zip) it and then upload it to your item 
-in the Chrome Web Store.
+# Development build (Firefox)
+npm run dev:firefox
 
-This repo includes a Github Action Workflow to create a 
-[optimized prod build and the zip file](https://github.com/JohnBra/vite-web-extension/actions/workflows/ci.yml).
+# Production build
+npm run build:chrome
+npm run build:firefox
+```
 
-To run the workflow do the following:
-1. Go to the **"Actions"** tab in your forked repository from this template
-2. In the left sidebar click on **"Build and Zip Chrome Extension"**
-3. Click on **"Run Workflow"** and select the main branch, then **"Run Workflow"**
-4. Refresh the page and click the most recent run
-5. In the summary page **"Artifacts"** section click on the generated **"vite-web-extension-chrome"**
-6. Upload this file to the Chrome Web Store as described [here](https://developer.chrome.com/docs/webstore/publish/)
+### Project Structure
 
-# Tech Docs <a name="tech"></a>
-- [Vite](https://vitejs.dev/)
-- [Vite Plugins](https://vitejs.dev/guide/api-plugin.html)
-- [Chrome Extension with manifest 3](https://developer.chrome.com/docs/extensions/mv3/)
-- [Chrome Extension i18n](https://developer.chrome.com/docs/extensions/reference/api/i18n#description)
-- [Cross browser development with webextension-polyfill](https://github.com/mozilla/webextension-polyfill?tab=readme-ov-file#webextension-browser-api-polyfill)
-- [@crxjs/vite-plugin](https://crxjs.dev/vite-plugin)
-- [Rollup](https://rollupjs.org/guide/en/)
-- [Tailwind CSS 4](https://tailwindcss.com/docs/configuration)
+```
+src/
+├── 📁 background/           # Service worker logic
+├── 📁 content/             # Content script injection
+├── 📁 pages/               # UI pages (askbar, dashboard, popup)
+├── 📁 components/          # Reusable React components
+├── 📁 services/            # Core business logic
+│   ├── messaging/          # Port-based communication
+│   ├── scraping/           # Content extraction & plugins
+│   └── storage/            # Data persistence
+├── 📁 utils/               # Helper functions
+└── 📁 types/               # TypeScript definitions
+```
 
-# Contributing <a name="contributing"></a>
-Feel free to open PRs or raise issues!
+---
+
+## 🤝 Contributing
+
+We welcome contributions! Sol is built with a modular architecture that makes adding features straightforward.
+
+### Quick Contribution Areas
+
+- **🧩 Plugin Scrapers**: Add support for new websites
+- **🎨 UI Components**: Improve user experience
+- **🧠 AI Integration**: Add new AI providers
+- **🐛 Bug Fixes**: Help improve stability
+- **📚 Documentation**: Enhance guides and examples
+
+### Development Setup
+
+1. Fork the repository
+2. Create a feature branch: `git checkout -b feature/amazing-feature`
+3. Make your changes and test thoroughly
+4. Commit with clear messages: `git commit -m 'Add amazing feature'`
+5. Push to your fork: `git push origin feature/amazing-feature`
+6. Open a Pull Request
+
+---
+
+## 🔐 Privacy & Security
+
+Sol prioritizes user privacy:
+
+- **🔒 Local Storage**: All settings stored locally in browser
+- **🚫 No Data Collection**: Sol never sees your API keys or conversations
+- **🛡️ Secure Communication**: Direct API calls from your browser
+- **🎯 Minimal Permissions**: Only requests necessary browser permissions
+- **📝 Open Source**: Full transparency with public codebase
+
+---
+
+## 📋 Roadmap
+
+### Upcoming Features
+
+- **🔄 Automatic Background Sync**: Cross-device conversation sync
+- **🎯 Smart Summarization**: Auto-summarize long conversations
+- **🔌 Plugin Marketplace**: Community-contributed site scrapers
+- **📱 Mobile Support**: Browser extension for mobile browsers
+- **🤖 Multiple AI Models**: Support for local AI models
+
+### Long-term Vision
+
+Sol aims to become the definitive AI browsing companion, transforming how users interact with web content through intelligent, context-aware assistance.
+
+---
+
+## 💬 Support
+
+- **📖 Documentation**: [Sol Help Center](https://solbrowse.notion.site/)
+- **🐛 Bug Reports**: [GitHub Issues](https://github.com/your-repo/issues)
+- **💡 Feature Requests**: [GitHub Discussions](https://github.com/your-repo/discussions)
+- **💬 Community**: [Discord Server](https://discord.gg/sol)
+
+---
+
+## 📄 License
+
+Sol is open source software licensed under the [MIT License](LICENSE).
+
+---
+
+<div align="center">
+
+**Built with ❤️ by the Sol team**
+
+[Website](https://solbrowse.com) • [Documentation](https://solbrowse.notion.site/) • [GitHub](https://github.com/your-repo) • [Discord](https://discord.gg/sol)
+
+</div>

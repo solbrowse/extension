@@ -1,4 +1,6 @@
 import { Readability } from '@mozilla/readability';
+import { pluginScraperRegistry, getScraperFor, setDefaultScraper } from './scraping/pluginScraperRegistry';
+import { createDefaultReadabilityScraper, createFallbackScraper } from './scraping/defaultScraper';
 import TurndownService from 'turndown';
 
 export interface ScrapedContent {
@@ -71,8 +73,20 @@ export class ContentScraperService {
   public static getInstance(): ContentScraperService {
     if (!ContentScraperService.instance) {
       ContentScraperService.instance = new ContentScraperService();
+      ContentScraperService.instance.initializePluginSystem();
     }
     return ContentScraperService.instance;
+  }
+
+  private initializePluginSystem(): void {
+    try {
+      // Set default scraper to use Readability with fallback
+      setDefaultScraper(createDefaultReadabilityScraper());
+      console.log('Sol ContentScrapingService: Plugin system initialized with built-in scrapers');
+    } catch (error) {
+      console.warn('Sol ContentScrapingService: Failed to initialize plugin system, using fallback:', error);
+      setDefaultScraper(createFallbackScraper());
+    }
   }
 
   private extractMetadata(doc: Document): {
@@ -310,10 +324,20 @@ export class ContentScraperService {
       extensionElements.forEach(el => el.remove());
       const originalLength = doc.body.innerHTML?.length || 0;
 
-      // Extract metadata
+      // NEW: Try plugin-based scraping first
+      try {
+        const scraper = getScraperFor(window.location.href);
+        const result = scraper(doc, window.location.href);
+        console.log(`Sol ContentScraper: Used plugin scraper, extracted ${result.text.length} chars`);
+        return result;
+      } catch (pluginError) {
+        console.warn('Sol ContentScraper: Plugin scraper failed, falling back to Readability:', pluginError);
+      }
+
+      // Extract metadata for fallback
       const metadata = this.extractMetadata(doc);
 
-      // Try Mozilla Readability first  
+      // Fallback to Mozilla Readability  
       const reader = new Readability(doc, {
         charThreshold: 500, // Higher threshold for better article detection
         debug: false,
@@ -388,6 +412,10 @@ export class ContentScraperService {
       console.error('Sol: Content extraction failed:', error);
       return this.createFallbackExtraction();
     }
+  }
+
+  public getPluginRegistry() {
+    return pluginScraperRegistry;
   }
 
   public getDebugInfo(scrapedContent: ScrapedContent): any {

@@ -313,6 +313,26 @@ export default function Dashboard() {
                 </div>
               </div>
             </div>
+
+            {/* Debug Mode */}
+            <div className="bg-white rounded-xl border border-gray-200/60 p-6 shadow-sm">
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h2 className="text-lg font-semibold text-gray-900 mb-1">Debug Mode</h2>
+                    <p className="text-sm text-gray-600">Enable verbose logging for troubleshooting</p>
+                  </div>
+                  <Switch
+                    id="debug-toggle"
+                    checked={settings.debug}
+                    onCheckedChange={(value) => updateSetting('debug', value)}
+                  />
+                </div>
+                {settings.debug && (
+                  <p className="text-xs text-gray-500">Debug logs will now appear in the browser console.</p>
+                )}
+              </div>
+            </div>
           </TabsContent>
 
           <TabsContent value="features" className="space-y-6">
@@ -344,7 +364,7 @@ export default function Dashboard() {
                               id="shortcut"
                               value={settings.features.askBar.keybind}
                               onChange={(e) => updateFeatureConfig('askBar', 'keybind', e.target.value)}
-                              placeholder="e.g., Cmd+J"
+                              placeholder="e.g., Cmd/Ctrl+F"
                               className="text-sm"
                             />
                           </div>

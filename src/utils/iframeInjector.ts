@@ -44,43 +44,19 @@ export class IframeInjector {
     // Set up pointer events management
     const pointerEventsManager = this.createPointerEventsManager(iframe);
     
-    // Pre-scrape content to avoid including iframe in content
-    const contentScraper = ContentScraperService.getInstance();
+    // Set up iframe load handler
+    iframe.onload = () => {
+      this.initializeIframe(iframe, {
+        existingConversation,
+        position,
+        url: window.location.href,
+        title: document.title
+      });
+    };
     
-    try {
-      const scrapedContent = await contentScraper.scrapePageContent();
-      console.log('Sol: Scraped content BEFORE iframe injection:', scrapedContent.text.length, 'chars');
-      
-      // Set up iframe load handler
-      iframe.onload = () => {
-        this.initializeIframe(iframe, {
-          existingConversation,
-          position,
-          scrapedContent: null, // Don't send content here - it gets lost
-          url: window.location.href,
-          title: document.title
-        });
-      };
-      
-      // Inject iframe after scraping
-      document.body.appendChild(iframe);
-      
-    } catch (error) {
-      console.error('Sol: Content scraping failed:', error);
-      
-      // Still inject iframe even if scraping fails
-      iframe.onload = () => {
-        this.initializeIframe(iframe, {
-          existingConversation,
-          position,
-          scrapedContent: null, // Don't send content here - timing issue
-          url: window.location.href,
-          title: document.title
-        });
-      };
-      
-      document.body.appendChild(iframe);
-    }
+    // Inject iframe
+    document.body.appendChild(iframe);
+    console.log('Sol Content Script: Ask Bar iframe injected');
     
     const instance: IframeInstance = {
       iframe,
@@ -118,13 +94,14 @@ export class IframeInjector {
       background: transparent !important;
       z-index: 2147483647 !important;
       pointer-events: none !important;
-      overflow: hidden !important;
+      overflow: visible !important;
     `;
     iframe.setAttribute('allowtransparency', 'true');
   }
   
   private static createPointerEventsManager(iframe: HTMLIFrameElement) {
     let isPointerEventsEnabled = false;
+    let askBarBounds: any = null;
     
     const togglePointerEvents = (enable: boolean) => {
       if (enable !== isPointerEventsEnabled) {
@@ -134,14 +111,16 @@ export class IframeInjector {
     };
     
     const handleMouseMove = (e: MouseEvent) => {
-      const askBarBounds = (iframe as any).__askBarBounds;
       if (!askBarBounds) return;
       
-      const padding = 20;
+      // More generous padding for dropdowns and expanded UI
+      const padding = 50;
+      
+      // Check if mouse is near the AskBar area (including potential dropdowns)
       const isNearAskBar = e.clientX >= askBarBounds.left - padding &&
                           e.clientX <= askBarBounds.right + padding &&
                           e.clientY >= askBarBounds.top - padding &&
-                          e.clientY <= askBarBounds.bottom + padding;
+                          e.clientY <= askBarBounds.bottom + 300; // Extra space below for dropdowns
       
       togglePointerEvents(isNearAskBar);
     };
@@ -154,7 +133,7 @@ export class IframeInjector {
     
     const handleBoundsMessage = (event: MessageEvent) => {
       if (event.data?.type === 'sol-askbar-bounds') {
-        (iframe as any).__askBarBounds = event.data.bounds;
+        askBarBounds = event.data.bounds;
       }
     };
     
@@ -175,14 +154,13 @@ export class IframeInjector {
   private static initializeIframe(iframe: HTMLIFrameElement, data: {
     existingConversation: any;
     position: string;
-    scrapedContent: any;
     url: string;
     title: string;
   }): void {
     try {
       console.log('Sol: Initializing iframe with content:', {
-        hasScrapedContent: !!data.scrapedContent,
-        contentLength: data.scrapedContent?.text?.length || 0,
+        hasScrapedContent: false,
+        contentLength: 0,
         url: data.url,
         title: data.title
       });
@@ -194,8 +172,7 @@ export class IframeInjector {
         position: data.position
       }, '*');
 
-      // Content sending removed - timing issue causes messages to be lost
-      // AskBar will request content via sol-request-content message instead
+      // Content now comes via UiPortService, not iframe messages
       console.log('Sol: Iframe initialized, content will be sent on request');
 
       // Request AskBar bounds

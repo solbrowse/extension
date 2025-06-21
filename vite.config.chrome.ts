@@ -15,7 +15,7 @@ const chromeManifest = {
   content_scripts: [
     {
       matches: ["<all_urls>"],
-      js: ["src/scripts/content/index.tsx"],
+      js: ["src/scripts/content/index.ts"],
       all_frames: false
     }
   ],

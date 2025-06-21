@@ -35,7 +35,7 @@
         "<all_urls>"
       ],
       "js": [
-        "src/scripts/content/index.tsx"
+        "src/scripts/content/index.ts"
       ],
       "all_frames": false,
       "run_at": "document_idle"
