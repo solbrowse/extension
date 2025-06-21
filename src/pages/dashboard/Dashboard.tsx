@@ -343,7 +343,7 @@ export default function Dashboard() {
                   <h2 className="text-lg font-semibold text-gray-900 mb-1">Features</h2>
                   <p className="text-sm text-gray-600">Configure Sol features</p>
                 </div>
-                
+
                 <div className="space-y-6">
                   <div className="space-y-4">
                     <div className="flex items-center justify-between">
@@ -354,7 +354,7 @@ export default function Dashboard() {
                         onCheckedChange={() => toggleFeature('askBar')}
                       />
                     </div>
-                    
+
                     {settings.features.askBar.isEnabled && (
                       <div className="space-y-4 pl-4 border-l-2 border-gray-100">
                         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
@@ -370,8 +370,8 @@ export default function Dashboard() {
                           </div>
                           <div className="space-y-2">
                             <Label htmlFor="position">Position</Label>
-                            <Select 
-                              value={settings.features.askBar.position} 
+                            <Select
+                              value={settings.features.askBar.position}
                               onValueChange={(value) => updateFeatureConfig('askBar', 'position', value)}
                             >
                               <SelectTrigger>

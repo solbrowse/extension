@@ -10,6 +10,7 @@ import {
 } from '@src/components/index';
 import { useSimpleChat } from '@src/components/hooks/useSimpleChat';
 import { UiPortService } from '@src/services/messaging/uiPortService';
+import { get } from '@src/services/storage';
 
 interface AskBarProps {
   position?: string;
@@ -38,6 +39,7 @@ export const AskBar: React.FC<AskBarProps> = ({
   const [pageTitle, setPageTitle] = useState<string>('');
   const [selectedTabIds, setSelectedTabIds] = useState<number[]>([]);
   const [currentTabId, setCurrentTabId] = useState<number | null>(null);
+  const [debugEnabled, setDebugEnabled] = useState<boolean>(false);
 
   // Refs
   const askBarRef = useRef<HTMLDivElement>(null);
@@ -83,6 +85,14 @@ export const AskBar: React.FC<AskBarProps> = ({
   // Effects
   useEffect(() => {
     setIsVisible(true);
+
+    // Load debug flag from storage once
+    (async () => {
+      try {
+        const settings = await get();
+        setDebugEnabled(!!settings.debug);
+      } catch {}
+    })();
   }, []);
 
   useEffect(() => {
@@ -326,6 +336,20 @@ export const AskBar: React.FC<AskBarProps> = ({
     }
   };
 
+  // Listen for context response to copy to clipboard
+  useEffect(() => {
+    const handler = (event: MessageEvent) => {
+      if (event.data?.type === 'sol-context-response') {
+        const text = JSON.stringify(event.data.context, null, 2);
+        navigator.clipboard.writeText(text).then(() => {
+          console.log('Sol AskBar: Context copied to clipboard');
+        });
+      }
+    };
+    window.addEventListener('message', handler);
+    return () => window.removeEventListener('message', handler);
+  }, []);
+
   return (
     <div 
       ref={askBarRef}
@@ -387,6 +411,7 @@ export const AskBar: React.FC<AskBarProps> = ({
             initialSelectedTabs={selectedTabIds}
             placeholder="Ask about this page or @mention other tabs..."
             disabled={chatState.isStreaming}
+            showDebug={debugEnabled}
           />
           
           {chatState.error && (

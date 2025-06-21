@@ -3,6 +3,13 @@ import { pluginScraperRegistry, getScraperFor, setDefaultScraper } from './scrap
 import { createDefaultReadabilityScraper, createFallbackScraper } from './scraping/defaultScraper';
 import TurndownService from 'turndown';
 
+export interface TranscriptCue {
+  text: string;
+  duration: number; // seconds
+  offset: number; // seconds from start
+  lang?: string;
+}
+
 export interface ScrapedContent {
   text: string;
   markdown: string;
@@ -38,6 +45,8 @@ export interface ScrapedContent {
       paragraphCount: number;
     };
   };
+  comments?: string[];
+  transcriptCues?: TranscriptCue[];
 }
 
 export class ContentScraperService {
@@ -287,7 +296,9 @@ export class ContentScraperService {
           linkCount: bestElements.reduce((sum, el) => sum + el.querySelectorAll('a').length, 0),
           paragraphCount: bestElements.reduce((sum, el) => sum + el.querySelectorAll('p').length, 0),
         }
-      }
+      },
+      comments: [],
+      transcriptCues: []
     };
   }
 
@@ -327,7 +338,7 @@ export class ContentScraperService {
       // NEW: Try plugin-based scraping first
       try {
         const scraper = getScraperFor(window.location.href);
-        const result = scraper(doc, window.location.href);
+        const result = await Promise.resolve(scraper(doc, window.location.href));
         console.log(`Sol ContentScraper: Used plugin scraper, extracted ${result.text.length} chars`);
         return result;
       } catch (pluginError) {
@@ -400,7 +411,9 @@ export class ContentScraperService {
               linkCount: doc.querySelectorAll('a').length,
               paragraphCount: doc.querySelectorAll('p').length,
             }
-          }
+          },
+          comments: [],
+          transcriptCues: []
         };
       }
 

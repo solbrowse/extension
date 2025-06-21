@@ -17,6 +17,7 @@ interface TabMentionInputProps {
   placeholder?: string;
   disabled?: boolean;
   className?: string;
+  showDebug?: boolean;
 }
 
 export const TabMentionInput: React.FC<TabMentionInputProps> = ({
@@ -27,7 +28,8 @@ export const TabMentionInput: React.FC<TabMentionInputProps> = ({
   initialSelectedTabs = [],
   placeholder = "Ask about this page or type @ to include other tabs...",
   disabled = false,
-  className = ''
+  className = '',
+  showDebug = false
 }) => {
   const [showDropdown, setShowDropdown] = useState(false);
   const [availableTabs, setAvailableTabs] = useState<TabInfo[]>([]);
@@ -320,8 +322,21 @@ export const TabMentionInput: React.FC<TabMentionInputProps> = ({
       {/* Selected tabs display (mentioned + auto-selected) */}
       {allSelectedTabs.length > 0 && (
         <div className="mentioned-tabs mb-3 p-3 bg-blue-50 rounded-lg border border-blue-200">
-          <div className="text-xs text-blue-700 mb-2 font-medium">
-            Including content from {allSelectedTabs.length} tab{allSelectedTabs.length > 1 ? 's' : ''}:
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-xs text-blue-700 font-medium">
+              Including content from {allSelectedTabs.length} tab{allSelectedTabs.length > 1 ? 's' : ''}:
+            </span>
+            {showDebug && (
+              <button
+                className="text-xs text-gray-500 hover:text-gray-700 px-2 py-1 border border-gray-300 rounded"
+                onClick={() => {
+                  window.parent.postMessage({ type: 'sol-copy-context' }, '*');
+                }}
+                title="Copy current tab context"
+              >
+                Copy context
+              </button>
+            )}
           </div>
           <div className="flex flex-wrap gap-2">
             {allSelectedTabs.map((tab, index) => {

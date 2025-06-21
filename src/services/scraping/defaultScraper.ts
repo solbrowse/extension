@@ -20,8 +20,9 @@ export const createDefaultReadabilityScraper = (): PluginScraper => {
       
       if (article) {
         // Successfully parsed with Readability
-        const text = article.textContent || '';
+        const text = article.textContent ?? '';
         const title = article.title || document.title;
+        const articleContent = article.content || '';
         
         return {
           text,
@@ -37,24 +38,24 @@ export const createDefaultReadabilityScraper = (): PluginScraper => {
             wordCount: text.split(/\s+/).length,
             contentLength: text.length,
             readingTimeMinutes: Math.ceil(text.split(/\s+/).length / 200),
-            byline: article.byline,
-            dir: article.dir,
-            lang: article.lang,
+            byline: article.byline ?? null,
+            dir: article.dir ?? null,
+            lang: article.lang ?? null,
             shadowDOMCount: 0,
             iframeCount: document.querySelectorAll('iframe').length,
             readabilityScore: 0.7, // Readability should be decent
             contentDensity: 0.7,
             isArticle: true,
             publishedTime: null,
-            siteName: article.siteName,
+            siteName: article.siteName ?? null,
             fallbackUsed: false,
             debugInfo: {
               originalLength: document.body.textContent?.length || 0,
               cleanedLength: text.length,
               removedElements: [],
               contentSelectors: ['readability-parsed'],
-              imageCount: (article.content.match(/<img/g) || []).length,
-              linkCount: (article.content.match(/<a/g) || []).length,
+              imageCount: (articleContent.match(/<img/g) || []).length,
+              linkCount: (articleContent.match(/<a/g) || []).length,
               paragraphCount: text.split('\n\n').length,
             }
           }
@@ -62,12 +63,12 @@ export const createDefaultReadabilityScraper = (): PluginScraper => {
       } else {
         // Readability failed, fallback to basic extraction
         console.warn('Sol DefaultScraper: Readability failed, using fallback extraction');
-        return createFallbackScraper()(document, url);
+        return createFallbackScraper()(document, url) as ScrapedContent;
       }
       
     } catch (error) {
       console.warn('Sol DefaultScraper: Readability not available or failed, using fallback:', error);
-      return createFallbackScraper()(document, url);
+      return createFallbackScraper()(document, url) as ScrapedContent;
     }
   };
 };

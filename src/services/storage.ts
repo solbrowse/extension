@@ -58,7 +58,7 @@ export const DEFAULT_STORAGE: Readonly<StorageData> = {
   features: {
     askBar: {
       isEnabled: true,
-      keybind: getDefaultKeybind("J"),
+      keybind: getDefaultKeybind("F"),
       position: 'top-right',
     },
     sideBar: {

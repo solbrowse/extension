@@ -6,6 +6,12 @@ body {
   overflow: hidden;
 }
 
+/* Ensure transparency survives aggressive dark-mode user styles */
+html,
+#root {
+  background: transparent !important;
+}
+
 #root {
   width: 100vw;
   height: 100vh;

@@ -92,6 +92,7 @@ export class IframeInjector {
       height: 100vh !important;
       border: none !important;
       background: transparent !important;
+      background-color: transparent !important;
       z-index: 2147483647 !important;
       pointer-events: none !important;
       overflow: visible !important;
