@@ -311,6 +311,17 @@ export class ContentScraperService {
         });
       }
 
+      // YouTube-specific waiting to prevent constant re-scraping with visual impact
+      if (window.location.hostname.includes('youtube.com')) {
+        console.log('Sol ContentScraper: YouTube detected, waiting for page stability...');
+        
+        // Wait for YouTube page to be fully ready
+        await this.waitForYouTubePageReady();
+        
+        // Additional settling time to prevent constant UI interactions
+        await new Promise(resolve => setTimeout(resolve, 1000));
+      }
+
       // Remove iframe content BEFORE cloning to prevent iframe content inclusion
       // Temporarily hide our extension iframe to exclude it from content extraction
       const solIframe = document.querySelector('#sol-askbar-container') as HTMLElement;
@@ -425,6 +436,51 @@ export class ContentScraperService {
       console.error('Sol: Content extraction failed:', error);
       return this.createFallbackExtraction();
     }
+  }
+
+  /**
+   * Wait for YouTube page to be fully ready before scraping
+   * This prevents constant re-scraping that causes visual impact
+   */
+  private async waitForYouTubePageReady(): Promise<void> {
+    const maxWaitTime = 10000; // 10 seconds max
+    const startTime = Date.now();
+
+    // Wait for basic page readiness
+    while (document.readyState !== 'complete' && (Date.now() - startTime) < maxWaitTime) {
+      await new Promise(resolve => setTimeout(resolve, 100));
+    }
+
+    // Wait for YouTube-specific elements that indicate the page is ready
+    const requiredSelectors = [
+      'h1.ytd-watch-metadata', // Video title
+      '#top-level-buttons-computed', // More actions button area
+      '.html5-video-player' // Video player
+    ];
+
+    for (const selector of requiredSelectors) {
+      await this.waitForElement(selector, 3000); // 3 seconds per element
+    }
+
+    console.log('Sol ContentScraper: YouTube page ready for scraping');
+  }
+
+  /**
+   * Wait for a specific element to appear in the DOM
+   */
+  private async waitForElement(selector: string, timeout: number = 5000): Promise<Element | null> {
+    const startTime = Date.now();
+    
+    while (Date.now() - startTime < timeout) {
+      const element = document.querySelector(selector);
+      if (element) {
+        return element;
+      }
+      await new Promise(resolve => setTimeout(resolve, 100));
+    }
+    
+    console.warn(`Sol ContentScraper: Element ${selector} not found within ${timeout}ms`);
+    return null;
   }
 
   public getPluginRegistry() {

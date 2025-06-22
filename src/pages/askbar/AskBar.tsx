@@ -1,7 +1,6 @@
 import '@src/utils/logger';
 import React, { useState, useEffect, useRef, useLayoutEffect, KeyboardEvent } from 'react';
 import { Message } from '@src/services/storage';
-import { ScrapedContent } from '@src/services/contentScraper';
 import {
   ConversationList,
   useCopyMessage,
@@ -9,12 +8,10 @@ import {
 } from '@src/components/index';
 import { useSimpleChat } from '@src/components/hooks/useSimpleChat';
 import { UiPortService, TabInfo } from '@src/services/messaging/uiPortService';
-import { get } from '@src/services/storage';
 import TabChipRow from './components/TabChipRow';
 import InputArea from './components/InputArea';
 
 interface AskBarProps {
-  position?: string;
   onUnmount?: () => void;
   initialConversation?: Message[];
   initialConversationId?: string | null;
@@ -36,27 +33,23 @@ interface TabMention {
 }
 
 export const AskBar: React.FC<AskBarProps> = ({
-  position = 'top-right',
   onUnmount,
   initialConversation = [],
   initialConversationId = null,
   onConversationUpdate
 }) => {
   // State
+  const [position, setPosition] = useState('top-right');
   const [input, setInput] = useState('');
   const [conversationHistory, setConversationHistory] = useState<Message[]>(initialConversation);
   const [currentConversationId, setCurrentConversationId] = useState<string | null>(initialConversationId);
   const [isExpanded, setIsExpanded] = useState(initialConversation.length > 0);
   const [isVisible, setIsVisible] = useState(false);
   const [isClosing, setIsClosing] = useState(false);
-  const [scrapedContent, setScrapedContent] = useState<ScrapedContent | null>(null);
   const [pageUrl, setPageUrl] = useState<string>('');
-  const [pageTitle, setPageTitle] = useState<string>('');
   const [selectedTabIds, setSelectedTabIds] = useState<number[]>([]);
   const [currentTabId, setCurrentTabId] = useState<number | null>(null);
-  const [debugEnabled, setDebugEnabled] = useState<boolean>(false);
   const [availableTabs, setAvailableTabs] = useState<TabChip[]>([]);
-  const [inputHasFocus, setInputHasFocus] = useState(false);
 
   // @ mention state
   const [showDropdown, setShowDropdown] = useState(false);
@@ -142,14 +135,6 @@ export const AskBar: React.FC<AskBarProps> = ({
   // Effects
   useEffect(() => {
     setIsVisible(true);
-
-    // Load debug flag from storage once
-    (async () => {
-      try {
-        const settings = await get();
-        setDebugEnabled(!!settings.debug);
-      } catch {}
-    })();
   }, []);
 
   useEffect(() => {
@@ -176,7 +161,6 @@ export const AskBar: React.FC<AskBarProps> = ({
             console.log('Sol AskBar: Received current tab from parent:', event.data.tabId);
             setCurrentTabId(event.data.tabId);
             setPageUrl(event.data.url || window.location.href);
-            setPageTitle(event.data.title || document.title);
           }
         };
 
@@ -308,6 +292,9 @@ export const AskBar: React.FC<AskBarProps> = ({
         sendBounds();
       } else if (event.data?.type === 'sol-init') {
         console.log('Sol AskBar: Received init message:', event.data);
+        if (event.data.position) {
+          setPosition(event.data.position);
+        }
       }
     };
 
@@ -376,10 +363,6 @@ export const AskBar: React.FC<AskBarProps> = ({
       window.parent.postMessage({ type: 'sol-close-askbar' }, '*');
       onUnmount?.();
     }, 300); // Match animation duration
-  };
-
-  const handleTabsChange = (tabIds: number[]) => {
-    setSelectedTabIds(tabIds);
   };
 
   const handleTabRemove = (tabId: number) => {
@@ -561,27 +544,17 @@ export const AskBar: React.FC<AskBarProps> = ({
     }
   };
 
-  // Listen for context response to copy to clipboard
-  useEffect(() => {
-    const handler = (event: MessageEvent) => {
-      if (event.data?.type === 'sol-context-response') {
-        const text = JSON.stringify(event.data.context, null, 2);
-        navigator.clipboard.writeText(text).then(() => {
-          console.log('Sol AskBar: Context copied to clipboard');
-        });
-      }
-    };
-    window.addEventListener('message', handler);
-    return () => window.removeEventListener('message', handler);
-  }, []);
-
-  // Helper function to get base domain from URL
-  const getBaseDomain = (url: string): string => {
-    try {
-      const urlObj = new URL(url);
-      return urlObj.hostname;
-    } catch {
-      return url;
+  // Helper to get position classes
+  const getPositionClasses = (pos: string) => {
+    switch (pos) {
+      case 'top-left':
+        return 'top-4 left-4';
+      case 'bottom-right':
+        return 'bottom-4 right-4';
+      case 'bottom-left':
+        return 'bottom-4 left-4';
+      default:
+        return 'top-4 right-4';
     }
   };
 
@@ -593,18 +566,10 @@ export const AskBar: React.FC<AskBarProps> = ({
   // Get selected tab chips for display
   const selectedTabChips = availableTabs.filter(tab => selectedTabIds.includes(tab.id));
 
-  // Calculate conversation container height based on content
-  const getConversationHeight = () => {
-    const baseHeight = 200; // Minimum height
-    const messageHeight = conversationHistory.length * 80; // Rough estimate per message
-    const maxHeight = 600;
-    return Math.min(Math.max(baseHeight, messageHeight), maxHeight);
-  };
-
   return (
     <div 
       ref={askBarRef}
-      className="fixed top-4 right-4 z-[2147483647] transition-all duration-300 ease-in-out font-inter"
+      className={`fixed z-[2147483647] transition-all duration-300 ease-in-out font-inter ${getPositionClasses(position)}`}
       style={{
         opacity: isVisible ? 1 : 0,
         transform: `scale(${isVisible && !isClosing ? 1 : 0.9}) translateY(${isVisible && !isClosing ? 0 : 10}px)`,

@@ -4,7 +4,7 @@
 @custom-variant dark (&:is(.dark *));
 
 @theme {
-  /* Arc-inspired spacing system (8px grid) */
+  /* Apple-inspired spacing system (8px grid) */
   --spacing-micro: 2px;
   --spacing-xs: 4px;
   --spacing-sm: 8px;
@@ -14,7 +14,7 @@
   --spacing-2xl: 48px;
   --spacing-3xl: 64px;
 
-  /* Arc-inspired modern radius system */
+  /* Apple-inspired modern radius system */
   --radius-xs: 4px;
   --radius-sm: 6px;
   --radius-md: 8px;
@@ -22,7 +22,7 @@
   --radius-xl: 16px;
   --radius-2xl: 20px;
 
-  /* Typography scale inspired by Arc */
+  /* Typography scale inspired by Apple */
   --font-size-xs: 11px;
   --font-size-sm: 13px;
   --font-size-base: 14px;
@@ -32,7 +32,7 @@
   --font-size-2xl: 20px;
   --font-size-3xl: 24px;
 
-  /* Arc-inspired subtle shadows (no glass, just depth) */
+  /* Apple-inspired subtle shadows (no glass, just depth) */
   --shadow-subtle: 0 1px 2px 0 rgb(0 0 0 / 0.03);
   --shadow-soft: 0 1px 3px 0 rgb(0 0 0 / 0.06), 0 1px 2px 0 rgb(0 0 0 / 0.04);
   --shadow-card: 0 4px 6px -1px rgb(0 0 0 / 0.08),
@@ -40,7 +40,7 @@
   --shadow-elevated: 0 10px 15px -3px rgb(0 0 0 / 0.08),
     0 4px 6px -2px rgb(0 0 0 / 0.03);
 
-  /* Arc-inspired animation timing */
+  /* Apple-inspired animation timing */
   --timing-fast: 150ms;
   --timing-normal: 200ms;
   --timing-slow: 300ms;
@@ -49,7 +49,7 @@
 }
 
 @theme inline {
-  /* Override shadcn radius with Arc-inspired values - consistent with main theme */
+  /* Override shadcn radius with Apple-inspired values - consistent with main theme */
 
   /* Enhanced color palette for cleaner UI */
   --color-background: hsl(0 0% 100%);
@@ -129,7 +129,7 @@
   transition-duration: 100ms;
 }
 
-/* Global shadow removal for clean Arc-inspired design */
+/* Global shadow removal for clean Apple-inspired design */
 *,
 *:hover,
 *:focus,
@@ -152,7 +152,7 @@ button,
   box-shadow: none !important;
 }
 
-/* Select component specific styling - clean Arc-inspired design */
+/* Select component specific styling - clean Apple-inspired design */
 [data-slot="select-trigger"] {
   box-shadow: none !important;
   border: 1px solid rgba(0, 0, 0, 0.1) !important;
@@ -227,7 +227,7 @@ button,
   box-shadow: none !important;
 }
 
-/* Arc-style focus states */
+/* Apple-style focus states */
 .sol-focus:focus-visible {
   outline: 2px solid #007aff;
   outline-offset: 2px;

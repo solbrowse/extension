@@ -51,7 +51,7 @@ export class AskBarController {
       iframeUrl: browser.runtime.getURL('src/pages/askbar/index.html'),
       containerId: 'sol-askbar-container',
       settings,
-      position: settings.features?.askBar?.position || 'top-right',
+      position: settings.features.askBar.position,
       existingConversation: existingConversation as any,
     });
 
@@ -87,8 +87,8 @@ export class AskBarController {
 
   private async loadSettings(): Promise<void> {
     const settings = await get();
-    this.askBarEnabled = settings?.features?.askBar?.isEnabled ?? false;
-    this.targetKeybindString = settings?.features?.askBar?.keybind || 'Cmd+F';
+    this.askBarEnabled = settings.features.askBar.isEnabled ?? false;
+    this.targetKeybindString = settings.features.askBar.keybind || 'Ctrl+F';
 
     if (this.askBarEnabled) {
       this.setupKeybindListener(this.targetKeybindString);

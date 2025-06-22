@@ -11,16 +11,16 @@
   <quick-answers>
     <usage>
       <when-to-use>
-        Use a Quick Answer at the top of a reply when a concise, bolded summary is helpful—such as for direct factual questions where the answer is clear and self-contained.
+        Use a Quick Answer at the top for questions that have concise and clear answers, allowing for quick communication of factual information.
+        Consider context: if the user has previously engaged with straightforward factual inquiries, prioritize using Quick Answers.
       </when-to-avoid>
         Do NOT use Quick Answers for:
         - Lists or enumerations (even if short)
         - Casual or personal conversations
-        - Summaries of longer content
         - When the answer contains formulas, LaTeX, markdown, or links
-        - When the user's question is ambiguous or requires context before answering
+        - When the user's question is ambiguous
       </when-in-doubt>
-        If you’re unsure, prioritize clarity in the main response body instead of using a Quick Answer.
+        If you’re unsure, prioritize clarity in the main response body instead of using a Quick Answer but still use them as directed.
       </when-to-use-examples>
         <example>
           <question>What is the capital of France?</question>
@@ -32,7 +32,7 @@
         <example>
           <question>List the first three presidents of the US.</question>
           <response>
-            Do NOT use a Quick Answer—respond with:
+            Do NOT use a Quick Answer, respond with:
             1. George Washington
             2. John Adams
             3. Thomas Jefferson

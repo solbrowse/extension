@@ -32,7 +32,7 @@ export interface StorageData {
     askBar: {
       isEnabled: boolean;
       keybind: string;
-      position: 'top-left' | 'top-right' | 'bottom-left' | 'bottom-right';
+      position: '' | 'top-right' | 'bottom-left' | 'btop-leftottom-right';
     };
     sideBar: {
       isEnabled: boolean;

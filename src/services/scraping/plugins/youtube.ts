@@ -6,6 +6,10 @@ import { ScrapedContent, TranscriptCue } from '../../contentScraper';
  */
 const RE_YOUTUBE_ID = /(?:youtube\.com\/(?:[^\/]+\/.*\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/)([^"&?\/#\s]{11})/i;
 
+// Cache to prevent re-scraping the same content
+const contentCache = new Map<string, { content: ScrapedContent; timestamp: number }>();
+const CACHE_DURATION = 30000; // 30 seconds
+
 /**
  * Extract the YouTube video ID from a URL.
  */
@@ -15,39 +19,110 @@ function extractVideoId(url: string): string | null {
 }
 
 /**
- * Extract transcript from YouTube's rendered transcript panel.
- * This is the most reliable method since it uses YouTube's own UI.
+ * Utility to wait for elements to appear in the DOM
  */
-function extractTranscriptFromUI(videoId: string): TranscriptCue[] {
-  console.log('Sol YouTube Scraper: Extracting transcript from UI elements');
-  
-  // Try to find and click the transcript button if not already open
-  const transcriptButton = document.querySelector('button[aria-label*="transcript" i], button[aria-label*="Show transcript" i]');
-  if (transcriptButton && !document.querySelector('ytd-transcript-segment-renderer')) {
-    console.log('Sol YouTube Scraper: Found transcript button, clicking to open panel');
-    (transcriptButton as HTMLElement).click();
-    
-    // Wait a moment for the panel to load
-    setTimeout(() => {}, 500);
-  }
+function waitForElement(selector: string, timeout = 5000): Promise<Element | null> {
+  return new Promise((resolve) => {
+    const element = document.querySelector(selector);
+    if (element) {
+      resolve(element);
+      return;
+    }
 
-  // Extract from rendered transcript segments
-  const transcriptElements = document.querySelectorAll('ytd-transcript-segment-renderer');
-  console.log(`Sol YouTube Scraper: Found ${transcriptElements.length} transcript elements`);
-  
-  if (transcriptElements.length === 0) {
+    const observer = new MutationObserver(() => {
+      const element = document.querySelector(selector);
+      if (element) {
+        observer.disconnect();
+        resolve(element);
+      }
+    });
+
+    observer.observe(document.body, { childList: true, subtree: true });
+
+    setTimeout(() => {
+      observer.disconnect();
+      resolve(null);
+    }, timeout);
+  });
+}
+
+/**
+ * Extract transcript using YouTube's UI - but only if not already extracted recently
+ */
+async function extractTranscriptFromUI(videoId: string): Promise<TranscriptCue[]> {
+  console.log('Sol YouTube: Attempting transcript extraction via UI');
+
+  try {
+    // Check if transcript panel is already open
+    const existingPanel = document.querySelector('ytd-engagement-panel-section-list-renderer[target-id="engagement-panel-searchable-transcript"] #content');
+    if (existingPanel) {
+      console.log('Sol YouTube: Transcript panel already open, extracting segments');
+      return extractSegmentsFromPanel(existingPanel);
+    }
+
+    // Step 1: Click "More actions" button (three dots) - only if not already clicked
+    const moreActionsButton = document.querySelector('button[aria-label="More actions"]') as HTMLElement;
+    if (!moreActionsButton) {
+      console.log('Sol YouTube: More actions button not found');
+      return [];
+    }
+
+    // Check if menu is already open
+    const existingMenu = document.querySelector('ytd-menu-popup-renderer[role="menu"]');
+    if (!existingMenu) {
+      moreActionsButton.click();
+      console.log('Sol YouTube: Clicked more actions button');
+      await new Promise(resolve => setTimeout(resolve, 500));
+    }
+
+    // Step 2: Wait for and click "Show transcript" button
+    const transcriptButton = await waitForElement('[aria-label="Show transcript"]', 3000) as HTMLElement;
+    if (!transcriptButton) {
+      console.log('Sol YouTube: Show transcript button not found');
+      return [];
+    }
+
+    transcriptButton.click();
+    console.log('Sol YouTube: Clicked show transcript button');
+
+    // Step 3: Wait for transcript panel to load with segments
+    const transcriptPanel = await waitForElement('ytd-engagement-panel-section-list-renderer[target-id="engagement-panel-searchable-transcript"] #content', 5000);
+    if (!transcriptPanel) {
+      console.log('Sol YouTube: Transcript panel not found');
+      return [];
+    }
+
+    // Wait a bit for segments to load
+    await new Promise(resolve => setTimeout(resolve, 1000));
+
+    return extractSegmentsFromPanel(transcriptPanel);
+
+  } catch (error) {
+    console.error('Sol YouTube: Error in UI transcript extraction:', error);
+    return [];
+  }
+}
+
+/**
+ * Extract segments from an already loaded transcript panel
+ */
+function extractSegmentsFromPanel(transcriptPanel: Element): TranscriptCue[] {
+  const segmentElements = transcriptPanel.querySelectorAll('ytd-transcript-segment-renderer');
+  console.log(`Sol YouTube: Found ${segmentElements.length} transcript segments`);
+
+  if (segmentElements.length === 0) {
     return [];
   }
 
   const cues: TranscriptCue[] = [];
   
-  transcriptElements.forEach((element) => {
+  segmentElements.forEach((segment) => {
     try {
-      const timeElement = element.querySelector('.ytd-transcript-segment-renderer[role="button"] .segment-timestamp');
-      const textElement = element.querySelector('.ytd-transcript-segment-renderer[role="button"] .segment-text');
+      const timestampElement = segment.querySelector('.segment-timestamp');
+      const textElement = segment.querySelector('.segment-text');
       
-      if (timeElement && textElement) {
-        const timeText = timeElement.textContent?.trim();
+      if (timestampElement && textElement) {
+        const timeText = timestampElement.textContent?.trim();
         const text = textElement.textContent?.trim();
         
         if (timeText && text) {
@@ -69,11 +144,11 @@ function extractTranscriptFromUI(videoId: string): TranscriptCue[] {
         }
       }
     } catch (error) {
-      console.warn('Sol YouTube Scraper: Error parsing transcript element:', error);
+      console.warn('Sol YouTube: Error parsing transcript segment:', error);
     }
   });
-  
-  console.log(`Sol YouTube Scraper: Extracted ${cues.length} transcript cues from UI`);
+
+  console.log(`Sol YouTube: Successfully extracted ${cues.length} transcript cues`);
   return cues;
 }
 
@@ -86,51 +161,21 @@ async function youtubeScraper(document: Document): Promise<ScrapedContent> {
   const videoId = extractVideoId(window.location.href);
   if (!videoId) {
     console.warn('Sol YouTube Scraper: Could not extract video ID');
-    return {
-      text: '',
-      markdown: '',
-      title: document.title || '',
-      excerpt: '',
-      metadata: {
-        hostname: window.location.hostname,
-        url: window.location.href,
-        title: document.title || '',
-        byline: null,
-        dir: null,
-        lang: null,
-        contentLength: 0,
-        wordCount: 0,
-        readingTimeMinutes: 0,
-        hasContent: false,
-        extractionMethod: 'youtube-plugin',
-        shadowDOMCount: 0,
-        iframeCount: 0,
-        readabilityScore: 0,
-        contentDensity: 0,
-        isArticle: false,
-        publishedTime: null,
-        siteName: 'YouTube',
-        fallbackUsed: false,
-        debugInfo: {
-          originalLength: 0,
-          cleanedLength: 0,
-          removedElements: [],
-          contentSelectors: [],
-          imageCount: 0,
-          linkCount: 0,
-          paragraphCount: 0
-        }
-      },
-      comments: [],
-      transcriptCues: []
-    };
+    return createEmptyResult();
+  }
+
+  // Check cache first to prevent unnecessary re-scraping
+  const cacheKey = `${videoId}-${window.location.href}`;
+  const cached = contentCache.get(cacheKey);
+  if (cached && (Date.now() - cached.timestamp) < CACHE_DURATION) {
+    console.log('Sol YouTube Scraper: Using cached content');
+    return cached.content;
   }
 
   let content = '';
-  const comments: string[] = [];
   let transcriptCues: TranscriptCue[] = [];
 
-  // Extract title
+  // Extract title - always available
   const titleElement = document.querySelector('h1.ytd-video-primary-info-renderer yt-formatted-string, h1.ytd-video-primary-info-renderer');
   if (titleElement) {
     const title = titleElement.textContent?.trim();
@@ -140,7 +185,7 @@ async function youtubeScraper(document: Document): Promise<ScrapedContent> {
     }
   }
 
-  // Extract description
+  // Extract description - always available
   const descriptionElement = document.querySelector('ytd-expandable-video-description-body-renderer, #description-text, .ytd-video-secondary-info-renderer #description');
   if (descriptionElement) {
     const description = descriptionElement.textContent?.trim();
@@ -150,41 +195,40 @@ async function youtubeScraper(document: Document): Promise<ScrapedContent> {
     }
   }
 
-  // Extract comments
-  const commentElements = document.querySelectorAll('ytd-comment-thread-renderer #content-text, ytd-comment-renderer #content-text');
-  commentElements.forEach((el, index) => {
-    if (index < 10) { // Limit to first 10 comments
-      const commentText = el.textContent?.trim();
-      if (commentText && commentText.length > 10) {
-        comments.push(commentText);
-      }
-    }
-  });
+  // Extract transcript - but only if transcript panel is already open or can be opened quietly
+  console.log(`Sol YouTube Scraper: Checking for transcript for video ID: ${videoId}`);
   
-  if (comments.length > 0) {
-    console.log(`Sol YouTube Scraper: Found ${comments.length} comments`);
-    content += `Comments:\n${comments.map(c => `- ${c}`).join('\n')}\n\n`;
+  // Only attempt transcript extraction if we haven't tried recently for this video
+  const transcriptCacheKey = `transcript-${videoId}`;
+  const transcriptCached = contentCache.get(transcriptCacheKey);
+  if (!transcriptCached || (Date.now() - transcriptCached.timestamp) > CACHE_DURATION * 2) {
+    transcriptCues = await extractTranscriptFromUI(videoId);
+    
+    // Cache transcript result
+    contentCache.set(transcriptCacheKey, {
+      content: { transcriptCues } as any,
+      timestamp: Date.now()
+    });
+  } else {
+    transcriptCues = (transcriptCached.content as any).transcriptCues || [];
+    console.log('Sol YouTube Scraper: Using cached transcript');
   }
-
-  // Extract transcript
-  console.log(`Sol YouTube Scraper: Attempting transcript extraction for video ID: ${videoId}`);
-  transcriptCues = extractTranscriptFromUI(videoId);
   
   if (transcriptCues.length > 0) {
     const transcriptText = transcriptCues.map(cue => cue.text).join(' ');
-    console.log(`Sol YouTube Scraper: Extracted ${transcriptCues.length} cues, ${transcriptText.length} chars`);
+    console.log(`Sol YouTube Scraper: Using ${transcriptCues.length} transcript cues, ${transcriptText.length} chars`);
     content += `Transcript:\n${transcriptText}\n\n`;
   } else {
-    console.log('Sol YouTube Scraper: No transcript found');
+    console.log('Sol YouTube Scraper: No transcript available');
   }
 
-  console.log(`Sol YouTube Scraper: Final extraction - text: ${content.length} chars, comments: ${comments.length}, transcript cues: ${transcriptCues.length}`);
+  console.log(`Sol YouTube Scraper: Final extraction - text: ${content.length} chars, transcript cues: ${transcriptCues.length}`);
   
   // Extract title for metadata
   const titleEl = document.querySelector('h1.ytd-video-primary-info-renderer yt-formatted-string, h1.ytd-video-primary-info-renderer');
   const title = titleEl?.textContent?.trim() || document.title || '';
   
-  return {
+  const result: ScrapedContent = {
     text: content,
     markdown: content, // Use same content as markdown since it's already formatted
     title: title,
@@ -213,23 +257,71 @@ async function youtubeScraper(document: Document): Promise<ScrapedContent> {
         originalLength: document.body.textContent?.length || 0,
         cleanedLength: content.length,
         removedElements: [],
-        contentSelectors: ['h1.ytd-video-primary-info-renderer', 'ytd-expandable-video-description-body-renderer', 'ytd-comment-thread-renderer'],
+        contentSelectors: ['h1.ytd-video-primary-info-renderer', 'ytd-expandable-video-description-body-renderer'],
         imageCount: 0,
         linkCount: 0,
         paragraphCount: content.split('\n\n').length
       }
     },
-    comments,
     transcriptCues
+  };
+
+  // Cache the result
+  contentCache.set(cacheKey, {
+    content: result,
+    timestamp: Date.now()
+  });
+
+  return result;
+}
+
+function createEmptyResult(): ScrapedContent {
+  return {
+    text: '',
+    markdown: '',
+    title: document.title || '',
+    excerpt: '',
+    metadata: {
+      hostname: window.location.hostname,
+      url: window.location.href,
+      title: document.title || '',
+      byline: null,
+      dir: null,
+      lang: null,
+      contentLength: 0,
+      wordCount: 0,
+      readingTimeMinutes: 0,
+      hasContent: false,
+      extractionMethod: 'youtube-plugin',
+      shadowDOMCount: 0,
+      iframeCount: 0,
+      readabilityScore: 0,
+      contentDensity: 0,
+      isArticle: false,
+      publishedTime: null,
+      siteName: 'YouTube',
+      fallbackUsed: false,
+      debugInfo: {
+        originalLength: 0,
+        cleanedLength: 0,
+        removedElements: [],
+        contentSelectors: [],
+        imageCount: 0,
+        linkCount: 0,
+        paragraphCount: 0
+      }
+    },
+    comments: [],
+    transcriptCues: []
   };
 }
 
 const youtubePlugin: ScraperPlugin = {
   name: 'YouTube',
-  version: '4.0.0',
-  description: 'Extracts YouTube video title, description, comments, and transcript using UI-based extraction',
+  version: '8.0.0',
+  description: 'Extracts YouTube video title, description, and transcript without scrolling. Includes caching to prevent constant re-scraping.',
   hostPatterns: [/youtube\.com\//, /youtu\.be\//],
-  priority: 75,
+  priority: 85, // Higher priority due to reliability
   scraper: youtubeScraper
 };
 

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Cog6ToothIcon, FaceSmileIcon, VariableIcon, AdjustmentsHorizontalIcon } from '@heroicons/react/24/outline';
+import { Cog6ToothIcon, FaceSmileIcon, VariableIcon } from '@heroicons/react/24/outline';
 import browser from 'webextension-polyfill';
 import { get, set } from '@src/services/storage';
 import { Button } from '@src/components/ui/button';

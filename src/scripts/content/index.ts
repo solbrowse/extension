@@ -1,4 +1,3 @@
-// Initialise custom logger first
 import '@src/utils/logger';
 import browser from 'webextension-polyfill';
 import { TabConversationManager } from '@src/utils/tabConversationManager';
@@ -23,8 +22,8 @@ const isExtensionContext = (): boolean => {
   return false;
 };
 
-// Ask background script for the real tab ID
-async function getRealTabId(): Promise<number | null> {
+// Ask background script for the tab ID
+async function getTabId(): Promise<number | null> {
   try {
     const response = (await browser.runtime.sendMessage({
       type: 'GET_CURRENT_TAB_ID',
@@ -46,9 +45,9 @@ if (isExtensionContext()) {
       return;
     }
 
-    const tabId = await getRealTabId();
+    const tabId = await getTabId();
     if (tabId == null) {
-      console.warn('Sol Content Script: Could not obtain real tab ID – aborting initialisation.');
+      console.warn('Sol Content Script: Could not obtain tab ID – aborting initialisation.');
       return;
     }
 

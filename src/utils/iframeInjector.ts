@@ -5,7 +5,7 @@ export interface InjectionConfig {
   iframeUrl: string;
   containerId: string;
   settings: any;
-  position?: string;
+  position: string;
   existingConversation?: {
     id: string | null;
     messages: Message[];
@@ -27,7 +27,7 @@ export class IframeInjector {
   private static instances = new Map<string, IframeInstance>();
   
   static async inject(config: InjectionConfig): Promise<IframeInstance> {
-    const { iframeUrl, containerId, settings, position = 'top-right', existingConversation } = config;
+    const { iframeUrl, containerId, position, existingConversation } = config;
     
     // Remove existing instance if it exists
     if (this.instances.has(containerId)) {

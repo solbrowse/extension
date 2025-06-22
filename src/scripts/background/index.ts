@@ -1,10 +1,10 @@
-// Initialise custom logger first
 import '@src/utils/logger';
 import browser from 'webextension-polyfill';
 import { ApiService } from '@src/services/api';
 import { needsSchemaReset, resetToDefaults, get } from '@src/services/storage';
 import { PortManager } from '@src/services/messaging/portManager';
 import { TabSnapshotManager } from '@src/services/scraping/tabSnapshotManager';
+import { createSystemPrompt, createWebsiteContext } from '@src/utils/prompts';
 import { 
   ContentInitMsg, 
   ContentDeltaMsg, 
@@ -13,8 +13,6 @@ import {
   UiListTabsMsg,
   UiContentResponseMsg,
   UiTabsResponseMsg,
-  UiLlmErrorMsg,
-  GetCurrentTabIdMsg,
   GetCurrentTabIdResponseMsg
 } from '@src/types/messaging';
 
@@ -40,37 +38,6 @@ browser.storage.onChanged.addListener((changes, area) => {
     }
   }
 });
-
-// Helper function for creating structured context messages
-function createContextMessage(tabContents: { url: string; title: string; content: string; metadata?: any }[]): string {
-  if (tabContents.length === 0) {
-    return "No content available from selected tabs.";
-  }
-
-  if (tabContents.length === 1) {
-    const tab = tabContents[0];
-    return `Context from ${tab.title}:\n\nURL: ${tab.url}\n\n${tab.content}`;
-  }
-
-  // Multiple tabs - create structured format
-  const contextSections = tabContents.map((tab, index) => {
-    const tabNumber = index + 1;
-    let section = `## Tab ${tabNumber}: ${tab.title}\n\nURL: ${tab.url}\n`;
-    
-    // Add metadata if available
-    if (tab.metadata) {
-      const meta = tab.metadata;
-      if (meta.lastUpdated) section += `Last Updated: ${new Date(meta.lastUpdated).toLocaleString()}\n`;
-    }
-    
-    section += `\nContent:\n${tab.content}`;
-    
-    return section;
-  }).join('\n\n---\n\n');
-
-  const tabTitles = tabContents.map(tab => tab.title).join(', ');
-  return `Context from ${tabContents.length} tabs (${tabTitles}):\n\n${contextSections}`;
-}
 
 // Check for schema updates and reset if needed
 const checkAndResetSchema = async () => {
@@ -212,26 +179,29 @@ const setupMessageHandlers = () => {
         }
       });
 
-      // Create structured context message
-      const contextMessage = createContextMessage(tabContents);
+      // Create structured context message for all tabs
+      const contextMessage = tabContents
+        .filter(tab => tab.content && tab.content !== '[No content available]')
+        .map(createWebsiteContext)
+        .join('\n\n');
       
-      // Load system prompt
-      const systemPrompt = "You are Sol, an AI assistant that helps users understand and interact with web content. You have access to content from browser tabs that the user has referenced. Provide helpful, accurate responses based on the content provided. If no content is provided, you can still help with general questions.";
+      // Load system prompt from the dedicated utility
+      const systemPrompt = createSystemPrompt();
 
       // Build messages array with conversation history
       const messages: Array<{ role: string; content: string }> = [
         { role: 'system', content: systemPrompt }
       ];
 
-      // Add tab content as system context if available
-      if (tabContents.some(tab => tab.content && tab.content !== '[No content available]')) {
+      // Add tab content as a consolidated system message if available
+      if (contextMessage) {
         messages.push({ role: 'system', content: contextMessage });
       }
 
       // Add conversation history if provided
       if (message.conversationHistory && message.conversationHistory.length > 0) {
-        // Take last 10 messages to avoid context window issues
-        const recentHistory = message.conversationHistory.slice(-10);
+        // Take last 12 messages to avoid context window issues
+        const recentHistory = message.conversationHistory.slice(-12);
         
         recentHistory.forEach(historyMessage => {
           messages.push({

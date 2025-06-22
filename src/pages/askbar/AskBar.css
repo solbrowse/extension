@@ -7,32 +7,6 @@ html {
   background: transparent !important;
 }
 
-.askbar-container {
-  position: absolute;
-  pointer-events: auto !important;
-  z-index: 10000;
-}
-
-.askbar-container.top-left {
-  top: 24px;
-  left: 24px;
-}
-
-.askbar-container.top-right {
-  top: 24px;
-  right: 24px;
-}
-
-.askbar-container.bottom-left {
-  bottom: 24px;
-  left: 24px;
-}
-
-.askbar-container.bottom-right {
-  bottom: 24px;
-  right: 24px;
-}
-
 .sol-ask-bar {
   position: relative !important;
   pointer-events: auto !important;
