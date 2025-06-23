@@ -135,6 +135,7 @@ export const AskBar: React.FC<AskBarProps> = ({
   // Effects
   useEffect(() => {
     setIsVisible(true);
+    inputRef.current?.focus();
   }, []);
 
   useEffect(() => {
@@ -470,6 +471,8 @@ export const AskBar: React.FC<AskBarProps> = ({
     } else if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
       handleSubmit();
+    } else if (e.key === 'Escape') {
+      handleClose();
     }
   };
 

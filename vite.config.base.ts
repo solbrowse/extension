@@ -8,9 +8,7 @@ import manifest from './manifest.json';
 import devManifest from './manifest.dev.json';
 import pkg from './package.json';
 
-
 const isDev = process.env.__DEV__ === 'true';
-// set this flag to true, if you want localization support
 const localize = false;
 
 const pagesDir = resolve(__dirname, 'src', 'pages');

@@ -47,7 +47,7 @@ if (isExtensionContext()) {
 
     const tabId = await getTabId();
     if (tabId == null) {
-      console.warn('Sol Content Script: Could not obtain tab ID – aborting initialisation.');
+      console.warn('Sol Content Script: Could not obtain tab ID, aborting initialisation.');
       return;
     }
 

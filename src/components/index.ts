@@ -4,7 +4,6 @@ export { default as CopyButton } from './CopyButton';
 export { default as MessageItem } from './MessageItem';
 export { default as ConversationList } from './ConversationList';
 export { default as ChatInput } from './ChatInput';
-export { TabMentionInput } from './TabMentionInput';
 
 // Hooks
 export { useConversationStorage } from './hooks/useConversationStorage';

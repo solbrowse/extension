@@ -1,4 +1,3 @@
-import { ContentScraperService } from '../services/contentScraper';
 import { Message } from '../services/storage';
 
 export interface InjectionConfig {

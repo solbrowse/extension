@@ -71,7 +71,6 @@ const InputArea: React.FC<Props> = ({
             fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
             fontSize: '16px',
             fontWeight: 500,
-            letterSpacing: '-0.025em',
             lineHeight: input ? '1.5' : '24px',
             minWidth: '50px' // Ensure it doesn't collapse completely
           }}

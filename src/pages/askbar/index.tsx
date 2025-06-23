@@ -1,7 +1,6 @@
 import React from 'react';
 import { createRoot } from 'react-dom/client';
 import AskBar from './AskBar';
-import './index.css';
 import './AskBar.css';
 
 const App: React.FC = () => {

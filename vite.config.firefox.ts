@@ -7,18 +7,6 @@ const outDir = resolve(__dirname, 'dist_firefox');
 
 const firefoxManifest = {
   ...baseManifest,
-  permissions: [
-    'storage',
-    'activeTab',
-    'clipboardWrite'
-  ],
-  content_scripts: [
-    {
-      matches: ["<all_urls>"],
-      js: ["src/scripts/content/index.ts"],
-      all_frames: false
-    }
-  ],
   background: {
     scripts: [ 'src/scripts/background/index.ts' ]
   },
