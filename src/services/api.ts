@@ -8,33 +8,33 @@ export interface Provider {
   id: string;
   name: string;
   baseUrl: string;
-  modelsEndpoint: string;
 }
 
 export const PROVIDERS: Provider[] = [
   {
     id: 'openai',
     name: 'OpenAI',
-    baseUrl: 'https://api.openai.com/v1',
-    modelsEndpoint: '/models',
+    baseUrl: 'https://api.openai.com/v1'
   },
   {
     id: 'openrouter',
     name: 'OpenRouter',
-    baseUrl: 'https://openrouter.ai/api/v1',
-    modelsEndpoint: '/models',
+    baseUrl: 'https://openrouter.ai/api/v1'
   },
   {
     id: 'gemini',
     name: 'Google Gemini',
-    baseUrl: 'https://generativelanguage.googleapis.com/v1beta/openai',
-    modelsEndpoint: '/models',
+    baseUrl: 'https://generativelanguage.googleapis.com/v1beta/openai'
+  },
+  {
+    id: 'mistral',
+    name: 'Mistral',
+    baseUrl: 'https://api.mistral.ai/v1'
   },
   {
     id: 'custom',
     name: 'Custom Endpoint',
-    baseUrl: '',
-    modelsEndpoint: '/models',
+    baseUrl: ''
   },
 ];
 
@@ -46,7 +46,7 @@ export class ApiService {
     }
 
     const baseUrl = provider === 'custom' && customEndpoint ? customEndpoint : providerConfig.baseUrl;
-    const url = `${baseUrl}${providerConfig.modelsEndpoint}`;
+    const url = `${baseUrl}/models`;
 
     try {
       const headers: Record<string, string> = {
