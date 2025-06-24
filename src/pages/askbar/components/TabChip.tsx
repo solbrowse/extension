@@ -35,6 +35,7 @@ const TabChip: React.FC<TabChipProps> = ({ tab, onRemove }) => {
     <button
       onClick={handleClick}
       className="flex-none w-[184px] h-[54px] bg-black/[0.06] rounded-[12px] p-3 flex items-center hover:bg-black/[0.1] transition-colors relative group"
+      title={tab.url}
     >
       {/* Favicon holder */}
       <div className="w-4 h-4 mr-3 flex-shrink-0 bg-gray-200 rounded-sm flex items-center justify-center">
@@ -69,7 +70,10 @@ const TabChip: React.FC<TabChipProps> = ({ tab, onRemove }) => {
       </div>
 
       {onRemove && (
-        <div className="absolute top-1 right-1 w-4 h-4 bg-black/20 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+        <div 
+          className="absolute top-1 right-1 w-4 h-4 bg-black/20 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+          title="Remove site from context"
+        >
           <XMarkIcon className="w-2.5 h-2.5 text-black/60" />
         </div>
       )}
