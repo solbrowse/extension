@@ -81,6 +81,7 @@ const InputArea: React.FC<Props> = ({
           <button
             onClick={onClose}
             className="w-5 h-5 hover:bg-black/10 rounded-full flex items-center justify-center transition-colors"
+            title="Close chat"
           >
             <XMarkIcon className="w-5 h-5 text-gray-600" />
           </button>
@@ -95,6 +96,7 @@ const InputArea: React.FC<Props> = ({
                 ? 'bg-black hover:bg-gray-800'
                 : 'bg-black/5'
             }`}
+            title={isStreaming ? "Submitting..." : (input.trim() ? "Submit" : "Enter a question first to submit")}
           >
             <ArrowUpIcon
               className={`w-5 h-5 ${

@@ -439,7 +439,7 @@ export default function Dashboard() {
                         onClick={() => setIsApiKeyVisible(!isApiKeyVisible)}
                         className="absolute right-0 top-0 h-full px-3 hover:bg-transparent"
                       >
-                        {isApiKeyVisible ? <EyeSlashIcon className="w-4 h-4" /> : <EyeIcon className="w-4 h-4" />}
+                        {isApiKeyVisible ? <EyeSlashIcon className="w-4 h-4" title="Hide API key" /> : <EyeIcon className="w-4 h-4" title"Show API key" />}
                       </Button>
                     </div>
                   </div>
@@ -606,6 +606,7 @@ export default function Dashboard() {
                               onClick={() => copyConversation(conversation)}
                               className="h-8 w-8 p-0 text-gray-600 hover:bg-black/5 rounded-lg transition-all duration-200 hover:scale-[1.05] active:scale-[0.95] truncate"
                               style={{ backgroundColor: 'rgba(0, 0, 0, 0.05)' }}
+                              title="Copy conversation"
                             >
                               <ClipboardDocumentIcon className="w-4 h-4" />
                             </Button>
@@ -613,6 +614,7 @@ export default function Dashboard() {
                               onClick={() => exportConversation(conversation)}
                               className="h-8 w-8 p-0 text-gray-600 hover:bg-black/5 rounded-lg transition-all duration-200 hover:scale-[1.05] active:scale-[0.95] truncate"
                               style={{ backgroundColor: 'rgba(0, 0, 0, 0.05)' }}
+                              title="Export conversation as Markdown"
                             >
                               <DocumentArrowDownIcon className="w-4 h-4" />
                             </Button>
@@ -620,6 +622,7 @@ export default function Dashboard() {
                               onClick={() => deleteConversationHandler(conversation.id)}
                               className="h-8 w-8 p-0 text-red-500 hover:text-red-700 rounded-lg transition-all duration-200 hover:scale-[1.05] active:scale-[0.95] truncate"
                               style={{ backgroundColor: 'rgba(239, 68, 68, 0.1)' }}
+                              title="Delete conversation"
                             >
                               <TrashIcon className="w-4 h-4" />
                             </Button>
