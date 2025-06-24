@@ -536,14 +536,14 @@ export const AskBar: React.FC<AskBarProps> = ({
     // Clear input & expand
     setInput('');
     setIsExpanded(true);
+    
+    // Keep focus on input for next message (delay for expansion)
+    setTimeout(() => inputRef.current?.focus(), 100);
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Escape') {
       handleClose();
-    } else if (e.key === 'Enter' && !e.shiftKey) {
-      e.preventDefault();
-      handleSubmit();
     }
   };
 
@@ -645,7 +645,7 @@ export const AskBar: React.FC<AskBarProps> = ({
                   setDropdownSelectedIndex={setDropdownSelectedIndex}
                   truncateTitle={truncateTitle}
                   onClose={handleClose}
-            onSubmit={handleSubmit}
+                  onSubmit={handleSubmit}
                   isStreaming={chatState.isStreaming}
                 />
           {chatState.error && (

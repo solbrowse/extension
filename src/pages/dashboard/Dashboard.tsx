@@ -439,7 +439,7 @@ export default function Dashboard() {
                         onClick={() => setIsApiKeyVisible(!isApiKeyVisible)}
                         className="absolute right-0 top-0 h-full px-3 hover:bg-transparent"
                       >
-                        {isApiKeyVisible ? <EyeSlashIcon className="w-4 h-4" title="Hide API key" /> : <EyeIcon className="w-4 h-4" title"Show API key" />}
+                        {isApiKeyVisible ? <EyeSlashIcon className="w-4 h-4" title="Hide API key" /> : <EyeIcon className="w-4 h-4" title="Show API key" />}
                       </Button>
                     </div>
                   </div>

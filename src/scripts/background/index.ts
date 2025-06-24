@@ -279,17 +279,6 @@ browser.runtime.onMessage.addListener((message: any, sender, sendResponse) => {
 setupMessageHandlers();
 keepAlive();
 
-browser.runtime.onInstalled.addListener(async (details) => {
-  console.log('Sol Background: onInstalled event fired');
-  
-  // Check schema on install/update
-  await checkAndResetSchema();
-  
-  if (details.reason === 'install') {
-    browser.runtime.openOptionsPage();
-  }
-});
-
 browser.runtime.onStartup.addListener(async () => {
   console.log('Sol Background: onStartup event fired, extension is active.');
   
@@ -311,4 +300,10 @@ browser.tabs.onUpdated.addListener((tabId, changeInfo) => {
   }
 });
 
-console.log("Sol Background Script: New architecture initialized"); 
+browser.runtime.onInstalled.addListener(async (details) => {
+  console.log('Sol Background: onInstalled event fired with reason: ', details.reason);
+  if (details.reason === 'install') {
+    const url = browser.runtime.getURL('src/pages/dashboard/index.html');
+    browser.tabs.create({ url: url });
+  }
+});

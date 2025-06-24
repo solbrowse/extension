@@ -64,7 +64,6 @@ const InputArea: React.FC<Props> = ({
           onChange={(e) => onInputChange(e.target.value)}
           onKeyDown={onInputKeyDown}
           placeholder="Ask a question about this page..."
-          disabled={isStreaming}
           rows={1}
           className="flex-grow border-none resize-none bg-transparent text-base placeholder:text-black/40 placeholder:font-medium focus:outline-none p-0"
           style={{
