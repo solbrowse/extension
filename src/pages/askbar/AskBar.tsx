@@ -27,7 +27,6 @@ interface TabMention {
 const TAB_MENTION_REGEX = /@tab:(\d+):([^@]*?):/g;
 
 export const AskBar: React.FC = () => {
-  // Simple UI state only - no business logic state
   const [input, setInput] = useState('');
   const [isExpanded, setIsExpanded] = useState(false);
   const [isVisible, setIsVisible] = useState(false);
