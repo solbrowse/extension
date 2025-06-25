@@ -1,5 +1,5 @@
 import React from 'react';
-import { Message } from '../services/storage';
+import { Message } from '../../../services/storage';
 import MessageRenderer from './MessageRenderer';
 import CopyButton from './CopyButton';
 

@@ -45,12 +45,7 @@ export class IframeInjector {
     
     // Set up iframe load handler
     iframe.onload = () => {
-      this.initializeIframe(iframe, {
-        existingConversation,
-        position,
-        url: window.location.href,
-        title: document.title
-      });
+      this.initializeIframe(iframe, { existingConversation, position });
     };
     
     // Inject iframe
@@ -154,26 +149,23 @@ export class IframeInjector {
   private static initializeIframe(iframe: HTMLIFrameElement, data: {
     existingConversation: any;
     position: string;
-    url: string;
-    title: string;
   }): void {
     try {
-      console.log('Sol: Initializing iframe with content:', {
-        hasScrapedContent: false,
-        contentLength: 0,
-        url: data.url,
-        title: data.title
-      });
+      console.log('Sol: Initializing iframe');
 
-      // Send initial conversation + position
+      // Send initialization data - simplified to avoid duplication
       iframe.contentWindow?.postMessage({
         type: 'sol-init',
-        existingConversation: data.existingConversation,
-        position: data.position
+        position: data.position,
+        conversationHistory: data.existingConversation?.messages?.map((msg: any) => ({
+          type: msg.type,
+          content: msg.content,
+          timestamp: msg.timestamp
+        })) || [],
+        conversationId: data.existingConversation?.id || null
       }, '*');
 
-      // Content now comes via UiPortService, not iframe messages
-      console.log('Sol: Iframe initialized, content will be sent on request');
+      console.log('Sol: Iframe initialized');
 
       // Request AskBar bounds
       setTimeout(() => {

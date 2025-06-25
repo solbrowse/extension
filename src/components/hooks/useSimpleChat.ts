@@ -27,6 +27,21 @@ export const useSimpleChat = (
   const uiPortService = UiPortService.getInstance();
   const currentResponseRef = useRef<string>('');
 
+  // Helper to handle errors consistently
+  const handleError = useCallback((error: string | Error) => {
+    const errorMessage = error instanceof Error ? error.message : error;
+    console.error('Sol useSimpleChat: Error:', errorMessage);
+    
+    setState(prev => ({
+      ...prev,
+      isStreaming: false,
+      error: errorMessage,
+      currentResponse: ''
+    }));
+    
+    currentResponseRef.current = '';
+  }, []);
+
   const sendMessage = useCallback(async (message: string, tabIds: number[], conversationId: string) => {
     setState(prev => ({
       ...prev,
@@ -41,12 +56,11 @@ export const useSimpleChat = (
       console.log('Sol useSimpleChat: Sending message to tabs:', tabIds);
 
       // Get conversation history for context
-      const conversationHistory = getConversationHistory ? 
-        getConversationHistory().map(msg => ({
-          role: msg.type === 'user' ? 'user' as const : 'assistant' as const,
-          content: msg.content,
-          timestamp: msg.timestamp
-        })) : undefined;
+      const conversationHistory = getConversationHistory?.()?.map(msg => ({
+        role: msg.type === 'user' ? 'user' as const : 'assistant' as const,
+        content: msg.content,
+        timestamp: msg.timestamp
+      }));
 
       await uiPortService.askQuestion(
         message,
@@ -59,11 +73,8 @@ export const useSimpleChat = (
               ...prev,
               currentResponse: currentResponseRef.current
             }));
-
-            // Call external delta handler
-            if (onStreamingDelta) {
-              onStreamingDelta(delta);
-            }
+            
+            onStreamingDelta?.(delta);
           },
           
           onComplete: (fullResponse: string) => {
@@ -75,56 +86,30 @@ export const useSimpleChat = (
               currentResponse: fullResponse
             }));
 
-            // Create a message object for the response
+            // Create response message
             if (onMessageComplete) {
-              const responseMessage: Message = {
+              onMessageComplete({
                 type: 'assistant',
                 content: fullResponse,
                 timestamp: Date.now()
-              };
-              onMessageComplete(responseMessage);
+              });
             }
 
-            // Reset current response for next message
             currentResponseRef.current = '';
           },
           
-          onError: (error: string) => {
-            console.error('Sol useSimpleChat: Streaming error:', error);
-            
-            setState(prev => ({
-              ...prev,
-              isStreaming: false,
-              error: error,
-              currentResponse: ''
-            }));
-
-            currentResponseRef.current = '';
-          }
+          onError: handleError
         },
         conversationHistory
       );
 
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Failed to send message';
-      console.error('Sol useSimpleChat: Error sending message:', error);
-      
-      setState(prev => ({
-        ...prev,
-        isStreaming: false,
-        error: errorMessage,
-        currentResponse: ''
-      }));
-
-      currentResponseRef.current = '';
+      handleError(error instanceof Error ? error : 'Failed to send message');
     }
-  }, [onMessageComplete, onStreamingDelta, getConversationHistory]);
+  }, [onMessageComplete, onStreamingDelta, getConversationHistory, handleError]);
 
   const clearError = useCallback(() => {
-    setState(prev => ({
-      ...prev,
-      error: null
-    }));
+    setState(prev => ({ ...prev, error: null }));
   }, []);
 
   return [

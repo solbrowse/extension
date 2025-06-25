@@ -64,20 +64,10 @@ export class UiPortService {
       this.setupPortHandlers();
       this.isConnected = true;
       console.log('Sol UiPortService: Connected successfully');
-      
-      // Activate multi-tab mode on current tab when UI connects
-      this.activateMultiTabMode();
     } catch (error) {
       console.error('Sol UiPortService: Connection failed:', error);
       this.isConnected = false;
     }
-  }
-
-  private activateMultiTabMode(): void {
-    console.log('Sol UiPortService: Activating multi-tab mode on current tab');
-    
-    // Send message to current tab to activate multi-tab mode
-    window.postMessage({ type: 'sol-activate-multitab' }, '*');
   }
 
   private setupPortHandlers(): void {

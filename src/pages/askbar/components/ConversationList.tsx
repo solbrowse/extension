@@ -1,5 +1,5 @@
 import React, { useRef, useEffect } from 'react';
-import { Message } from '../services/storage';
+import { Message } from '../../../services/storage';
 import MessageItem from './MessageItem';
 
 interface ConversationListProps {

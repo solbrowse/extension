@@ -1,22 +1,13 @@
 import '@src/utils/logger';
 import React, { useState, useEffect, useRef, useLayoutEffect, KeyboardEvent } from 'react';
 import { Message } from '@src/services/storage';
-import {
-  ConversationList,
-  useCopyMessage,
-  useConversationStorage
-} from '@src/components/index';
+import { ConversationList, useCopyMessage } from '@src/components/index';
 import { useSimpleChat } from '@src/components/hooks/useSimpleChat';
 import { UiPortService, TabInfo } from '@src/services/messaging/uiPortService';
+import { PortManager } from '@src/services/messaging/portManager';
+import { IframeActionMsg, IframeCloseMsg, IframeGetCurrentTabMsg, IframeCurrentTabResponseMsg } from '@src/types/messaging';
 import TabChipRow from './components/TabChipRow';
 import InputArea from './components/InputArea';
-
-interface AskBarProps {
-  onUnmount?: () => void;
-  initialConversation?: Message[];
-  initialConversationId?: string | null;
-  onConversationUpdate?: (messages: Message[], conversationId: string | null) => void;
-}
 
 interface TabChip {
   id: number;
@@ -32,31 +23,31 @@ interface TabMention {
   favIconUrl?: string;
 }
 
-export const AskBar: React.FC<AskBarProps> = ({
-  onUnmount,
-  initialConversation = [],
-  initialConversationId = null,
-  onConversationUpdate
-}) => {
-  // State
-  const [position, setPosition] = useState('top-right');
+// Consolidated tab mention regex pattern
+const TAB_MENTION_REGEX = /@tab:(\d+):([^@]*?):/g;
+
+export const AskBar: React.FC = () => {
+  // Simple UI state only - no business logic state
   const [input, setInput] = useState('');
-  const [conversationHistory, setConversationHistory] = useState<Message[]>(initialConversation);
-  const [currentConversationId, setCurrentConversationId] = useState<string | null>(initialConversationId);
-  const [isExpanded, setIsExpanded] = useState(initialConversation.length > 0);
+  const [isExpanded, setIsExpanded] = useState(false);
   const [isVisible, setIsVisible] = useState(false);
   const [isClosing, setIsClosing] = useState(false);
-  const [pageUrl, setPageUrl] = useState<string>('');
   const [selectedTabIds, setSelectedTabIds] = useState<number[]>([]);
-  const [currentTabId, setCurrentTabId] = useState<number | null>(null);
   const [availableTabs, setAvailableTabs] = useState<TabChip[]>([]);
 
-  // @ mention state
+  // @ mention UI state
   const [showDropdown, setShowDropdown] = useState(false);
   const [filteredTabs, setFilteredTabs] = useState<TabInfo[]>([]);
   const [dropdownSelectedIndex, setDropdownSelectedIndex] = useState(0);
   const [mentionStartPos, setMentionStartPos] = useState(-1);
   const [mentionedTabs, setMentionedTabs] = useState<TabMention[]>([]);
+
+  // State received from controller (pure rendering component)
+  const [conversationHistory, setConversationHistory] = useState<Message[]>([]);
+  const [currentConversationId, setCurrentConversationId] = useState<string | null>(null);
+  const [currentTabId, setCurrentTabId] = useState<number | null>(null);
+  const [pageUrl, setPageUrl] = useState<string>('');
+  const [position, setPosition] = useState<string>('top-right');
 
   // Refs
   const askBarRef = useRef<HTMLDivElement>(null);
@@ -64,73 +55,82 @@ export const AskBar: React.FC<AskBarProps> = ({
   const dropdownRef = useRef<HTMLDivElement>(null);
   const mountTimeRef = useRef<number>(Date.now());
   const uiPortService = useRef<UiPortService>(UiPortService.getInstance());
+  const portManager = useRef<PortManager>(PortManager.getInstance());
 
   // Custom hooks
   const { copiedMessageIndex, handleCopyMessage } = useCopyMessage();
-  
-  useConversationStorage(
-    conversationHistory,
-    currentConversationId,
-    setCurrentConversationId,
-    pageUrl
-  );
 
-  // Chat system
+  // Chat system for streaming responses - only for API communication, no state management
   const [chatState, chatActions] = useSimpleChat(
     (message: Message) => {
-      // Finalize the last assistant message (keep existing content, just mark as complete)
+      // Only dispatch action to controller, no local state management
       if (message.type === 'assistant') {
-        setConversationHistory(prev => {
-          const updated = [...prev];
-          const lastMessage = updated[updated.length - 1];
-          if (lastMessage && lastMessage.type === 'assistant') {
-            // Keep the content we built during streaming, just update timestamp to mark as final
-            updated[updated.length - 1] = {
-              ...lastMessage,
-              timestamp: message.timestamp // Use the completion timestamp
-            };
-          } else {
-            // Add new assistant message if none exists (fallback)
-            updated.push(message);
+        const action: IframeActionMsg = {
+          type: 'IFRAME_ACTION',
+          action: {
+            type: 'ADD_ASSISTANT_MESSAGE',
+            payload: {
+              content: message.content,
+              timestamp: message.timestamp
+            }
           }
-          return updated;
-        });
+        };
+        portManager.current.sendToParent(action);
       }
     },
     (delta: string) => {
-      // Update the last assistant message with streaming content
-      setConversationHistory(prev => {
-        const updated = [...prev];
-        const lastMessage = updated[updated.length - 1];
-        if (lastMessage && lastMessage.type === 'assistant') {
-          const prevContent = lastMessage.content;
-          // Detect if delta is cumulative or incremental
-          // If the new delta already includes the previous content as a prefix, treat it as cumulative and replace
-          // Otherwise, treat it as incremental and append
-          if (delta.startsWith(prevContent)) {
-            updated[updated.length - 1] = {
-              ...lastMessage,
-              content: delta
-            };
-          } else {
-            updated[updated.length - 1] = {
-              ...lastMessage,
-              content: prevContent + delta
-            };
-          }
-        } else {
-          // Create new assistant message if none exists
-          updated.push({
-            type: 'assistant',
+      // Only dispatch streaming updates to controller, no local state
+      const action: IframeActionMsg = {
+        type: 'IFRAME_ACTION',
+        action: {
+          type: 'UPDATE_STREAMING_MESSAGE',
+          payload: {
             content: delta,
             timestamp: Date.now()
-          });
+          }
         }
-        return updated;
-      });
+      };
+      portManager.current.sendToParent(action);
     },
-    () => conversationHistory // Provide conversation history to the hook
+    () => conversationHistory
   );
+
+  // Consolidated function to parse tab mentions from text
+  const parseTabMentions = (text: string): TabMention[] => {
+    const mentions: TabMention[] = [];
+    const regex = new RegExp(TAB_MENTION_REGEX);
+    let match;
+
+    while ((match = regex.exec(text)) !== null) {
+      const tabId = parseInt(match[1]);
+      const title = match[2];
+      const tab = availableTabs.find(t => t.id === tabId);
+      if (tab) {
+        mentions.push({
+          id: tabId,
+          title: title || tab.title,
+          url: tab.url,
+          favIconUrl: tab.favIconUrl
+        });
+      }
+    }
+    return mentions;
+  };
+
+  // Extract tab IDs from mentions in text
+  const extractTabIds = (text: string): number[] => {
+    const tabIds: number[] = [];
+    const regex = new RegExp(TAB_MENTION_REGEX);
+    let match;
+    
+    while ((match = regex.exec(text)) !== null) {
+      const tabId = parseInt(match[1]);
+      if (!isNaN(tabId)) {
+        tabIds.push(tabId);
+      }
+    }
+    return tabIds;
+  };
 
   // Effects
   useEffect(() => {
@@ -138,50 +138,24 @@ export const AskBar: React.FC<AskBarProps> = ({
     inputRef.current?.focus();
   }, []);
 
+  // Initialize messaging system to receive updates from controller
   useEffect(() => {
-    // Send conversation updates to parent content script for persistence
-    window.parent.postMessage({
-      type: 'sol-update-tab-conversation',
-      messages: conversationHistory,
-      conversationId: currentConversationId
-    }, '*');
-    
-    // Also call the optional callback if provided
-    if (onConversationUpdate) {
-      onConversationUpdate(conversationHistory, currentConversationId);
-    }
-  }, [conversationHistory, currentConversationId, onConversationUpdate]);
+    // Listen for current tab response
+    const cleanupTabHandler = portManager.current.addIframeHandler<IframeCurrentTabResponseMsg>('IFRAME_CURRENT_TAB_RESPONSE', (message) => {
+      setCurrentTabId(message.tabId);
+      setPageUrl(message.url);
+    });
 
-  // Initialize current tab and get page content from current tab
-  useEffect(() => {
-    const initializeCurrentTab = async () => {
-      try {
-        // Listen for current tab response from parent (content script)
-        const handleCurrentTabResponse = (event: MessageEvent) => {
-          if (event.data?.type === 'sol-current-tab-response' && event.data.tabId) {
-            console.log('Sol AskBar: Received current tab from parent:', event.data.tabId);
-            setCurrentTabId(event.data.tabId);
-            setPageUrl(event.data.url || window.location.href);
-          }
-        };
+    // Request current tab info on mount
+    const getCurrentTabMsg: IframeGetCurrentTabMsg = { type: 'IFRAME_GET_CURRENT_TAB' };
+    portManager.current.sendToParent(getCurrentTabMsg);
 
-        window.addEventListener('message', handleCurrentTabResponse);
-        
-        // Request current tab info from parent (content script)
-        window.parent.postMessage({ type: 'sol-get-current-tab' }, '*');
-
-        return () => {
-          window.removeEventListener('message', handleCurrentTabResponse);
-        };
-      } catch (error) {
-        console.error('Sol AskBar: Error initializing current tab:', error);
-      }
+    return () => {
+      cleanupTabHandler();
     };
-
-    initializeCurrentTab();
   }, []);
 
-  // Load available tabs for tab chips
+  // Load available tabs for tab chips (this is UI-specific, so can stay here)
   useEffect(() => {
     const loadAvailableTabs = async () => {
       try {
@@ -219,56 +193,11 @@ export const AskBar: React.FC<AskBarProps> = ({
     }
   }, [mentionedTabs]);
 
-  // Validate and clean up selected tabs (remove closed tabs)
-  useEffect(() => {
-    if (selectedTabIds.length === 0) return;
-
-    const validateSelectedTabs = async () => {
-      try {
-        // Get current live tabs
-        const liveTabs = await uiPortService.current.listTabs();
-        const liveTabIds = new Set(liveTabs.map(tab => tab.id));
-        
-        // Filter out closed tabs
-        const validTabIds = selectedTabIds.filter(id => liveTabIds.has(id));
-        
-        // Update selection if any tags were closed
-        if (validTabIds.length !== selectedTabIds.length) {
-          console.log(`Sol AskBar: Removed ${selectedTabIds.length - validTabIds.length} closed tabs from selection`);
-          setSelectedTabIds(validTabIds);
-          
-          // Auto-select current tab if no tabs left
-          if (validTabIds.length === 0 && currentTabId) {
-            setSelectedTabIds([currentTabId]);
-          }
-        }
-      } catch (error) {
-        console.error('Sol AskBar: Failed to validate selected tabs:', error);
-      }
-    };
-
-    // Only validate when window gains focus (user might have closed tabs)
-    const handleFocus = () => {
-      validateSelectedTabs();
-    };
-
-    window.addEventListener('focus', handleFocus);
-    
-    // Initial validation (but not on every re-render)
-    const timer = setTimeout(validateSelectedTabs, 1000);
-    
-    return () => {
-      window.removeEventListener('focus', handleFocus);
-      clearTimeout(timer);
-    };
-  }, []); // Empty dependency array - only run once on mount
-
-  // Position and resize logic
+  // Position and resize logic (UI-specific)
   useLayoutEffect(() => {
     const sendBounds = () => {
       if (askBarRef.current) {
         const rect = askBarRef.current.getBoundingClientRect();
-        // Send bounds in the format expected by iframeInjector
         window.parent.postMessage({
           type: 'sol-askbar-bounds',
           bounds: {
@@ -292,16 +221,33 @@ export const AskBar: React.FC<AskBarProps> = ({
       if (event.data?.type === 'sol-request-askbar-bounds') {
         sendBounds();
       } else if (event.data?.type === 'sol-init') {
-        console.log('Sol AskBar: Received init message:', event.data);
+        // Initialize state from controller
         if (event.data.position) {
           setPosition(event.data.position);
         }
+        if (event.data.conversationHistory) {
+          setConversationHistory(event.data.conversationHistory);
+          setIsExpanded(event.data.conversationHistory.length > 0);
+        }
+        if (event.data.conversationId !== undefined) {
+          setCurrentConversationId(event.data.conversationId);
+        }
+      } else if (event.data?.type === 'sol-state-update') {
+        // Update state from controller
+        if (event.data.conversationHistory) {
+          setConversationHistory(event.data.conversationHistory);
+          setIsExpanded(event.data.conversationHistory.length > 0);
+        }
+        if (event.data.conversationId !== undefined) {
+          setCurrentConversationId(event.data.conversationId);
+        }
+      } else if (event.data?.type === 'sol-trigger-close') {
+        // Trigger the same close animation as the X button
+        handleClose();
       }
     };
 
     window.addEventListener('message', messageHandler);
-    
-    // Send bounds immediately and after a short delay
     sendBounds();
     setTimeout(sendBounds, 100);
 
@@ -311,29 +257,20 @@ export const AskBar: React.FC<AskBarProps> = ({
     };
   }, [isExpanded, conversationHistory.length]);
 
-  // Mouse interaction handlers for pointer events
+  // Mouse interaction handlers for pointer events (UI-specific)
   useLayoutEffect(() => {
     const handleEnter = () => {
-      // Enable pointer events when mouse enters AskBar
-      window.parent.postMessage({ 
-        type: 'sol-pointer-lock', 
-        enabled: true 
-      }, '*');
+      window.parent.postMessage({ type: 'sol-pointer-lock', enabled: true }, '*');
     };
 
     const handleLeave = () => {
-      // Disable pointer events when mouse leaves AskBar
-      window.parent.postMessage({ 
-        type: 'sol-pointer-lock', 
-        enabled: false 
-      }, '*');
+      window.parent.postMessage({ type: 'sol-pointer-lock', enabled: false }, '*');
     };
 
     const askBar = askBarRef.current;
     if (askBar) {
       askBar.addEventListener('mouseenter', handleEnter);
       askBar.addEventListener('mouseleave', handleLeave);
-
       return () => {
         askBar.removeEventListener('mouseenter', handleEnter);
         askBar.removeEventListener('mouseleave', handleLeave);
@@ -341,56 +278,29 @@ export const AskBar: React.FC<AskBarProps> = ({
     }
   }, []);
 
-  const handleClose = () => {
-    if (Date.now() - mountTimeRef.current < 200) {
-      console.log('Sol AskBar: Ignoring close during mount animation');
-      return;
-    }
+  // Action dispatchers - send actions to controller instead of managing state
+  const dispatchAction = (actionType: string, payload: any) => {
+    const action: IframeActionMsg = {
+      type: 'IFRAME_ACTION',
+      action: { type: actionType as any, payload }
+    };
+    portManager.current.sendToParent(action);
+  };
 
-    console.log('Sol AskBar: Close button clicked');
-    
-    // Ensure conversation is saved before closing
-    window.parent.postMessage({
-      type: 'sol-update-tab-conversation',
-      messages: conversationHistory,
-      conversationId: currentConversationId
-    }, '*');
+  const handleClose = () => {
+    if (Date.now() - mountTimeRef.current < 200) return;
     
     setIsClosing(true);
     setIsVisible(false);
     
-    // Send close message immediately, but with animation timing
     setTimeout(() => {
-      window.parent.postMessage({ type: 'sol-close-askbar' }, '*');
-      onUnmount?.();
-    }, 300); // Match animation duration
+      const closeMsg: IframeCloseMsg = { type: 'IFRAME_CLOSE' };
+      portManager.current.sendToParent(closeMsg);
+    }, 300);
   };
 
   const handleTabRemove = (tabId: number) => {
     setSelectedTabIds(prev => prev.filter(id => id !== tabId));
-  };
-
-  // @ mention helper functions
-  const parseTabMentions = (text: string): TabMention[] => {
-    const mentions: TabMention[] = [];
-    const mentionRegex = /@tab:(\d+):([^@]*?):/g;
-    let match;
-
-    while ((match = mentionRegex.exec(text)) !== null) {
-      const tabId = parseInt(match[1]);
-      const title = match[2];
-      const tab = availableTabs.find(t => t.id === tabId);
-      if (tab) {
-        mentions.push({
-          id: tabId,
-          title: title || tab.title,
-          url: tab.url,
-          favIconUrl: tab.favIconUrl
-        });
-      }
-    }
-
-    return mentions;
   };
 
   const insertTabMention = (tab: TabChip) => {
@@ -405,7 +315,6 @@ export const AskBar: React.FC<AskBarProps> = ({
     setShowDropdown(false);
     setMentionStartPos(-1);
     
-    // Focus back to input
     setTimeout(() => {
       inputRef.current?.focus();
       const newPos = before.length + mention.length;
@@ -416,11 +325,9 @@ export const AskBar: React.FC<AskBarProps> = ({
   const handleInputChange = (newValue: string) => {
     setInput(newValue);
     
-    // Update mentioned tabs
     const newMentions = parseTabMentions(newValue);
     setMentionedTabs(newMentions);
 
-    // Check for @ mentions
     const cursorPos = inputRef.current?.selectionStart || 0;
     const textBeforeCursor = newValue.substring(0, cursorPos);
     const atIndex = textBeforeCursor.lastIndexOf('@');
@@ -428,13 +335,11 @@ export const AskBar: React.FC<AskBarProps> = ({
     if (atIndex !== -1) {
       const afterAt = textBeforeCursor.substring(atIndex + 1);
       
-      // Show dropdown if we have @ and it's not already a complete mention
       if (!afterAt.includes(':')) {
         setMentionStartPos(atIndex);
         setShowDropdown(true);
         setDropdownSelectedIndex(0);
         
-        // Filter tabs based on search after @
         const searchTerm = afterAt.toLowerCase();
         const filtered = availableTabs.filter(tab => 
           tab.title.toLowerCase().includes(searchTerm) ||
@@ -451,7 +356,6 @@ export const AskBar: React.FC<AskBarProps> = ({
   };
 
   const handleInputKeyDown = (e: KeyboardEvent<HTMLTextAreaElement>) => {
-    // Prevent parent handlers from receiving this key event
     e.stopPropagation();
 
     if (showDropdown && filteredTabs.length > 0) {
@@ -479,56 +383,27 @@ export const AskBar: React.FC<AskBarProps> = ({
   const handleSubmit = async () => {
     if (!input.trim()) return;
 
-    // Parse mentioned tabs and update selected tabs if any mentions exist
-    const mentionRegex = /@tab:(\d+):([^@]*?):/g;
-    const mentionedTabIds = new Set<number>();
-    let match;
+    // Get tab IDs from mentions and selected tabs
+    const mentionedTabIds = extractTabIds(input);
+    const allTabIds = [...new Set([...selectedTabIds, ...mentionedTabIds])];
+    const tabsToUse = allTabIds.length > 0 ? allTabIds : (currentTabId ? [currentTabId] : []);
     
-    while ((match = mentionRegex.exec(input)) !== null) {
-      const tabId = parseInt(match[1]);
-      if (!isNaN(tabId)) {
-        mentionedTabIds.add(tabId);
-      }
-    }
-
-    // Calculate tabs to use BEFORE state update (combine existing + mentioned)
-    const allTabIds = [...new Set([...selectedTabIds, ...Array.from(mentionedTabIds)])];
-    let tabsToUse = allTabIds.length > 0 ? allTabIds : (currentTabId ? [currentTabId] : []);
-    
-    // Update selected tabs for UI display
-    if (mentionedTabIds.size > 0) {
+    // Update selected tabs to include mentions
+    if (mentionedTabIds.length > 0) {
       setSelectedTabIds(allTabIds);
     }
 
-    // Prevent duplicate consecutive user messages
-    setConversationHistory(prev => {
-      const last = prev[prev.length - 1];
-      if (last && last.type === 'user' && last.content === input.trim()) {
-        return prev; // Skip duplicate
-      }
-      return [...prev, {
-      type: 'user',
+    // Dispatch action to add user message - no local state management
+    dispatchAction('ADD_USER_MESSAGE', {
       content: input.trim(),
-        timestamp: Date.now(),
-      }];
+      timestamp: Date.now()
     });
 
-    // Fallback to current tab if no tabs selected
-    if (tabsToUse.length === 0 && currentTabId) {
-      tabsToUse = [currentTabId];
-      setSelectedTabIds([currentTabId]);
-    }
-
-    console.log('Sol AskBar: Ensuring content for tabs', tabsToUse);
-
     try {
-      // Ensure background has scraped content for all tabs before asking question
       await uiPortService.current.getContent(tabsToUse);
     } catch (err) {
       console.warn('Sol AskBar: getContent failed', err);
     }
-
-    console.log('Sol AskBar: Sending message with tabs:', tabsToUse);
     
     // Send message via chat system
     chatActions.sendMessage(input.trim(), tabsToUse, currentConversationId || 'new');
@@ -537,8 +412,7 @@ export const AskBar: React.FC<AskBarProps> = ({
     setInput('');
     setIsExpanded(true);
     
-    // Keep focus on input for next message (delay for expansion)
-    setTimeout(() => inputRef.current?.focus(), 100);
+    setTimeout(() => inputRef.current?.focus(), 50);
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -547,23 +421,18 @@ export const AskBar: React.FC<AskBarProps> = ({
     }
   };
 
-  // Helper to get position classes
   const getPositionClasses = (pos: string) => {
     switch (pos) {
-      case 'top-left':
-        return 'top-4 left-4';
-      case 'bottom-right':
-        return 'bottom-4 right-4';
-      case 'bottom-left':
-        return 'bottom-4 left-4';
-      default:
-        return 'top-4 right-4';
+      case 'top-left': return 'top-4 left-4 origin-top-left';
+      case 'top-right': return 'top-4 right-4 origin-top-right';
+      case 'bottom-left': return 'bottom-4 left-4 origin-bottom-left';
+      case 'bottom-right': return 'bottom-4 right-4 origin-bottom-right';
+      default: return 'top-4 right-4 origin-top-right';
     }
   };
 
-  // Helper function to truncate title
   const truncateTitle = (title: string, maxLength: number = 20): string => {
-    return title.length > maxLength ? title.substring(0, maxLength) + '...' : title;
+    return title.length > maxLength ? `${title.substring(0, maxLength)}...` : title;
   };
 
   // Get selected tab chips for display
@@ -596,9 +465,7 @@ export const AskBar: React.FC<AskBarProps> = ({
             fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif'
           }}
         >
-          {/* Header space */}
-          <div className="p-2">
-        </div>
+          <div className="p-2"></div>
 
           {/* Conversation Messages */}
           <div className="px-[14px] pb-2 max-h-[400px] overflow-y-auto">
@@ -620,10 +487,8 @@ export const AskBar: React.FC<AskBarProps> = ({
                 fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif'
               }}
             >
-              {/* Tab Chips */}
               <TabChipRow tabs={selectedTabChips} onRemove={handleTabRemove} />
 
-              {/* Input & buttons */}
               <div
                 style={{
                   paddingTop: selectedTabChips.length > 0 ? '8px' : '16px',
@@ -648,7 +513,7 @@ export const AskBar: React.FC<AskBarProps> = ({
                   onSubmit={handleSubmit}
                   isStreaming={chatState.isStreaming}
                 />
-          {chatState.error && (
+                {chatState.error && (
                   <div className="mt-2 text-red-600 text-sm">{chatState.error}</div>
                 )}
               </div>
@@ -656,7 +521,6 @@ export const AskBar: React.FC<AskBarProps> = ({
           </div>
         </div>
       ) : (
-        // Initial Mode - Just Input Container
         <div 
           className="rounded-[20px] border-[0.5px] border-black/[0.07] transition-all duration-300 ease-in-out transform sol-input-shadow-large"
           style={{ 
@@ -665,10 +529,8 @@ export const AskBar: React.FC<AskBarProps> = ({
             fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif'
           }}
         >
-          {/* Tab Chips */}
           <TabChipRow tabs={selectedTabChips} onRemove={handleTabRemove} />
 
-          {/* Input Area */}
           <div
             style={{
               paddingTop: selectedTabChips.length > 0 ? '8px' : '16px',
@@ -696,7 +558,7 @@ export const AskBar: React.FC<AskBarProps> = ({
             {chatState.error && (
               <div className="mt-2 text-red-600 text-sm">{chatState.error}</div>
             )}
-            </div>
+          </div>
         </div>
       )}
     </div>

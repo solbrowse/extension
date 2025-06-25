@@ -76,10 +76,10 @@ const InputArea: React.FC<Props> = ({
         />
         
         {/* Button group that won't shrink */}
-        <div className="flex items-center gap-[14px] flex-shrink-0">
+        <div className="flex items-center gap-[8px] flex-shrink-0">
           <button
             onClick={onClose}
-            className="w-5 h-5 hover:bg-black/10 rounded-full flex items-center justify-center transition-colors"
+            className="w-8 h-8 hover:bg-black/5 rounded-md flex items-center justify-center transition-colors"
             title="Close chat"
           >
             <XMarkIcon className="w-5 h-5 text-gray-600" />
@@ -90,9 +90,9 @@ const InputArea: React.FC<Props> = ({
             disabled={!input.trim() || isStreaming}
             className={`w-8 h-8 rounded-full flex items-center justify-center transition-colors ${
               isStreaming
-                ? 'bg-gray-300 cursor-not-allowed animate-pulse'
+                ? 'bg-black/5 cursor-not-allowed animate-pulse'
                 : input.trim()
-                ? 'bg-black hover:bg-gray-800'
+                ? 'bg-black hover:bg-black/80'
                 : 'bg-black/5'
             }`}
             title={isStreaming ? "Submitting..." : (input.trim() ? "Submit" : "Enter a question first to submit")}

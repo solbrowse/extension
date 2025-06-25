@@ -61,6 +61,68 @@ const keepAlive = () => {
   }, 20000);
 };
 
+// Consolidated function to process tab snapshots into page format
+const processTabSnapshots = (snapshots: Array<any>, tabIds: number[]) => {
+  return snapshots.map((snapshot, index) => {
+    const tabId = tabIds[index];
+    if (!snapshot) {
+      return {
+        tabId,
+        url: '',
+        title: `Tab ${tabId}`,
+        content: '[No content available]',
+        lastUpdated: 0
+      };
+    }
+    
+    return {
+      tabId: snapshot.tabId,
+      url: snapshot.url,
+      title: snapshot.title,
+      content: snapshot.content,
+      lastUpdated: snapshot.timestamp
+    };
+  });
+};
+
+// Simplified function to ensure content availability for tabs
+const ensureTabsHaveContent = async (tabIds: number[]): Promise<void> => {
+  const tabsWithoutContent = tabIds.filter(tabId => {
+    const snapshot = snapshotManager.getLatestSnapshot(tabId);
+    return !snapshot || snapshot.content === '[No content available]' || Date.now() - snapshot.timestamp > 60000;
+  });
+  
+  if (tabsWithoutContent.length === 0) return;
+  
+  console.log(`Sol Background: Ensuring content is available for tabs: ${tabsWithoutContent.join(', ')}`);
+  
+  // Try to trigger scraping for tabs without content
+  for (const tabId of tabsWithoutContent) {
+    try {
+      const tab = await browser.tabs.get(tabId);
+      if (!tab?.url || tab.url.startsWith('chrome://') || tab.url.startsWith('chrome-extension://')) {
+        continue;
+      }
+      
+      await browser.scripting.executeScript({
+        target: { tabId },
+        func: () => {
+          if ((window as any).solContentScript?.scraper?.triggerManualScrape) {
+            (window as any).solContentScript.scraper.triggerManualScrape();
+            console.log('Sol: Triggered manual scrape for multi-tab context');
+          }
+        }
+      });
+      
+    } catch (error) {
+      console.warn(`Sol Background: Could not trigger scrape for tab ${tabId}:`, error);
+    }
+  }
+  
+  // Wait for scraping to complete
+  await new Promise(resolve => setTimeout(resolve, 1000));
+};
+
 // Setup messaging handlers
 const setupMessageHandlers = () => {
   // Content script handlers
@@ -93,26 +155,7 @@ const setupMessageHandlers = () => {
     console.log(`Sol Background: Content request for tabs: ${message.tabIds.join(', ')}`);
     
     const snapshots = snapshotManager.getLatestSnapshots(message.tabIds);
-    const pages = snapshots.map((snapshot, index) => {
-      const tabId = message.tabIds[index];
-      if (!snapshot) {
-        return {
-          tabId,
-          url: '',
-          title: `Tab ${tabId}`,
-          content: '[No content available]',
-          lastUpdated: 0
-        };
-      }
-      
-      return {
-        tabId: snapshot.tabId,
-        url: snapshot.url,
-        title: snapshot.title,
-        content: snapshot.content,
-        lastUpdated: snapshot.timestamp
-      };
-    });
+    const pages = processTabSnapshots(snapshots, message.tabIds);
 
     return {
       type: 'CONTENT_RESPONSE',
@@ -152,58 +195,46 @@ const setupMessageHandlers = () => {
     console.log(`Sol Background: User prompt for tabs: ${message.tabIds.join(', ')}`);
     
     try {
-      // Get content for specified tabs
+      // Ensure content scripts are injected and content is available for mentioned tabs
+      await ensureTabsHaveContent(message.tabIds);
+      
+      // Get content for specified tabs using the same logic as GET_CONTENT
       const snapshots = snapshotManager.getLatestSnapshots(message.tabIds);
+      const pages = processTabSnapshots(snapshots, message.tabIds);
       const settings = await get();
       
-      // Prepare context from tabs with enhanced structure
-      const tabContents = snapshots.map((snapshot, index) => {
-        const tabId = message.tabIds[index];
-        if (snapshot) {
-          return {
-            url: snapshot.url,
-            title: snapshot.title,
-            content: snapshot.content,
-            metadata: {
-              tabId: snapshot.tabId,
-              lastUpdated: snapshot.timestamp
-            }
-          };
-        } else {
-          return {
-            url: '',
-            title: `Tab ${tabId}`,
-            content: '[No content available]',
-            metadata: { tabId, lastUpdated: 0 }
-          };
-        }
-      });
-
-      // Create structured context message for all tabs
-      const contextMessage = tabContents
-        .filter(tab => tab.content && tab.content !== '[No content available]')
-        .map(createWebsiteContext)
+      // Separate available and unavailable content
+      const availablePages = pages.filter(page => page.content && page.content !== '[No content available]');
+      const unavailablePages = pages.filter(page => page.content === '[No content available]');
+      
+      // Create context from available pages
+      const contextMessage = availablePages
+        .map(page => createWebsiteContext({
+          url: page.url,
+          title: page.title,
+          content: page.content,
+          metadata: { tabId: page.tabId, lastUpdated: page.lastUpdated }
+        }))
         .join('\n\n');
       
-      // Load system prompt from the dedicated utility
-      const systemPrompt = createSystemPrompt();
-
-      // Build messages array with conversation history
+      // Create user notice for unavailable tabs
+      const contextNotice = unavailablePages.length > 0 
+        ? `\n\nNote: Content from ${unavailablePages.length} mentioned tab(s) (${unavailablePages.map(p => p.tabId).join(', ')}) is not available.`
+        : '';
+      
+      // Build messages array
       const messages: Array<{ role: string; content: string }> = [
-        { role: 'system', content: systemPrompt }
+        { role: 'system', content: createSystemPrompt() }
       ];
 
-      // Add tab content as a consolidated system message if available
+      // Add tab content if available
       if (contextMessage) {
         messages.push({ role: 'system', content: contextMessage });
       }
 
-      // Add conversation history if provided
-      if (message.conversationHistory && message.conversationHistory.length > 0) {
-        // Take last 12 messages to avoid context window issues
-        const recentHistory = message.conversationHistory.slice(-12);
-        
-        recentHistory.forEach(historyMessage => {
+      // Add conversation history (last 12 messages to avoid context window issues)
+      if (message.conversationHistory?.length) {
+        message.conversationHistory.slice(-12).forEach(historyMessage => {
           messages.push({
             role: historyMessage.role,
             content: historyMessage.content
@@ -211,16 +242,11 @@ const setupMessageHandlers = () => {
         });
       }
 
-      // Add current user message
-      messages.push({ role: 'user', content: message.prompt });
+      // Add current user message with notice
+      messages.push({ role: 'user', content: message.prompt + contextNotice });
 
       console.log(`Sol Background: Sending ${messages.length} messages to LLM (${message.conversationHistory?.length || 0} history messages)`);
       
-      // Debug: Log full message structure for transparency
-      if (process.env.NODE_ENV === 'development') {
-        console.log('Sol Background: Full LLM message structure:', JSON.stringify(messages, null, 2));
-      }
-
       // Start streaming
       await ApiService.streamChatCompletion({
         provider: settings.provider,
@@ -228,7 +254,7 @@ const setupMessageHandlers = () => {
         model: settings.model,
         messages,
         customEndpoint: settings.customEndpoint,
-        abortSignal: new AbortController().signal, // TODO: Implement proper abort handling
+        abortSignal: new AbortController().signal,
         onDelta: (chunk: string) => {
           portManager.sendToUiPort(port, {
             type: 'LLM_DELTA',
@@ -240,7 +266,7 @@ const setupMessageHandlers = () => {
           portManager.sendToUiPort(port, {
             type: 'LLM_DONE',
             requestId: message.requestId,
-            fullResponse: '' // We could track this if needed
+            fullResponse: ''
           });
         },
         onError: (error: Error) => {
@@ -281,8 +307,6 @@ keepAlive();
 
 browser.runtime.onStartup.addListener(async () => {
   console.log('Sol Background: onStartup event fired, extension is active.');
-  
-  // Check schema on startup (browser restart)
   await checkAndResetSchema();
 });
 
@@ -293,10 +317,8 @@ browser.tabs.onRemoved.addListener((tabId) => {
 });
 
 browser.tabs.onUpdated.addListener((tabId, changeInfo) => {
-  // Clear snapshots if the tab is navigating to a completely new page
   if (changeInfo.status === 'loading' && changeInfo.url) {
     console.log(`Sol Background: Tab ${tabId} navigating to ${changeInfo.url}, will clear snapshots if needed`);
-    // The content script will send a new INIT_SCRAPE which will handle URL changes
   }
 });
 

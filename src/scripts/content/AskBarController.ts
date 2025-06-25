@@ -2,9 +2,10 @@ import '@src/utils/logger';
 import browser from 'webextension-polyfill';
 import { get } from '@src/services/storage';
 import { IframeInjector, IframeInstance } from '@src/utils/iframeInjector';
-import { TabConversationManager } from '@src/utils/tabConversationManager';
-import { MessageBus } from '@src/utils/messageHandler';
+import { TabConversationManager, TabConversation } from '@src/utils/tabConversationManager';
+import { PortManager } from '@src/services/messaging/portManager';
 import { attachToggleKeybind } from '@src/services/keybindManager';
+import { IframeActionMsg, IframeCloseMsg, IframeGetCurrentTabMsg, IframeCurrentTabResponseMsg } from '@src/types/messaging';
 
 export class AskBarController {
   private askBarInstance: IframeInstance | null = null;
@@ -13,6 +14,8 @@ export class AskBarController {
   private targetKeybindString = '';
   private keypressDisposer: (() => void) | null = null;
   private onAskBarOpenCallback: (() => void) | null = null;
+  private portManager = PortManager.getInstance();
+  private stateChangeCleanup: (() => void) | null = null;
 
   constructor(private tabManager: TabConversationManager) {}
 
@@ -24,12 +27,14 @@ export class AskBarController {
   async init(): Promise<void> {
     await this.loadSettings();
     this.setupMessageHandlers();
+    this.setupStateSync();
   }
 
   cleanup(): void {
     this.hide();
-    MessageBus.cleanup();
+    this.portManager.cleanup();
     this.keypressDisposer?.();
+    this.stateChangeCleanup?.();
   }
 
   /** Public accessor for Ask Bar visibility state */
@@ -81,6 +86,20 @@ export class AskBarController {
     document.body.focus();
   }
 
+  /** Close with animation - triggers the same close animation as the X button */
+  closeWithAnimation(): void {
+    if (!this.isAskBarVisible || !this.askBarInstance?.iframe.contentWindow) return;
+
+    // Send a message to the iframe to trigger the close animation
+    // This mimics what happens when the X button is clicked
+    this.askBarInstance.iframe.contentWindow.postMessage({
+      type: 'sol-trigger-close'
+    }, '*');
+
+    // The iframe will handle the animation and send IFRAME_CLOSE message
+    // which will be caught by our IFRAME_CLOSE handler that calls hide()
+  }
+
   // ---------------------------------------------------------
   // Internal helpers
   // ---------------------------------------------------------
@@ -107,7 +126,7 @@ export class AskBarController {
       isEnabled: () => this.askBarEnabled,
       isVisible: () => this.isAskBarVisible,
       show: () => this.show(),
-      hide: () => this.hide(),
+      hide: () => this.closeWithAnimation(),
       log: console.log.bind(console),
     });
   }
@@ -131,23 +150,48 @@ export class AskBarController {
   }
 
   private setupMessageHandlers(): void {
-    MessageBus.addHandler('sol-close-askbar', () => {
+    // Handle iframe actions
+    this.portManager.addIframeHandler<IframeActionMsg>('IFRAME_ACTION', (message, source) => {
+      this.tabManager.dispatch(message.action);
+    });
+
+    // Handle iframe close requests
+    this.portManager.addIframeHandler<IframeCloseMsg>('IFRAME_CLOSE', (message, source) => {
       if (this.isAskBarVisible) this.hide();
     });
 
-    MessageBus.addHandler('sol-update-tab-conversation', (data) => {
-      this.tabManager.setConversation(data.messages, data.conversationId);
+    // Handle current tab requests
+    this.portManager.addIframeHandler<IframeGetCurrentTabMsg>('IFRAME_GET_CURRENT_TAB', (message, source) => {
+      const response: IframeCurrentTabResponseMsg = {
+        type: 'IFRAME_CURRENT_TAB_RESPONSE',
+        tabId: (window as any).solTabId ?? null,
+        url: window.location.href,
+        title: document.title,
+      };
+      this.portManager.sendToIframe(source, response);
     });
+  }
 
-    MessageBus.addHandler('sol-get-current-tab', () => {
-      if (this.askBarInstance) {
-        this.askBarInstance.sendMessage({
-          type: 'sol-current-tab-response',
-          tabId: (window as any).solTabId ?? null,
-          url: window.location.href,
-          title: document.title,
-        });
-      }
+  private setupStateSync(): void {
+    // Listen for state changes from TabConversationManager
+    this.stateChangeCleanup = this.tabManager.addStateChangeHandler((state: TabConversation) => {
+      this.updateIframeState();
     });
+  }
+
+  private updateIframeState(): void {
+    if (this.askBarInstance && this.isAskBarVisible && this.askBarInstance.iframe.contentWindow) {
+      const state = this.tabManager.getConversation();
+      // Send state update via postMessage
+      this.askBarInstance.iframe.contentWindow.postMessage({
+        type: 'sol-state-update',
+        conversationHistory: state.messages.map(msg => ({
+          type: msg.type,
+          content: msg.content,
+          timestamp: msg.timestamp
+        })),
+        conversationId: state.conversationId
+      }, '*');
+    }
   }
 } 
