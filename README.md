@@ -14,7 +14,7 @@ A browser extension that brings AI into your browsing experience.
 
 ## Quick Start
 
-1. **Build & Install**  
+1. **Build**  
    ```bash
    git clone https://github.com/solbrowse/extension
    cd extension
@@ -22,13 +22,25 @@ A browser extension that brings AI into your browsing experience.
    npm run dev:firefox (or dev:chrome)
     ```
 
-2. **Configure**
+2. **Install**
+   * Firefox
+      * Open `about:debugging`
+      * Select "This Firefox"
+      * Click on "Load Temporary Add-On..."
+      * Select the `manifest.json` file found in the `dist_firefox` folder
+   * Chrome
+      * Open `chrome://extensions/`
+      * Toggle "Developer Mode" on
+      * Click on "Load Unpacked Extension"
+      * Select the `dist_chrome` folder
+
+3. **Configure**
 
    * Open the extension dashboard
    * Add your OpenAI/Anthropic API key
    * Customize keybinds and UI in Settings
 
-3. **Use**
+4. **Use**
 
    * Press `Cmd+F` (Windows/Linux: `Ctrl+F` or your custom keybind)
    * Ask a question about the current page
