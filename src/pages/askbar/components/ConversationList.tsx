@@ -2,6 +2,13 @@ import React, { useRef, useEffect } from 'react';
 import { Message } from '../../../services/storage';
 import MessageItem from './MessageItem';
 
+interface TabInfo {
+  id: number;
+  title: string;
+  url: string;
+  favIconUrl?: string;
+}
+
 interface ConversationListProps {
   messages: Message[];
   isStreaming?: boolean;
@@ -11,6 +18,8 @@ interface ConversationListProps {
   showCopyButtons?: boolean;
   autoScroll?: boolean;
   mountTime?: number;
+  availableTabs?: TabInfo[]; // Available tabs for resolving tab history
+  onTabReAdd?: (tab: TabInfo) => void; // Callback to re-add a tab
 }
 
 export const ConversationList: React.FC<ConversationListProps> = ({
@@ -21,7 +30,9 @@ export const ConversationList: React.FC<ConversationListProps> = ({
   className = '',
   showCopyButtons = true,
   autoScroll = true,
-  mountTime = Date.now()
+  mountTime = Date.now(),
+  availableTabs = [],
+  onTabReAdd
 }) => {
   const conversationRef = useRef<HTMLDivElement>(null);
 
@@ -51,14 +62,10 @@ export const ConversationList: React.FC<ConversationListProps> = ({
           onCopy={onCopyMessage}
           showCopyButton={showCopyButtons}
           mountTime={mountTime}
+          availableTabs={availableTabs}
+          onTabReAdd={onTabReAdd}
         />
       ))}
-      
-      {messages.length === 0 && (
-        <div className="text-gray-500 text-center py-8">
-          No messages yet. Start a conversation!
-        </div>
-      )}
     </div>
   );
 };

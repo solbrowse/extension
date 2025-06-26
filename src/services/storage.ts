@@ -4,6 +4,7 @@ export interface Message {
   type: 'user' | 'assistant';
   content: string;
   timestamp: number;
+  tabIds?: number[]; // Optional tab context for the message
 }
 
 export interface Conversation {

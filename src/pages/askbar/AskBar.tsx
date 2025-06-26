@@ -14,6 +14,20 @@ interface TabChip {
   title: string;
   url: string;
   favIconUrl?: string;
+  isCollective?: boolean; // For collective chips like "All tabs" or "Matching X"
+  searchTerm?: string; // For collective search chips
+  count?: number; // Number of tabs represented
+  tabIds?: number[]; // For collective chips, the actual tab IDs they represent
+}
+
+interface InlineChip {
+  id: string; // Unique identifier for the chip
+  tabId?: number; // For individual tab chips
+  type: 'tab' | 'collective';
+  title: string;
+  favIconUrl?: string;
+  searchTerm?: string; // For collective chips
+  tabIds?: number[]; // For collective chips
 }
 
 interface TabMention {
@@ -23,23 +37,24 @@ interface TabMention {
   favIconUrl?: string;
 }
 
-// Consolidated tab mention regex pattern
-const TAB_MENTION_REGEX = /@tab:(\d+):([^@]*?):/g;
+// Simple inline mention patterns for text parsing
+const INLINE_TAB_PATTERN = /🔗([^🔗]+)🔗/g;
 
 export const AskBar: React.FC = () => {
   const [input, setInput] = useState('');
   const [isExpanded, setIsExpanded] = useState(false);
   const [isVisible, setIsVisible] = useState(false);
   const [isClosing, setIsClosing] = useState(false);
-  const [selectedTabIds, setSelectedTabIds] = useState<number[]>([]);
+  const [selectedTabChips, setSelectedTabChips] = useState<TabChip[]>([]);
   const [availableTabs, setAvailableTabs] = useState<TabChip[]>([]);
+  const [hasAutoAddedCurrentTab, setHasAutoAddedCurrentTab] = useState(false);
 
   // @ mention UI state
   const [showDropdown, setShowDropdown] = useState(false);
   const [filteredTabs, setFilteredTabs] = useState<TabInfo[]>([]);
   const [dropdownSelectedIndex, setDropdownSelectedIndex] = useState(0);
   const [mentionStartPos, setMentionStartPos] = useState(-1);
-  const [mentionedTabs, setMentionedTabs] = useState<TabMention[]>([]);
+  const [searchTerm, setSearchTerm] = useState('');
 
   // State received from controller (pure rendering component)
   const [conversationHistory, setConversationHistory] = useState<Message[]>([]);
@@ -62,7 +77,6 @@ export const AskBar: React.FC = () => {
   // Chat system for streaming responses - only for API communication, no state management
   const [chatState, chatActions] = useSimpleChat(
     (message: Message) => {
-      // Only dispatch action to controller, no local state management
       if (message.type === 'assistant') {
         const action: IframeActionMsg = {
           type: 'IFRAME_ACTION',
@@ -78,7 +92,6 @@ export const AskBar: React.FC = () => {
       }
     },
     (delta: string) => {
-      // Only dispatch streaming updates to controller, no local state
       const action: IframeActionMsg = {
         type: 'IFRAME_ACTION',
         action: {
@@ -94,41 +107,116 @@ export const AskBar: React.FC = () => {
     () => conversationHistory
   );
 
-  // Consolidated function to parse tab mentions from text
-  const parseTabMentions = (text: string): TabMention[] => {
-    const mentions: TabMention[] = [];
-    const regex = new RegExp(TAB_MENTION_REGEX);
-    let match;
+  // Helper functions
+  const extractTabIdsFromText = (text: string): number[] => {
+    const tabIds: number[] = [];
+    
+    // Find collective chips in selected chips that have tabIds
+    selectedTabChips.forEach(chip => {
+      if (chip.isCollective && chip.tabIds) {
+        const chipText = `🔗${chip.title}🔗`;
+        if (text.includes(chipText)) {
+          tabIds.push(...chip.tabIds);
+        }
+      }
+    });
 
-    while ((match = regex.exec(text)) !== null) {
-      const tabId = parseInt(match[1]);
-      const title = match[2];
-      const tab = availableTabs.find(t => t.id === tabId);
+    // Find individual tab mentions in text
+    const matches = text.matchAll(INLINE_TAB_PATTERN);
+    for (const match of matches) {
+      const chipTitle = match[1];
+      const tab = availableTabs.find(t => t.title === chipTitle);
       if (tab) {
-        mentions.push({
-          id: tabId,
-          title: title || tab.title,
-          url: tab.url,
-          favIconUrl: tab.favIconUrl
-        });
+        tabIds.push(tab.id);
       }
     }
-    return mentions;
+
+    return [...new Set(tabIds)]; // Remove duplicates
   };
 
-  // Extract tab IDs from mentions in text
-  const extractTabIds = (text: string): number[] => {
-    const tabIds: number[] = [];
-    const regex = new RegExp(TAB_MENTION_REGEX);
-    let match;
+  const insertTabMention = (tab: TabChip | { id: number; title: string; url: string; favIconUrl?: string }) => {
+    if (mentionStartPos === -1) return;
+
+    const before = input.substring(0, mentionStartPos);
+    const after = input.substring(inputRef.current?.selectionStart || mentionStartPos);
     
-    while ((match = regex.exec(text)) !== null) {
-      const tabId = parseInt(match[1]);
-      if (!isNaN(tabId)) {
-        tabIds.push(tabId);
-      }
+    if (tab.id === -1) {
+      // Special case for "All tabs" or "All visible results"
+      const isSearching = searchTerm.trim().length > 0;
+      const tabsToAdd = isSearching ? filteredTabs : availableTabs;
+      
+      // Create ONE collective chip
+      const collectiveTitle = isSearching ? `Matching "${searchTerm}"` : 'All open tabs';
+      const collectiveChip: TabChip = {
+        id: Date.now(), // Unique ID for collective chip
+        title: collectiveTitle,
+        url: '',
+        isCollective: true,
+        searchTerm: isSearching ? searchTerm : undefined,
+        count: tabsToAdd.length,
+        tabIds: tabsToAdd.map(t => t.id)
+      };
+      
+      setSelectedTabChips(prev => [...prev, collectiveChip]);
+      
+      // Insert just ONE inline mention for the collective chip
+      const inlineText = `🔗${collectiveTitle}🔗`;
+      const newValue = before + inlineText + after;
+      setInput(newValue);
+      
+    } else {
+      // Individual tab selection
+      const tabChip: TabChip = {
+        id: tab.id,
+        title: tab.title,
+        url: tab.url,
+        favIconUrl: tab.favIconUrl
+      };
+      
+      setSelectedTabChips(prev => [...prev, tabChip]);
+      
+      // Insert inline mention
+      const inlineText = `🔗${tab.title}🔗`;
+      const newValue = before + inlineText + after;
+      setInput(newValue);
     }
-    return tabIds;
+    
+    setShowDropdown(false);
+    setMentionStartPos(-1);
+    setSearchTerm('');
+    
+    setTimeout(() => {
+      inputRef.current?.focus();
+    }, 0);
+  };
+
+  // Handle removing tab chips by ID (wrapper for TabChipRow interface)
+  const handleTabRemoveById = (tabId: number) => {
+    const chipToRemove = selectedTabChips.find(chip => chip.id === tabId);
+    if (chipToRemove) {
+      // Remove from tab chips
+      setSelectedTabChips(prev => prev.filter(chip => chip.id !== chipToRemove.id));
+      
+      // Remove corresponding inline mention from text
+      const chipText = `🔗${chipToRemove.title}🔗`;
+      const updatedText = input.replace(chipText, '');
+      setInput(updatedText);
+    }
+  };
+
+  // Handle re-adding tabs from message history
+  const handleTabReAdd = (tab: { id: number; title: string; url: string; favIconUrl?: string }) => {
+    // Check if tab is already selected
+    const isAlreadySelected = selectedTabChips.some(chip => chip.id === tab.id);
+    if (!isAlreadySelected) {
+      const tabChip: TabChip = {
+        id: tab.id,
+        title: tab.title,
+        url: tab.url,
+        favIconUrl: tab.favIconUrl
+      };
+      setSelectedTabChips(prev => [...prev, tabChip]);
+    }
   };
 
   // Effects
@@ -139,13 +227,11 @@ export const AskBar: React.FC = () => {
 
   // Initialize messaging system to receive updates from controller
   useEffect(() => {
-    // Listen for current tab response
     const cleanupTabHandler = portManager.current.addIframeHandler<IframeCurrentTabResponseMsg>('IFRAME_CURRENT_TAB_RESPONSE', (message) => {
       setCurrentTabId(message.tabId);
       setPageUrl(message.url);
     });
 
-    // Request current tab info on mount
     const getCurrentTabMsg: IframeGetCurrentTabMsg = { type: 'IFRAME_GET_CURRENT_TAB' };
     portManager.current.sendToParent(getCurrentTabMsg);
 
@@ -154,7 +240,7 @@ export const AskBar: React.FC = () => {
     };
   }, []);
 
-  // Load available tabs for tab chips (this is UI-specific, so can stay here)
+  // Load available tabs for tab chips and auto-update
   useEffect(() => {
     const loadAvailableTabs = async () => {
       try {
@@ -172,25 +258,31 @@ export const AskBar: React.FC = () => {
     };
 
     loadAvailableTabs();
-  }, []);
+    
+    // Auto-update tabs every 2 seconds when dropdown is visible
+    const interval = showDropdown ? setInterval(loadAvailableTabs, 2000) : null;
+    
+    return () => {
+      if (interval) clearInterval(interval);
+    };
+  }, [showDropdown]);
 
-  // Auto-select current tab when available and no tabs selected
+  // Auto-add current tab when Ask Bar opens (only once)
   useEffect(() => {
-    if (currentTabId && selectedTabIds.length === 0) {
-      setSelectedTabIds([currentTabId]);
-    }
-  }, [currentTabId]);
-
-  // Sync mentioned tabs with selected tabs
-  useEffect(() => {
-    const mentionedTabIds = mentionedTabs.map(tab => tab.id);
-    if (mentionedTabIds.length > 0) {
-      const newSelectedTabIds = [...new Set([...selectedTabIds, ...mentionedTabIds])];
-      if (newSelectedTabIds.length !== selectedTabIds.length) {
-        setSelectedTabIds(newSelectedTabIds);
+    if (currentTabId && availableTabs.length > 0 && !hasAutoAddedCurrentTab) {
+      const currentTab = availableTabs.find(tab => tab.id === currentTabId);
+      if (currentTab) {
+        const currentTabChip: TabChip = {
+          id: currentTab.id,
+          title: currentTab.title,
+          url: currentTab.url,
+          favIconUrl: currentTab.favIconUrl
+        };
+        setSelectedTabChips([currentTabChip]);
+        setHasAutoAddedCurrentTab(true); // Mark as auto-added, never do it again
       }
     }
-  }, [mentionedTabs]);
+  }, [currentTabId, availableTabs, hasAutoAddedCurrentTab]);
 
   // Position and resize logic (UI-specific)
   useLayoutEffect(() => {
@@ -298,34 +390,28 @@ export const AskBar: React.FC = () => {
     }, 300);
   };
 
-  const handleTabRemove = (tabId: number) => {
-    setSelectedTabIds(prev => prev.filter(id => id !== tabId));
-  };
-
-  const insertTabMention = (tab: TabChip) => {
-    if (mentionStartPos === -1) return;
-
-    const before = input.substring(0, mentionStartPos);
-    const after = input.substring(inputRef.current?.selectionStart || mentionStartPos);
-    const mention = `@tab:${tab.id}:${tab.title}:`;
-    const newValue = before + mention + after;
-    
-    setInput(newValue);
-    setShowDropdown(false);
-    setMentionStartPos(-1);
-    
-    setTimeout(() => {
-      inputRef.current?.focus();
-      const newPos = before.length + mention.length;
-      inputRef.current?.setSelectionRange(newPos, newPos);
-    }, 0);
-  };
-
   const handleInputChange = (newValue: string) => {
+    const previousValue = input;
     setInput(newValue);
-    
-    const newMentions = parseTabMentions(newValue);
-    setMentionedTabs(newMentions);
+
+    // Check for removed inline mentions and sync tab chips
+    if (previousValue !== newValue) {
+      const previousMentions = extractInlineMentions(previousValue);
+      const currentMentions = extractInlineMentions(newValue);
+      
+      // Find mentions that were removed
+      const removedMentions = previousMentions.filter(prevMention => 
+        !currentMentions.some(currMention => currMention === prevMention)
+      );
+      
+      // Remove corresponding tab chips
+      if (removedMentions.length > 0) {
+        setSelectedTabChips(prev => prev.filter(chip => {
+          const chipText = `🔗${chip.title}🔗`;
+          return !removedMentions.includes(chipText);
+        }));
+      }
+    }
 
     const cursorPos = inputRef.current?.selectionStart || 0;
     const textBeforeCursor = newValue.substring(0, cursorPos);
@@ -334,39 +420,61 @@ export const AskBar: React.FC = () => {
     if (atIndex !== -1) {
       const afterAt = textBeforeCursor.substring(atIndex + 1);
       
-      if (!afterAt.includes(':')) {
+      if (!afterAt.includes(' ') && afterAt.length >= 0) {
         setMentionStartPos(atIndex);
         setShowDropdown(true);
         setDropdownSelectedIndex(0);
         
-        const searchTerm = afterAt.toLowerCase();
-        const filtered = availableTabs.filter(tab => 
-          tab.title.toLowerCase().includes(searchTerm) ||
-          tab.url.toLowerCase().includes(searchTerm)
-        );
+        const searchTermValue = afterAt.toLowerCase();
+        setSearchTerm(searchTermValue);
+        const filtered = availableTabs.filter(tab => tab.title.toLowerCase().includes(searchTermValue));
         setFilteredTabs(filtered);
       } else {
         setShowDropdown(false);
+        setSearchTerm('');
       }
     } else {
       setShowDropdown(false);
       setMentionStartPos(-1);
+      setSearchTerm('');
     }
+  };
+
+  // Helper function to extract inline mentions from text
+  const extractInlineMentions = (text: string): string[] => {
+    const mentions: string[] = [];
+    const matches = text.matchAll(INLINE_TAB_PATTERN);
+    for (const match of matches) {
+      mentions.push(match[0]); // The full match including 🔗🔗
+    }
+    return mentions;
   };
 
   const handleInputKeyDown = (e: KeyboardEvent<HTMLTextAreaElement>) => {
     e.stopPropagation();
 
-    if (showDropdown && filteredTabs.length > 0) {
+    if (showDropdown) {
+      const totalOptions = filteredTabs.length + 1; // +1 for "All tabs"
+      
       if (e.key === 'ArrowDown') {
         e.preventDefault();
-        setDropdownSelectedIndex(prev => (prev + 1) % filteredTabs.length);
+        setDropdownSelectedIndex(prev => (prev + 1) % totalOptions);
       } else if (e.key === 'ArrowUp') {
         e.preventDefault();
-        setDropdownSelectedIndex(prev => (prev - 1 + filteredTabs.length) % filteredTabs.length);
+        setDropdownSelectedIndex(prev => prev === 0 ? 0 : prev - 1);
       } else if (e.key === 'Enter') {
         e.preventDefault();
-        insertTabMention(filteredTabs[dropdownSelectedIndex]);
+        if (dropdownSelectedIndex === 0) {
+          // "All tabs" option
+          insertTabMention({
+            id: -1,
+            title: searchTerm ? `Matching "${searchTerm}"` : 'All open tabs',
+            url: '',
+            favIconUrl: undefined
+          });
+        } else if (filteredTabs.length > 0 && dropdownSelectedIndex - 1 < filteredTabs.length) {
+          insertTabMention(filteredTabs[dropdownSelectedIndex - 1]);
+        }
       } else if (e.key === 'Escape') {
         setShowDropdown(false);
         setMentionStartPos(-1);
@@ -382,32 +490,35 @@ export const AskBar: React.FC = () => {
   const handleSubmit = async () => {
     if (!input.trim()) return;
 
-    // Get tab IDs from mentions and selected tabs
-    const mentionedTabIds = extractTabIds(input);
-    const allTabIds = [...new Set([...selectedTabIds, ...mentionedTabIds])];
-    const tabsToUse = allTabIds.length > 0 ? allTabIds : (currentTabId ? [currentTabId] : []);
+    // Use selected tab IDs
+    const tabsToUse = extractTabIdsFromText(input);
     
-    // Update selected tabs to include mentions
-    if (mentionedTabIds.length > 0) {
-      setSelectedTabIds(allTabIds);
-    }
+    // Add any selected chips that aren't in the text
+    const chipTabIds = selectedTabChips.flatMap(chip => 
+      chip.isCollective && chip.tabIds ? chip.tabIds : [chip.id]
+    );
+    const allTabIds = [...new Set([...tabsToUse, ...chipTabIds])];
 
-    // Dispatch action to add user message - no local state management
+    // Dispatch action to add user message with tab context (can be empty)
     dispatchAction('ADD_USER_MESSAGE', {
       content: input.trim(),
-      timestamp: Date.now()
+      timestamp: Date.now(),
+      tabIds: allTabIds.length > 0 ? allTabIds : undefined // Only include tabIds if there are tabs
     });
 
-    try {
-      await uiPortService.current.getContent(tabsToUse);
-    } catch (err) {
-      console.warn('Sol AskBar: getContent failed', err);
+    // Only scrape content if we have tabs to scrape
+    if (allTabIds.length > 0) {
+      try {
+        await uiPortService.current.getContent(allTabIds);
+      } catch (err) {
+        console.warn('Sol AskBar: getContent failed', err);
+      }
     }
     
-    // Send message via chat system
-    chatActions.sendMessage(input.trim(), tabsToUse, currentConversationId || 'new');
+    // Send message via chat system (empty array is fine)
+    chatActions.sendMessage(input.trim(), allTabIds, currentConversationId || 'new');
 
-    // Clear input & expand
+    // Clear input but KEEP tab chips for persistent context
     setInput('');
     setIsExpanded(true);
     
@@ -434,19 +545,15 @@ export const AskBar: React.FC = () => {
     return title.length > maxLength ? `${title.substring(0, maxLength)}...` : title;
   };
 
-  // Get selected tab chips for display
-  const selectedTabChips = availableTabs.filter(tab => selectedTabIds.includes(tab.id));
-
   return (
     <div 
       ref={askBarRef}
-      className={`fixed z-[2147483647] transition-all duration-300 ease-in-out font-inter ${getPositionClasses(position)}`}
+      className={`fixed z-[2147483647] transition-all duration-300 ease-in-out sol-font-inter ${getPositionClasses(position)}`}
       style={{
         opacity: isVisible ? 1 : 0,
         transform: `scale(${isVisible && !isClosing ? 1 : 0.9}) translateY(${isVisible && !isClosing ? 0 : 10}px)`,
         maxWidth: '90vw',
-        maxHeight: '90vh',
-        fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif'
+        maxHeight: '90vh'
       }}
       onKeyDown={handleKeyDown}
       tabIndex={0}
@@ -454,14 +561,12 @@ export const AskBar: React.FC = () => {
       {isExpanded ? (
         // Expanded Mode - Full Conversation Container  
         <div 
-          className="backdrop-blur-[16px] rounded-[28px] border-[0.5px] border-black/[0.07] transition-all duration-300 ease-in-out sol-conversation-shadow"
+          className="backdrop-blur-[16px] rounded-[28px] border-[0.5px] border-black/[0.07] transition-all duration-300 ease-in-out sol-conversation-shadow sol-font-inter"
            style={{ 
             width: '436px',
             maxHeight: '600px',
-            minHeight: '200px',
             height: 'auto',
-            backgroundColor: 'rgba(255, 255, 255, 0.8)',
-            fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif'
+            backgroundColor: 'rgba(255, 255, 255, 0.8)'
           }}
         >
           <div className="p-2"></div>
@@ -473,20 +578,21 @@ export const AskBar: React.FC = () => {
               copiedMessageIndex={copiedMessageIndex}
               onCopyMessage={handleCopyMessage}
               isStreaming={chatState.isStreaming}
+              availableTabs={availableTabs}
+              onTabReAdd={handleTabReAdd}
             />
           </div>
 
           {/* Input Area within conversation container */}
           <div className="p-2">
             <div 
-              className="rounded-[20px] border-[0.5px] border-black/[0.07] sol-input-shadow"
+              className="rounded-[20px] border-[0.5px] border-black/[0.07] sol-input-shadow sol-font-inter"
               style={{ 
                 width: '420px',
-                backgroundColor: 'white',
-                fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif'
+                backgroundColor: 'white'
               }}
             >
-              <TabChipRow tabs={selectedTabChips} onRemove={handleTabRemove} />
+              <TabChipRow tabs={selectedTabChips} onRemove={handleTabRemoveById} />
 
               <div
                 style={{
@@ -508,6 +614,7 @@ export const AskBar: React.FC = () => {
                   dropdownRef={dropdownRef}
                   setDropdownSelectedIndex={setDropdownSelectedIndex}
                   truncateTitle={truncateTitle}
+                  searchTerm={searchTerm}
                   onClose={handleClose}
                   onSubmit={handleSubmit}
                   isStreaming={chatState.isStreaming}
@@ -521,14 +628,13 @@ export const AskBar: React.FC = () => {
         </div>
       ) : (
         <div 
-          className="rounded-[20px] border-[0.5px] border-black/[0.07] transition-all duration-300 ease-in-out transform sol-input-shadow-large"
+          className="rounded-[20px] border-[0.5px] border-black/[0.07] transition-all duration-300 ease-in-out transform sol-input-shadow-large sol-font-inter"
           style={{ 
             width: '420px',
-            backgroundColor: 'white',
-            fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif'
+            backgroundColor: 'white'
           }}
         >
-          <TabChipRow tabs={selectedTabChips} onRemove={handleTabRemove} />
+          <TabChipRow tabs={selectedTabChips} onRemove={handleTabRemoveById} />
 
           <div
             style={{
@@ -550,6 +656,7 @@ export const AskBar: React.FC = () => {
               dropdownRef={dropdownRef}
               setDropdownSelectedIndex={setDropdownSelectedIndex}
               truncateTitle={truncateTitle}
+              searchTerm={searchTerm}
               onClose={handleClose}
               onSubmit={handleSubmit}
               isStreaming={chatState.isStreaming}

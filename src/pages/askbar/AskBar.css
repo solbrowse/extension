@@ -280,3 +280,218 @@ html {
 .sol-input-shadow-large {
   box-shadow: 0 4px 32px rgba(0, 0, 0, 0.1) !important;
 }
+
+.sol-dropdown-shadow {
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08) !important;
+}
+
+/* Enhanced input with inline chip styling */
+.sol-input-with-chips {
+  /* Base input styling will be handled by the textarea */
+}
+
+/* Style inline chip mentions */
+.sol-input-with-chips::placeholder {
+  color: rgba(0, 0, 0, 0.4);
+  font-weight: 500;
+}
+
+/* This would be applied via JavaScript to style 🔗text🔗 patterns */
+.sol-inline-chip {
+  display: inline-flex;
+  align-items: center;
+  background-color: rgba(0, 0, 0, 0.06);
+  border-radius: 4px;
+  padding: 2px 6px;
+  margin: 0 2px;
+  font-weight: 500;
+  color: #374151;
+  font-size: 16px;
+  line-height: 1.5;
+  vertical-align: baseline;
+}
+
+/* Centralized Font Families */
+.sol-font-inter {
+  font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+    sans-serif !important;
+}
+
+.sol-font-apple {
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI",
+    Roboto, sans-serif !important;
+}
+
+.sol-font-apple-clean {
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", sans-serif !important;
+}
+
+/* Typography Patterns */
+.sol-input-text {
+  font-size: 16px;
+  font-weight: 500;
+  line-height: 1.5;
+}
+
+.sol-input-placeholder {
+  font-size: 16px;
+  font-weight: 500;
+  line-height: 24px;
+}
+
+.sol-dropdown-item {
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.sol-dropdown-secondary {
+  font-size: 13px;
+  font-weight: 400;
+  line-height: 18px;
+}
+
+.sol-chip-title {
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.sol-chip-subtitle {
+  font-size: 12px;
+  font-weight: 400;
+}
+
+.sol-tab-history {
+  font-size: 12px;
+  font-weight: 500;
+  text-decoration: none;
+}
+
+/* Common Background Patterns */
+.sol-bg-translucent {
+  background-color: rgba(255, 255, 255, 0.85);
+}
+
+.sol-bg-chip {
+  background-color: rgba(0, 0, 0, 0.06);
+}
+
+.sol-bg-chip-collective {
+  background-color: rgba(59, 130, 246, 0.08);
+  border: 1px solid rgba(59, 130, 246, 0.2);
+}
+
+.sol-bg-chip-history {
+  background-color: rgba(0, 0, 0, 0.06);
+}
+
+.sol-bg-selected {
+  background-color: rgba(59, 130, 246, 0.2);
+  backdrop-filter: blur(4px);
+}
+
+.sol-bg-hover {
+  background-color: rgba(0, 0, 0, 0.03);
+}
+
+.sol-bg-hover-chip {
+  background-color: rgba(0, 0, 0, 0.1);
+}
+
+/* Border Radius Patterns */
+.sol-rounded-dropdown {
+  border-radius: 8px;
+}
+
+.sol-rounded-chip {
+  border-radius: 12px;
+}
+
+/* Transition Patterns */
+.sol-transition-colors {
+  transition: all 0.2s ease-in-out;
+}
+
+.sol-transition-opacity {
+  transition: opacity 0.2s ease-in-out;
+}
+
+/* Common Layout Patterns */
+.sol-message-container {
+  margin-bottom: 12px;
+}
+
+.sol-message-container:last-child {
+  margin-bottom: 0;
+}
+
+/* Button Hover States */
+.sol-button-hover {
+  transition: all 0.2s ease-in-out;
+}
+
+.sol-button-hover:hover {
+  background-color: rgba(0, 0, 0, 0.05);
+}
+
+/* Text Truncation Pattern */
+.sol-text-truncate {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Ensure dropdown fonts cascade to all children */
+.sol-font-apple,
+.sol-font-apple * {
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI",
+    Roboto, sans-serif !important;
+}
+
+.sol-font-apple-clean,
+.sol-font-apple-clean * {
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", sans-serif !important;
+}
+
+/* Force font override for any stubborn elements */
+.sol-font-apple div,
+.sol-font-apple span,
+.sol-font-apple p {
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI",
+    Roboto, sans-serif !important;
+}
+
+/* Snappy Dropdown Animation */
+@keyframes dropdown-appear {
+  from {
+    opacity: 0;
+    transform: translateY(-4px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes dropdown-disappear {
+  from {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+  to {
+    opacity: 0;
+    transform: translateY(-4px) scale(0.98);
+  }
+}
+
+.sol-dropdown-enter {
+  animation: dropdown-appear 0.15s cubic-bezier(0.2, 0, 0.2, 1) forwards;
+}
+
+.sol-dropdown-exit {
+  animation: dropdown-disappear 0.1s cubic-bezier(0.4, 0, 1, 1) forwards;
+}
+
+/* Fast dropdown item hover transitions */
+.sol-dropdown-item-hover {
+  transition: background-color 0.08s ease-out;
+}

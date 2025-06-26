@@ -1,11 +1,14 @@
 import React from 'react';
-import { XMarkIcon } from '@heroicons/react/24/outline';
+import { XMarkIcon, RectangleStackIcon } from '@heroicons/react/24/outline';
 
 export interface TabChipData {
   id: number;
   title: string;
   url: string;
   favIconUrl?: string;
+  isCollective?: boolean; // For collective chips like "All tabs" or "Tabs that match X"
+  searchTerm?: string; // For collective search chips
+  count?: number; // Number of tabs represented
 }
 
 interface TabChipProps {
@@ -31,18 +34,26 @@ const TabChip: React.FC<TabChipProps> = ({ tab, onRemove }) => {
     if (onRemove) onRemove(tab.id);
   };
 
+  const isCollective = tab.isCollective;
+
   return (
     <button
       onClick={handleClick}
-      className="flex-none w-[184px] h-[54px] bg-black/[0.06] rounded-[12px] p-3 flex items-center hover:bg-black/[0.1] transition-colors relative group"
-      title={tab.url}
+      className={`flex-none w-[184px] h-[54px] sol-rounded-chip p-3 flex items-center hover:sol-bg-hover-chip sol-transition-colors relative group ${
+        isCollective 
+          ? 'sol-bg-chip-collective' 
+          : 'sol-bg-chip'
+      }`}
+      title={isCollective ? `${tab.title} - ${tab.count} tabs` : tab.url}
     >
       {/* Favicon holder */}
       <div className="w-4 h-4 mr-3 flex-shrink-0 bg-gray-200 rounded-sm flex items-center justify-center">
-        {tab.favIconUrl ? (
+        {isCollective ? (
+          <RectangleStackIcon className="w-3.5 h-3.5 text-blue-600" />
+        ) : tab.favIconUrl ? (
           <img
             src={tab.favIconUrl}
-            alt=""
+            alt="Favicon"
             className="w-4 h-4 rounded-sm"
             onError={(e) => {
               (e.currentTarget as HTMLImageElement).style.display = 'none';
@@ -56,23 +67,24 @@ const TabChip: React.FC<TabChipProps> = ({ tab, onRemove }) => {
       {/* Text content */}
       <div className="flex-1 min-w-0">
         <div
-          className="text-xs font-medium text-black leading-tight text-left overflow-hidden text-ellipsis whitespace-nowrap"
-          style={{ fontFamily: 'Inter, sans-serif', fontWeight: 500 }}
+          className="text-black leading-tight text-left sol-text-truncate sol-font-inter sol-chip-title"
         >
           {truncateTitle(tab.title)}
         </div>
         <div
-          className="text-xs text-black/55 leading-tight text-left overflow-hidden text-ellipsis whitespace-nowrap"
-          style={{ fontFamily: 'Inter, sans-serif', fontWeight: 400 }}
+          className="text-black/55 leading-tight text-left sol-text-truncate sol-font-inter sol-chip-subtitle"
         >
-          {getBaseDomain(tab.url)}
+          {isCollective 
+            ? (tab.count+" tabs")
+            : getBaseDomain(tab.url)
+          }
         </div>
       </div>
 
       {onRemove && (
         <div 
-          className="absolute top-1 right-1 w-4 h-4 bg-black/20 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
-          title="Remove site from context"
+          className="absolute top-1 right-1 w-4 h-4 bg-black/20 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 sol-transition-opacity"
+          title="Remove from context"
         >
           <XMarkIcon className="w-2.5 h-2.5 text-black/60" />
         </div>
