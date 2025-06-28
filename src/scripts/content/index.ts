@@ -2,6 +2,7 @@ import '@src/utils/logger';
 import browser from 'webextension-polyfill';
 import { TabConversationManager } from '@src/utils/tabConversationManager';
 import { AskBarController } from './AskBarController';
+import { SideBarController } from './SideBarController';
 import { ScraperController } from './ScraperController';
 
 // Detect whether we are executing inside an extension-origin page
@@ -57,19 +58,23 @@ if (isExtensionContext()) {
     // Instantiate controllers
     const tabManager = TabConversationManager.getInstance();
     const askBar = new AskBarController(tabManager);
+    const sideBar = new SideBarController();
     const scraper = new ScraperController(tabId);
 
-    // Connect scraper to ask bar state
-    scraper.setAskBarOpenCallback(() => askBar.isVisible());
+    // Connect scraper to ask bar and sidebar state
+    scraper.setAskBarOpenCallback(() => askBar.isVisible() || sideBar.isVisible());
     askBar.setOnOpenCallback(() => scraper.triggerManualScrape());
+    
+    // Connect askbar to sidebar for expand functionality
+    askBar.setSideBarController(sideBar);
 
-    await Promise.all([askBar.init(), scraper.init()]);
+    await Promise.all([askBar.init(), sideBar.init(), scraper.init()]);
 
     // Start scraping immediately; controllers can later coordinate if needed
     scraper.start();
 
     // Expose globally for debugging/testing
-    (window as any).solContentScript = { askBar, scraper };
+    (window as any).solContentScript = { askBar, sideBar, scraper };
 
     // Listen for debug context requests from the AskBar iframe
     window.addEventListener('message', (event) => {
@@ -87,6 +92,7 @@ if (isExtensionContext()) {
     // Cleanup
     window.addEventListener('beforeunload', () => {
       askBar.cleanup();
+      sideBar.cleanup();
       scraper.cleanup();
     });
 

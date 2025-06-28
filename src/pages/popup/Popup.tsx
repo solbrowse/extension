@@ -186,20 +186,16 @@ export default function Popup() {
         {/* Side Feature */}
         <div className="space-y-3">
           <div className="flex items-center justify-between">
-            <h2 className="text-xl font-semibold text-gray-900 flex items-center gap-2">
+            <h2 className="text-xl font-semibold text-gray-900">
               Side
-              <span className="text-xs font-medium">
-                Coming Soon
-              </span>
             </h2>
             <Switch
               checked={sideEnabled}
               onCheckedChange={handleSideToggle}
-              disabled={true}
             />
           </div>
           <p className="text-[14px] text-gray-600 leading-relaxed">
-            Press enter on an Ask Bar or <kbd className="inline-flex items-center px-2 py-1 bg-gray-100 text-gray-700 rounded text-[12px] font-mono border border-gray-200 mx-1">Cmd+Enter</kbd> for an expanded conversation view
+            Press the expand button in Ask Bar or <kbd className="inline-flex items-center px-2 py-1 bg-gray-100 text-gray-700 rounded text-[12px] font-mono border border-gray-200 mx-1">Cmd+Enter</kbd> for an expanded conversation view
           </p>
         </div>
       </div>

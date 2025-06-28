@@ -15,6 +15,9 @@
       "32": "icon-32.png"
     }
   },
+  "chrome_url_overrides": {
+    "newtab": "src/pages/newtab/index.html"
+  },
   "icons": {
     "128": "icon-128.png"
   },
@@ -47,7 +50,10 @@
       "resources": [
         "src/pages/askbar/index.html",
         "src/pages/askbar/*",
-        "askbar/*"
+        "src/pages/sidebar/index.html",
+        "src/pages/sidebar/*",
+        "askbar/*",
+        "sidebar/*"
       ],
       "matches": ["<all_urls>"]
     }

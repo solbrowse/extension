@@ -1,6 +1,6 @@
 import '@src/utils/logger';
 import { ContentScraperService } from '@src/services/contentScraper';
-import { portManager } from './PortManager';
+import { portManager } from './portManager';
 import { ContentInitMsg, ContentDeltaMsg } from '@src/types/messaging';
 
 function isSignificant(mutation: MutationRecord): boolean {

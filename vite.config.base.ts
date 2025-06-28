@@ -30,6 +30,8 @@ export const baseBuildOptions: BuildOptions = {
   rollupOptions: {
     input: {
       askbar: resolve(pagesDir, "askbar", "index.html"),
+      sidebar: resolve(pagesDir, "sidebar", "index.html"),
+      newtab: resolve(pagesDir, "newtab", "index.html"),
     },
     output: {
       entryFileNames: (chunk) => `src/pages/${chunk.name}/index.js`,

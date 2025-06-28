@@ -22,9 +22,10 @@ interface Props {
   searchTerm: string;
 
   // Buttons / actions
-  onClose: () => void;
+  onClose?: () => void;
   onSubmit: () => void;
   isStreaming: boolean;
+  showCloseButton?: boolean;
 }
 
 const InputArea: React.FC<Props> = ({
@@ -40,9 +41,10 @@ const InputArea: React.FC<Props> = ({
   setDropdownSelectedIndex,
   truncateTitle,
   searchTerm,
-  onClose,
+  onClose = () => {},
   onSubmit,
-  isStreaming
+  isStreaming,
+  showCloseButton = true
 }) => {
   // Simple auto-resize - let the browser do the work.
   const autoResize = useCallback(() => {
@@ -79,13 +81,15 @@ const InputArea: React.FC<Props> = ({
         
         {/* Button group that won't shrink */}
         <div className="flex items-center gap-[8px] flex-shrink-0">
-          <button
-            onClick={onClose}
-            className="w-8 h-8 hover:bg-black/5 rounded-md flex items-center justify-center transition-colors"
-            title="Close chat"
-          >
-            <XMarkIcon className="w-5 h-5 text-gray-600" />
-          </button>
+          {showCloseButton && (
+            <button
+              onClick={onClose}
+              className="w-8 h-8 hover:bg-black/5 rounded-md flex items-center justify-center transition-colors"
+              title="Close chat"
+            >
+              <XMarkIcon className="w-5 h-5 text-gray-600" />
+            </button>
+          )}
           
           <button
             onClick={onSubmit}

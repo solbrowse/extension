@@ -1,6 +1,7 @@
 import { useState, useCallback, useRef } from 'react';
 import { UiPortService } from '@src/services/messaging/uiPortService';
-import { Message } from '@src/services/storage';
+import { Message, getConversation, updateConversation } from '@src/services/storage';
+import { ConversationService } from '@src/services/conversationService';
 
 export interface SimpleChatState {
   isStreaming: boolean;
@@ -67,17 +68,40 @@ export const useSimpleChat = (
         tabIds,
         conversationId,
         {
-          onDelta: (delta: string) => {
+          onDelta: async (delta: string) => {
             currentResponseRef.current += delta;
             setState(prev => ({
               ...prev,
               currentResponse: currentResponseRef.current
             }));
             
-            onStreamingDelta?.(delta);
+            // Update the conversation tied to this stream, even if user switches away
+            const convService = ConversationService.getInstance();
+            if (convService.getActiveConversationId() === conversationId) {
+              onStreamingDelta?.(delta); // Maintain existing behaviour for active conv
+            } else {
+              // Update storage directly for background conversation
+              try {
+                const conv = await getConversation(conversationId);
+                if (conv) {
+                  let msgs = conv.messages;
+                  // Update last assistant message or push new
+                  if (msgs.length > 0 && msgs[msgs.length-1].type === 'assistant') {
+                    const prevContent = msgs[msgs.length-1].content;
+                    const newContent = delta.startsWith(prevContent) ? delta : prevContent + delta;
+                    msgs[msgs.length-1] = { ...msgs[msgs.length-1], content: newContent };
+                  } else {
+                    msgs = [...msgs, { type: 'assistant' as const, content: delta, timestamp: Date.now() }];
+                  }
+                  await updateConversation(conversationId, { messages: msgs });
+                }
+              } catch(err) {
+                console.warn('Sol useSimpleChat: failed to update background conversation during stream', err);
+              }
+            }
           },
           
-          onComplete: (fullResponse: string) => {
+          onComplete: async (fullResponse: string) => {
             console.log('Sol useSimpleChat: Streaming complete');
             
             setState(prev => ({
@@ -86,15 +110,22 @@ export const useSimpleChat = (
               currentResponse: fullResponse
             }));
 
-            // Create response message
-            if (onMessageComplete) {
-              onMessageComplete({
-                type: 'assistant',
-                content: fullResponse,
-                timestamp: Date.now()
-              });
+            // Create response message in the correct conversation
+            try {
+              const convService = ConversationService.getInstance();
+              if (convService.getActiveConversationId() === conversationId) {
+                onMessageComplete?.({ type: 'assistant', content: fullResponse, timestamp: Date.now() });
+              } else {
+                const conv = await getConversation(conversationId);
+                if (conv) {
+                  const updatedMsgs = [...conv.messages, { type: 'assistant' as const, content: fullResponse, timestamp: Date.now() }];
+                  await updateConversation(conversationId, { messages: updatedMsgs });
+                }
+              }
+            } catch(err) {
+              console.warn('Sol useSimpleChat: failed to finalize background conversation', err);
             }
-
+            
             currentResponseRef.current = '';
           },
           

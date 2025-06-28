@@ -16,6 +16,7 @@ export class AskBarController {
   private onAskBarOpenCallback: (() => void) | null = null;
   private portManager = PortManager.getInstance();
   private stateChangeCleanup: (() => void) | null = null;
+  private sideBarController: any = null; // Will be injected
 
   constructor(private tabManager: TabConversationManager) {}
 
@@ -24,10 +25,16 @@ export class AskBarController {
     this.onAskBarOpenCallback = callback;
   }
 
+  /** Set reference to sidebar controller for expand functionality */
+  setSideBarController(sideBarController: any): void {
+    this.sideBarController = sideBarController;
+  }
+
   async init(): Promise<void> {
     await this.loadSettings();
     this.setupMessageHandlers();
     this.setupStateSync();
+    this.setupIframeMessageListener();
   }
 
   cleanup(): void {
@@ -193,5 +200,17 @@ export class AskBarController {
         conversationId: state.conversationId
       }, '*');
     }
+  }
+
+  private setupIframeMessageListener(): void {
+    // Listen for messages from iframe (e.g., expand to sidebar)
+    window.addEventListener('message', (event) => {
+      if (event.data?.type === 'sol-open-sidebar' && this.sideBarController) {
+        // Open sidebar (force=true bypasses disabled flag)
+        this.sideBarController.show(true);
+        // Optionally close the askbar when opening sidebar
+        // this.closeWithAnimation();
+      }
+    });
   }
 } 

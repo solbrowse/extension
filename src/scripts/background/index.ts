@@ -87,23 +87,39 @@ const processTabSnapshots = (snapshots: Array<any>, tabIds: number[]) => {
 
 // Simplified function to ensure content availability for tabs
 const ensureTabsHaveContent = async (tabIds: number[]): Promise<void> => {
-  const tabsWithoutContent = tabIds.filter(tabId => {
-    const snapshot = snapshotManager.getLatestSnapshot(tabId);
+  const maxWaitTimeMs = 5000; // total time to wait
+  const pollIntervalMs = 500; // how often to check
+
+  // Helper for snapshot existence check
+  const needsContent = (id: number) => {
+    const snapshot = snapshotManager.getLatestSnapshot(id);
     return !snapshot || snapshot.content === '[No content available]' || Date.now() - snapshot.timestamp > 60000;
-  });
-  
-  if (tabsWithoutContent.length === 0) return;
-  
+  };
+
+  const logSnapshotState = (ids: number[]) => {
+    ids.forEach(id => {
+      const snap = snapshotManager.getLatestSnapshot(id);
+      console.log(`Sol Background: Snapshot for tab ${id}:`, snap ? `content length ${snap.content?.length || 0}, ts ${snap.timestamp}` : 'NONE');
+    });
+  };
+
+  let tabsWithoutContent = tabIds.filter(needsContent);
+  if (tabsWithoutContent.length === 0) {
+    console.log('Sol Background: All mentioned tabs already have fresh content.');
+    return;
+  }
+
   console.log(`Sol Background: Ensuring content is available for tabs: ${tabsWithoutContent.join(', ')}`);
-  
-  // Try to trigger scraping for tabs without content
+  logSnapshotState(tabsWithoutContent);
+
+  // Trigger scraping for tabs without content
   for (const tabId of tabsWithoutContent) {
     try {
       const tab = await browser.tabs.get(tabId);
       if (!tab?.url || tab.url.startsWith('chrome://') || tab.url.startsWith('chrome-extension://')) {
         continue;
       }
-      
+
       await browser.scripting.executeScript({
         target: { tabId },
         func: () => {
@@ -113,14 +129,26 @@ const ensureTabsHaveContent = async (tabIds: number[]): Promise<void> => {
           }
         }
       });
-      
     } catch (error) {
       console.warn(`Sol Background: Could not trigger scrape for tab ${tabId}:`, error);
     }
   }
-  
-  // Wait for scraping to complete
-  await new Promise(resolve => setTimeout(resolve, 1000));
+
+  // Poll until all required content is available or timeout reached
+  const start = Date.now();
+  while (Date.now() - start < maxWaitTimeMs) {
+    await new Promise(res => setTimeout(res, pollIntervalMs));
+    tabsWithoutContent = tabIds.filter(needsContent);
+    if (tabsWithoutContent.length === 0) {
+      console.log('Sol Background: All tab content retrieved within wait period.');
+      break;
+    }
+  }
+
+  if (tabsWithoutContent.length > 0) {
+    console.warn('Sol Background: Some tabs still lack content after wait:', tabsWithoutContent);
+    logSnapshotState(tabsWithoutContent);
+  }
 };
 
 // Setup messaging handlers
@@ -195,12 +223,13 @@ const setupMessageHandlers = () => {
     console.log(`Sol Background: User prompt for tabs: ${message.tabIds.join(', ')}`);
     
     try {
-      // Ensure content scripts are injected and content is available for mentioned tabs
       await ensureTabsHaveContent(message.tabIds);
-      
-      // Get content for specified tabs using the same logic as GET_CONTENT
+
       const snapshots = snapshotManager.getLatestSnapshots(message.tabIds);
       const pages = processTabSnapshots(snapshots, message.tabIds);
+
+      console.log('Sol Background: Retrieved page snapshots:', pages.map(p => ({ id: p.tabId, title: p.title, contentLen: p.content.length })));
+
       const settings = await get();
       
       // Separate available and unavailable content

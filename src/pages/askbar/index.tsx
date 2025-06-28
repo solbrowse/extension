@@ -1,7 +1,7 @@
 import React from 'react';
 import { createRoot } from 'react-dom/client';
 import AskBar from './AskBar';
-import './AskBar.css';
+import '@src/assets/styles/chat.css';
 
 const App: React.FC = () => {
   return (
