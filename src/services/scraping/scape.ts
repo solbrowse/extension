@@ -1,6 +1,6 @@
 import { Readability } from '@mozilla/readability';
-import { pluginScraperRegistry, getScraperFor, setDefaultScraper } from './scraping/pluginScraperRegistry';
-import { createDefaultReadabilityScraper, createFallbackScraper } from './scraping/defaultScraper';
+import { pluginScraperRegistry, getScraperFor, setDefaultScraper } from './pluginRegistry';
+import { createDefaultReadabilityScraper, createFallbackScraper } from './default';
 import TurndownService from 'turndown';
 
 export interface TranscriptCue {

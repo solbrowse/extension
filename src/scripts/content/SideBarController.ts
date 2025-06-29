@@ -1,9 +1,9 @@
 import '@src/utils/logger';
 import browser from 'webextension-polyfill';
 import { get } from '@src/services/storage';
-import { IframeInjector, IframeInstance } from '@src/utils/iframeInjector';
+import { IframeInjector, IframeInstance } from '@src/utils/inject';
 import { PortManager } from '@src/services/messaging/portManager';
-import { attachToggleKeybind } from '@src/services/keybindManager';
+import { attachToggleKeybind } from '@src/services/keybind';
 import { IframeActionMsg, IframeCloseMsg, IframeGetCurrentTabMsg, IframeCurrentTabResponseMsg } from '@src/types/messaging';
 
 export class SideBarController {

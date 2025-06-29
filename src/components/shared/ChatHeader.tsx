@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { ClockIcon, PlusIcon, ArrowsPointingOutIcon, XMarkIcon, TrashIcon, PencilSquareIcon } from '@heroicons/react/24/outline';
 import { Conversation } from '@src/services/storage';
-import { useConversationService } from '../hooks/useConversationService';
+import { useConversationService } from '../hooks/useConversation';
 
 interface ChatHeaderProps {
   conversations: Conversation[];

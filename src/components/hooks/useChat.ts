@@ -1,7 +1,7 @@
 import { useState, useCallback, useRef } from 'react';
 import { UiPortService } from '@src/services/messaging/uiPortService';
 import { Message, getConversation, updateConversation } from '@src/services/storage';
-import { ConversationService } from '@src/services/conversationService';
+import conversation from '@src/services/conversation';
 
 export interface SimpleChatState {
   isStreaming: boolean;
@@ -14,7 +14,7 @@ export interface SimpleChatActions {
   clearError: () => void;
 }
 
-export const useSimpleChat = (
+export const useChat = (
   onMessageComplete?: (message: Message) => void,
   onStreamingDelta?: (delta: string) => void,
   getConversationHistory?: () => Message[]
@@ -31,7 +31,7 @@ export const useSimpleChat = (
   // Helper to handle errors consistently
   const handleError = useCallback((error: string | Error) => {
     const errorMessage = error instanceof Error ? error.message : error;
-    console.error('Sol useSimpleChat: Error:', errorMessage);
+    console.error('Sol useChat: Error:', errorMessage);
     
     setState(prev => ({
       ...prev,
@@ -54,7 +54,7 @@ export const useSimpleChat = (
     currentResponseRef.current = '';
 
     try {
-      console.log('Sol useSimpleChat: Sending message to tabs:', tabIds);
+      console.log('Sol useChat: Sending message to tabs:', tabIds);
 
       // Get conversation history for context
       const conversationHistory = getConversationHistory?.()?.map(msg => ({
@@ -76,9 +76,8 @@ export const useSimpleChat = (
             }));
             
             // Update the conversation tied to this stream, even if user switches away
-            const convService = ConversationService.getInstance();
-            if (convService.getActiveConversationId() === conversationId) {
-              onStreamingDelta?.(delta); // Maintain existing behaviour for active conv
+            if (conversation.getGlobalActiveConversationId() === conversationId) {
+              onStreamingDelta?.(currentResponseRef.current); // Pass full accumulated content
             } else {
               // Update storage directly for background conversation
               try {
@@ -96,13 +95,13 @@ export const useSimpleChat = (
                   await updateConversation(conversationId, { messages: msgs });
                 }
               } catch(err) {
-                console.warn('Sol useSimpleChat: failed to update background conversation during stream', err);
+                console.warn('Sol useChat: failed to update background conversation during stream', err);
               }
             }
           },
           
           onComplete: async (fullResponse: string) => {
-            console.log('Sol useSimpleChat: Streaming complete');
+            console.log('Sol useChat: Streaming complete');
             
             setState(prev => ({
               ...prev,
@@ -112,8 +111,7 @@ export const useSimpleChat = (
 
             // Create response message in the correct conversation
             try {
-              const convService = ConversationService.getInstance();
-              if (convService.getActiveConversationId() === conversationId) {
+              if (conversation.getGlobalActiveConversationId() === conversationId) {
                 onMessageComplete?.({ type: 'assistant', content: fullResponse, timestamp: Date.now() });
               } else {
                 const conv = await getConversation(conversationId);
@@ -123,7 +121,7 @@ export const useSimpleChat = (
                 }
               }
             } catch(err) {
-              console.warn('Sol useSimpleChat: failed to finalize background conversation', err);
+              console.warn('Sol useChat: failed to finalize background conversation', err);
             }
             
             currentResponseRef.current = '';

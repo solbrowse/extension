@@ -1,5 +1,5 @@
-import { ScraperPlugin } from '../pluginScraperRegistry';
-import { ScrapedContent } from '../../contentScraper';
+import { ScraperPlugin } from '../pluginRegistry';
+import { ScrapedContent } from '../scape';
 
 const githubScraper = (document: Document, url: string): ScrapedContent => {
   try {

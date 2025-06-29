@@ -1,10 +1,10 @@
 import '@src/utils/logger';
 import browser from 'webextension-polyfill';
 import { get } from '@src/services/storage';
-import { IframeInjector, IframeInstance } from '@src/utils/iframeInjector';
-import { TabConversationManager, TabConversation } from '@src/utils/tabConversationManager';
+import { IframeInjector, IframeInstance } from '@src/utils/inject';
+import conversation, { TabConversation } from '@src/services/conversation';
 import { PortManager } from '@src/services/messaging/portManager';
-import { attachToggleKeybind } from '@src/services/keybindManager';
+import { attachToggleKeybind } from '@src/services/keybind';
 import { IframeActionMsg, IframeCloseMsg, IframeGetCurrentTabMsg, IframeCurrentTabResponseMsg } from '@src/types/messaging';
 
 export class AskBarController {
@@ -18,7 +18,7 @@ export class AskBarController {
   private stateChangeCleanup: (() => void) | null = null;
   private sideBarController: any = null; // Will be injected
 
-  constructor(private tabManager: TabConversationManager) {}
+  constructor(private tabId: string) {}
 
   /** Set callback to trigger when Ask Bar opens */
   setOnOpenCallback(callback: () => void): void {
@@ -57,7 +57,7 @@ export class AskBarController {
     if (!this.askBarEnabled || this.isAskBarVisible) return;
 
     const settings = await get();
-    const existingConversation = this.tabManager.getConversation() || null;
+    const existingConversation = conversation.getTabState(this.tabId);
 
     this.askBarInstance = await IframeInjector.inject({
       iframeUrl: browser.runtime.getURL('src/pages/askbar/index.html'),
@@ -159,7 +159,40 @@ export class AskBarController {
   private setupMessageHandlers(): void {
     // Handle iframe actions
     this.portManager.addIframeHandler<IframeActionMsg>('IFRAME_ACTION', (message, source) => {
-      this.tabManager.dispatch(message.action);
+      // Dispatch actions to the unified conversation service for this tab
+      switch (message.action.type) {
+        case 'ADD_USER_MESSAGE':
+          conversation.addTabUserMessage(
+            this.tabId, 
+            message.action.payload.content,
+            message.action.payload.tabIds
+          );
+          break;
+        case 'ADD_ASSISTANT_MESSAGE':
+          conversation.addTabAssistantMessage(
+            this.tabId,
+            message.action.payload.content
+          );
+          break;
+        case 'UPDATE_STREAMING_MESSAGE':
+          conversation.updateTabStreamingMessage(
+            this.tabId,
+            message.action.payload.content
+          );
+          break;
+        case 'CLEAR_CONVERSATION':
+          conversation.clearTabConversation(this.tabId);
+          break;
+        case 'UPDATE_CONVERSATION_ID':
+          conversation.setTabConversationId(
+            this.tabId,
+            message.action.payload.conversationId
+          );
+          break;
+        default:
+          // Handle other actions as needed
+          break;
+      }
     });
 
     // Handle iframe close requests
@@ -180,15 +213,15 @@ export class AskBarController {
   }
 
   private setupStateSync(): void {
-    // Listen for state changes from TabConversationManager
-    this.stateChangeCleanup = this.tabManager.addStateChangeHandler((state: TabConversation) => {
+    // Listen for state changes from unified conversation service for this tab
+    this.stateChangeCleanup = conversation.subscribeToTab(this.tabId, (state: TabConversation) => {
       this.updateIframeState();
     });
   }
 
   private updateIframeState(): void {
     if (this.askBarInstance && this.isAskBarVisible && this.askBarInstance.iframe.contentWindow) {
-      const state = this.tabManager.getConversation();
+      const state = conversation.getTabState(this.tabId);
       // Send state update via postMessage
       this.askBarInstance.iframe.contentWindow.postMessage({
         type: 'sol-state-update',
@@ -203,14 +236,42 @@ export class AskBarController {
   }
 
   private setupIframeMessageListener(): void {
-    // Listen for messages from iframe (e.g., expand to sidebar)
+    // Listen for expand requests from the iframe
     window.addEventListener('message', (event) => {
-      if (event.data?.type === 'sol-open-sidebar' && this.sideBarController) {
-        // Open sidebar (force=true bypasses disabled flag)
-        this.sideBarController.show(true);
-        // Optionally close the askbar when opening sidebar
-        // this.closeWithAnimation();
+      if (event.data?.type === 'sol-expand-to-sidebar') {
+        this.expandToSidebar();
       }
     });
+  }
+
+  private expandToSidebar(): void {
+    if (!this.sideBarController) {
+      console.warn('Sol AskBar: SideBar controller not available for expand');
+      return;
+    }
+
+    // Get current tab conversation state
+    const tabState = conversation.getTabState(this.tabId);
+    
+    // Sync tab conversation to global if it has content
+    if (tabState.messages.length > 0) {
+      conversation.syncTabToGlobal(this.tabId)
+        .then(() => {
+          // Show sidebar after sync
+          this.sideBarController.show();
+          // Hide ask bar
+          this.hide();
+        })
+        .catch(error => {
+          console.error('Sol AskBar: Failed to sync conversation to global:', error);
+          // Still show sidebar even if sync fails
+          this.sideBarController.show();
+          this.hide();
+        });
+    } else {
+      // No conversation to sync, just show sidebar
+      this.sideBarController.show();
+      this.hide();
+    }
   }
 } 

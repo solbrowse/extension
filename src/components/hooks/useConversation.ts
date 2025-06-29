@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { ConversationService, ConversationState } from '@src/services/conversationService';
+import conversation, { ConversationState } from '@src/services/conversation';
 import { Message, Conversation } from '@src/services/storage';
 
 export interface UseConversationServiceReturn {
@@ -28,73 +28,52 @@ export const useConversationService = (): UseConversationServiceReturn => {
   });
   const [isLoading, setIsLoading] = useState(true);
 
-  const conversationService = ConversationService.getInstance();
-
-  // Subscribe to conversation service state changes
+  // Subscribe to global conversation service state changes
   useEffect(() => {
     // Get initial state
-    setState(conversationService.getState());
+    setState(conversation.getGlobalState());
     setIsLoading(false);
 
     // Subscribe to updates
-    const unsubscribe = conversationService.subscribe((newState) => {
+    const unsubscribe = conversation.subscribeToGlobal((newState) => {
       setState(newState);
     });
 
     return unsubscribe;
-  }, [conversationService]);
+  }, []);
 
   // Action handlers
   const createNewConversation = useCallback(async (): Promise<string> => {
-    return await conversationService.createNewConversation();
-  }, [conversationService]);
+    return await conversation.createNewGlobalConversation();
+  }, []);
 
   const switchToConversation = useCallback(async (conversationId: string): Promise<void> => {
-    await conversationService.switchToConversation(conversationId);
-  }, [conversationService]);
+    await conversation.switchToGlobalConversation(conversationId);
+  }, []);
 
   const addUserMessage = useCallback(async (content: string, tabIds?: number[]): Promise<void> => {
-    await conversationService.dispatch({
-      type: 'ADD_USER_MESSAGE',
-      payload: {
-        content,
-        timestamp: Date.now(),
-        tabIds
-      }
-    });
-  }, [conversationService]);
+    await conversation.addGlobalUserMessage(content, tabIds);
+  }, []);
 
   const addAssistantMessage = useCallback(async (content: string): Promise<void> => {
-    await conversationService.dispatch({
-      type: 'ADD_ASSISTANT_MESSAGE',
-      payload: {
-        content,
-        timestamp: Date.now()
-      }
-    });
-  }, [conversationService]);
+    await conversation.addGlobalAssistantMessage(content);
+  }, []);
 
   const updateStreamingMessage = useCallback(async (content: string): Promise<void> => {
-    await conversationService.dispatch({
-      type: 'UPDATE_STREAMING_MESSAGE',
-      payload: {
-        content,
-        timestamp: Date.now()
-      }
-    });
-  }, [conversationService]);
+    await conversation.updateGlobalStreamingMessage(content);
+  }, []);
 
   const clearCurrentConversation = useCallback(async (): Promise<void> => {
-    await conversationService.clearCurrentConversation();
-  }, [conversationService]);
+    await conversation.clearGlobalConversation();
+  }, []);
 
   const renameConversation = useCallback(async (conversationId: string, title: string): Promise<void> => {
-    await conversationService.renameConversation(conversationId, title);
-  }, [conversationService]);
+    await conversation.renameGlobalConversation(conversationId, title);
+  }, []);
 
   const deleteConversation = useCallback(async (conversationId: string): Promise<void> => {
-    await conversationService.deleteConversation(conversationId);
-  }, [conversationService]);
+    await conversation.deleteGlobalConversation(conversationId);
+  }, []);
 
   return {
     // State

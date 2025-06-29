@@ -1,6 +1,6 @@
 import '@src/utils/logger';
 import browser from 'webextension-polyfill';
-import { TabConversationManager } from '@src/utils/tabConversationManager';
+import conversation from '@src/services/conversation';
 import { AskBarController } from './AskBarController';
 import { SideBarController } from './SideBarController';
 import { ScraperController } from './ScraperController';
@@ -55,9 +55,9 @@ if (isExtensionContext()) {
     // Expose for debugging
     (window as any).solTabId = tabId;
 
-    // Instantiate controllers
-    const tabManager = TabConversationManager.getInstance();
-    const askBar = new AskBarController(tabManager);
+    // Instantiate controllers with unified service
+    const tabIdString = tabId.toString();
+    const askBar = new AskBarController(tabIdString);
     const sideBar = new SideBarController();
     const scraper = new ScraperController(tabId);
 
@@ -94,6 +94,7 @@ if (isExtensionContext()) {
       askBar.cleanup();
       sideBar.cleanup();
       scraper.cleanup();
+      conversation.cleanupTab(tabIdString);
     });
 
     console.log('Sol Content Script: Controllers initialised');

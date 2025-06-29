@@ -1,5 +1,5 @@
-import { ScraperPlugin } from '../pluginScraperRegistry';
-import { ScrapedContent, TranscriptCue } from '../../contentScraper';
+import { ScraperPlugin } from '../pluginRegistry';
+import { ScrapedContent, TranscriptCue } from '../scape';
 
 /**
  * Regex helpers

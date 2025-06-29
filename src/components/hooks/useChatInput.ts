@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, KeyboardEvent } from 'react';
 import { UiPortService, TabInfo } from '@src/services/messaging/uiPortService';
-import { useConversationService } from './useConversationService';
-import { useSimpleChat } from './useSimpleChat';
+import { useConversationService } from './useConversation';
+import { useChat } from './useChat';
 
 export interface TabChip {
   id: number;
@@ -73,7 +73,7 @@ export const useChatInput = (): UseChatInputReturn => {
   const conversationService = useConversationService();
 
   // Chat system for streaming responses
-  const [chatState, chatActions] = useSimpleChat(
+  const [chatState, chatActions] = useChat(
     (message) => {
       if (message.type === 'assistant') {
         conversationService.addAssistantMessage(message.content);

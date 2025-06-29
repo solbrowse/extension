@@ -1,4 +1,4 @@
-import { ScrapedContent } from '@src/services/contentScraper';
+import { ScrapedContent } from '@src/services/scraping/scape';
 import github from './plugins/github';
 import wikipedia from './plugins/wikipedia';
 import youtube from './plugins/youtube';

@@ -3,8 +3,8 @@ import browser from 'webextension-polyfill';
 import { ApiService } from '@src/services/api';
 import { needsSchemaReset, resetToDefaults, get } from '@src/services/storage';
 import { PortManager } from '@src/services/messaging/portManager';
-import { TabSnapshotManager } from '@src/services/scraping/tabSnapshotManager';
-import { createSystemPrompt, createWebsiteContext } from '@src/utils/prompts';
+import { TabSnapshotManager } from '@src/services/scraping/snapshotManager';
+import { createSystemPrompt, createWebsiteContext } from '@src/utils/promptBuilder';
 import { 
   ContentInitMsg, 
   ContentDeltaMsg, 

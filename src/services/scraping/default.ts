@@ -1,5 +1,5 @@
-import { ScrapedContent } from '@src/services/contentScraper';
-import { PluginScraper } from './pluginScraperRegistry';
+import { ScrapedContent } from '@src/services/scraping/scape';
+import { PluginScraper } from './pluginRegistry';
 import { Readability } from '@mozilla/readability';
 
 /**

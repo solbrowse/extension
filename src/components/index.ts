@@ -6,11 +6,15 @@ export { default as ConversationList } from './shared/ConversationList';
 export { default as ChatHeader } from './shared/ChatHeader';
 
 // Hooks
+export { useConversationService } from './hooks/useConversation';
 export { useConversationStorage } from './hooks/useConversationStorage';
 export { useCopyMessage } from './hooks/useCopyMessage';
-export { useSimpleChat } from './hooks/useSimpleChat';
-export { useConversationService } from './hooks/useConversationService';
+export { useChat } from './hooks/useChat';
+export { useStickToBottom } from './hooks/useStickToBottom';
 export { useChatInput, type TabChip } from './hooks/useChatInput';
+
+// Chat components
+export { MemoisedMessages } from './chat/MemoisedMessages';
 
 // Types (re-export from components for convenience)
 export type { Message } from '../services/storage'; 
