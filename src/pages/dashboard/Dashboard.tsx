@@ -19,7 +19,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Switch } from '@src/components/ui/switch';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@src/components/ui/tabs';
 import { useTheme } from '@src/hooks/useTheme';
-import logo from '@assets/img/logo.svg';
+import Logo from '@src/components/Logo';
 
 export default function Dashboard() {
   const [settings, setSettings] = useState<StorageData | null>(null);
@@ -277,7 +277,7 @@ export default function Dashboard() {
       <div className="bg-white/80 dark:bg-gray-900/80 backdrop-blur-sm border-b border-gray-200/50 dark:border-gray-700/50 sticky top-0 z-10">
         <div className="max-w-4xl mx-auto px-6">
           <div className="flex flex-col items-center">
-            <img src={logo} alt="Sol" className="w-32 h-32" />
+            <Logo className="w-32 h-32" />
           </div>
         </div>
       </div>

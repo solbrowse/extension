@@ -426,6 +426,7 @@ button,
   color: rgb(243, 244, 246) !important; /* gray-100 */
 }
 
+
 /* Fixed save indicator */
 .sol-save-indicator {
   position: fixed;
