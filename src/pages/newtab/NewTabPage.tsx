@@ -5,6 +5,7 @@ import { MemoisedMessages } from '@src/components/chat/MemoisedMessages';
 import { useStickToBottom } from '@src/components/hooks/useStickToBottom';
 import TabChipRow from '../../components/shared/TabChipRow';
 import InputArea from '../../components/shared/InputArea';
+import { useTheme } from '@src/hooks/useTheme';
 
 export const NewTabPage: React.FC = () => {
   const [isConversationMode, setIsConversationMode] = useState(false);
@@ -12,6 +13,7 @@ export const NewTabPage: React.FC = () => {
   // Custom hooks
   const { copiedMessageIndex, handleCopyMessage } = useCopyMessage();
   const conversationService = useConversationService();
+  const { isDarkMode } = useTheme();
   
   // Consolidated chat input hook - handles all input, tabs, dropdown logic
   const chatInput = useChatInput();

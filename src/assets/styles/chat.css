@@ -60,6 +60,15 @@ html {
   background: rgba(0, 0, 0, 0.3);
 }
 
+/* Dark mode scrollbar */
+.dark .sol-conversation::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+.dark .sol-conversation::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.3);
+}
+
 /* Streaming animation for text */
 @keyframes solPulse {
   0% {
@@ -133,9 +142,19 @@ html {
   opacity: 1 !important;
 }
 
+/* Dark mode placeholder */
+.dark .sol-ask-bar textarea::placeholder {
+  color: rgba(255, 255, 255, 0.4) !important;
+}
+
 /* Dividing line for expanded conversation */
 .sol-conversation-divider {
   border-bottom: 1px solid rgba(0, 0, 0, 0.07) !important;
+}
+
+/* Dark mode divider */
+.dark .sol-conversation-divider {
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1) !important;
 }
 
 /* Mode transition animations */
@@ -395,6 +414,36 @@ html {
 
 .sol-bg-hover-chip {
   background-color: rgba(0, 0, 0, 0.1);
+}
+
+/* Dark mode background patterns */
+.dark .sol-bg-translucent {
+  background-color: rgba(31, 41, 55, 0.85);
+}
+
+.dark .sol-bg-chip {
+  background-color: rgba(255, 255, 255, 0.1);
+}
+
+.dark .sol-bg-chip-collective {
+  background-color: rgba(59, 130, 246, 0.15);
+  border: 1px solid rgba(59, 130, 246, 0.3);
+}
+
+.dark .sol-bg-chip-history {
+  background-color: rgba(255, 255, 255, 0.1);
+}
+
+.dark .sol-bg-selected {
+  background-color: rgba(59, 130, 246, 0.3);
+}
+
+.dark .sol-bg-hover {
+  background-color: rgba(255, 255, 255, 0.05);
+}
+
+.dark .sol-bg-hover-chip {
+  background-color: rgba(255, 255, 255, 0.15);
 }
 
 /* Border Radius Patterns */

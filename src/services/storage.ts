@@ -83,6 +83,7 @@ export interface StorageData {
   model: string;
   customEndpoint?: string;
   debug: boolean;
+  darkMode: boolean;
   conversations: Conversation[]; // Legacy storage
   dbVersion?: number;
 }
@@ -128,6 +129,7 @@ export const DEFAULT_STORAGE: Readonly<StorageData> = {
   model: 'gpt-4o-mini',
   customEndpoint: '',
   debug: false,
+  darkMode: false,
   conversations: [],
 };
 

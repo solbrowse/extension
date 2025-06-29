@@ -6,6 +6,7 @@ import { IframeCloseMsg, IframeGetCurrentTabMsg, IframeCurrentTabResponseMsg } f
 import TabChipRow from '../../components/shared/TabChipRow';
 import InputArea from '../../components/shared/InputArea';
 import { XMarkIcon } from '@heroicons/react/24/outline';
+import { useTheme } from '@src/hooks/useTheme';
 
 export const SideBar: React.FC = () => {
   // UI-specific state
@@ -23,6 +24,7 @@ export const SideBar: React.FC = () => {
   // Custom hooks
   const { copiedMessageIndex, handleCopyMessage } = useCopyMessage();
   const conversationService = useConversationService();
+  const { isDarkMode } = useTheme();
   
   // Consolidated chat input hook - handles all input, tabs, dropdown logic
   const chatInput = useChatInput();
@@ -143,22 +145,22 @@ export const SideBar: React.FC = () => {
       tabIndex={0}
     >
       <div 
-        className="h-full backdrop-blur-[16px] border-r-[0.5px] border-black/[0.07] transition-all duration-300 ease-in-out sol-conversation-shadow sol-font-inter flex flex-col"
+        className={`h-full backdrop-blur-[16px] border-r-[0.5px] ${isDarkMode ? 'border-white/10' : 'border-black/[0.07]'} transition-all duration-300 ease-in-out sol-conversation-shadow sol-font-inter flex flex-col`}
         style={{ 
-          backgroundColor: 'rgba(255, 255, 255, 0.8)'
+          backgroundColor: isDarkMode ? 'rgba(31, 41, 55, 0.8)' : 'rgba(255, 255, 255, 0.8)'
         }}
       >
         {/* Header with close button */}
-        <div className="flex items-center justify-between p-4 border-b border-black/[0.07]">
+        <div className={`flex items-center justify-between p-4 border-b ${isDarkMode ? 'border-white/10' : 'border-black/[0.07]'}`}>
           <div className="flex items-center space-x-2">
             <div className="w-6 h-6 rounded-full bg-gradient-to-br from-purple-500 to-blue-600"></div>
-            <span className="font-semibold text-gray-800">Sol Assistant</span>
+            <span className={`font-semibold ${isDarkMode ? 'text-gray-200' : 'text-gray-800'}`}>Sol Assistant</span>
           </div>
           <button
             onClick={handleClose}
-            className="p-1 rounded-lg hover:bg-black/5 transition-colors"
+            className={`p-1 rounded-lg transition-colors ${isDarkMode ? 'hover:bg-white/10' : 'hover:bg-black/5'}`}
           >
-            <XMarkIcon className="w-5 h-5 text-gray-600" />
+            <XMarkIcon className={`w-5 h-5 ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`} />
           </button>
         </div>
 

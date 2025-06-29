@@ -4,6 +4,7 @@ import browser from 'webextension-polyfill';
 import { get, set } from '@src/services/storage';
 import { Button } from '@src/components/ui/button';
 import { Switch } from '@src/components/ui/switch';
+import { useTheme } from '@src/hooks/useTheme';
 import logo from '@assets/img/logo.svg';
 
 export default function Popup() {
@@ -13,6 +14,7 @@ export default function Popup() {
   const [isConfigured, setIsConfigured] = useState(false);
   const [askKeybind, setAskKeybind] = useState('');
   const [needsPermissions, setNeedsPermissions] = useState(false);
+  const { isDarkMode } = useTheme();
 
   useEffect(() => {
     loadSettings();
@@ -100,24 +102,24 @@ export default function Popup() {
 
   if (isLoading) {
     return (
-      <div className="h-96 flex items-center justify-center">
-        <div className="w-5 h-5 border-2 border-gray-300 border-t-gray-700 rounded-full animate-spin"></div>
+      <div className="h-96 flex items-center justify-center bg-white dark:bg-gray-900">
+        <div className="w-5 h-5 border-2 border-gray-300 dark:border-gray-600 border-t-gray-700 dark:border-t-gray-100 rounded-full animate-spin"></div>
       </div>
     );
   }
 
   if (needsPermissions) {
     return (
-      <div className="h-96 p-6 flex flex-col justify-center">
+      <div className="h-96 p-6 flex flex-col justify-center bg-white dark:bg-gray-900">
         <div className="text-center space-y-5">
-          <div className="w-14 h-14 mx-auto mb-4 flex items-center justify-center bg-amber-50 rounded-xl">
+          <div className="w-14 h-14 mx-auto mb-4 flex items-center justify-center bg-amber-50 dark:bg-amber-900/20 rounded-xl">
             <img src={logo} alt="Sol" className="w-8 h-8" />
           </div>
           <div className="space-y-2">
-            <h2 className="text-xl font-semibold text-gray-900 tracking-tight">
+            <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100 tracking-tight">
               Permission Required
             </h2>
-            <p className="text-[13px] text-gray-600 leading-relaxed px-2">
+            <p className="text-[13px] text-gray-600 dark:text-gray-400 leading-relaxed px-2">
               Firefox requires explicit permission for Sol to work on all websites. Click below to grant access.
             </p>
           </div>
@@ -134,16 +136,16 @@ export default function Popup() {
 
   if (!isConfigured) {
     return (
-      <div className="h-96 p-6 flex flex-col justify-center">
+      <div className="h-96 p-6 flex flex-col justify-center bg-white dark:bg-gray-900">
         <div className="text-center space-y-5">
-          <div className="w-14 h-14 mx-auto mb-4 flex items-center justify-center bg-blue-50 rounded-xl">
+          <div className="w-14 h-14 mx-auto mb-4 flex items-center justify-center bg-blue-50 dark:bg-blue-900/20 rounded-xl">
             <img src={logo} alt="Sol" className="w-8 h-8" />
           </div>
           <div className="space-y-2">
-            <h2 className="text-xl font-semibold text-gray-900 tracking-tight">
+            <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100 tracking-tight">
               Setup Required
             </h2>
-            <p className="text-[13px] text-gray-600 leading-relaxed px-2">
+            <p className="text-[13px] text-gray-600 dark:text-gray-400 leading-relaxed px-2">
               Please configure your AI provider in the dashboard to begin using Sol.
             </p>
           </div>
@@ -159,7 +161,7 @@ export default function Popup() {
   }
 
   return (
-    <div className="min-h-96 p-6 flex flex-col">
+    <div className="min-h-96 p-6 flex flex-col bg-white dark:bg-gray-900">
       {/* Header with Logo */}
       <div className="flex items-center justify-center mb-8">
         <img src={logo} alt="Sol" className="w-20 h-20" />
@@ -170,7 +172,7 @@ export default function Popup() {
         {/* Ask Feature */}
         <div className="space-y-3">
           <div className="flex items-center justify-between">
-            <h2 className="text-xl font-semibold text-gray-900">
+            <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100">
               Ask
             </h2>
             <Switch
@@ -178,15 +180,15 @@ export default function Popup() {
               onCheckedChange={handleAskToggle}
             />
           </div>
-          <p className="text-[14px] text-gray-600 leading-relaxed">
-            Press <kbd className="inline-flex items-center px-2 py-1 bg-gray-100 text-gray-700 rounded text-[12px] font-mono border border-gray-200 mx-1">{askKeybind}</kbd> to ask questions about a website
+          <p className="text-[14px] text-gray-600 dark:text-gray-400 leading-relaxed">
+            Press <kbd className="inline-flex items-center px-2 py-1 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded text-[12px] font-mono border border-gray-200 dark:border-gray-600 mx-1">{askKeybind}</kbd> to ask questions about a website
           </p>
         </div>
 
         {/* Side Feature */}
         <div className="space-y-3">
           <div className="flex items-center justify-between">
-            <h2 className="text-xl font-semibold text-gray-900">
+            <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100">
               Side
             </h2>
             <Switch
@@ -194,8 +196,8 @@ export default function Popup() {
               onCheckedChange={handleSideToggle}
             />
           </div>
-          <p className="text-[14px] text-gray-600 leading-relaxed">
-            Press the expand button in Ask Bar or <kbd className="inline-flex items-center px-2 py-1 bg-gray-100 text-gray-700 rounded text-[12px] font-mono border border-gray-200 mx-1">Cmd+Enter</kbd> for an expanded conversation view
+          <p className="text-[14px] text-gray-600 dark:text-gray-400 leading-relaxed">
+            Press the expand button in Ask Bar or <kbd className="inline-flex items-center px-2 py-1 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded text-[12px] font-mono border border-gray-200 dark:border-gray-600 mx-1">Cmd+Enter</kbd> for an expanded conversation view
           </p>
         </div>
       </div>
