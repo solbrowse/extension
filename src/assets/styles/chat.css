@@ -544,3 +544,53 @@ html {
 .sol-dropdown-item-hover {
   transition: background-color 0.08s ease-out;
 }
+
+/* Message text styling for dark mode */
+.sol-message-text {
+  color: #1f2937;
+  transition: color 0.2s ease-in-out;
+}
+
+.dark .sol-message-text {
+  color: #f9fafb;
+}
+
+/* AI response content styling */
+.sol-ai-response {
+  color: #374151;
+}
+
+.dark .sol-ai-response {
+  color: #e5e7eb;
+}
+
+/* User message styling */
+.sol-user-message {
+  color: #1f2937;
+}
+
+.dark .sol-user-message {
+  color: #f3f4f6;
+}
+
+/* General message container text color */
+.sol-message-container,
+.sol-message-container p,
+.sol-message-container div {
+  color: inherit;
+}
+
+.dark .sol-message-container,
+.dark .sol-message-container p,
+.dark .sol-message-container div {
+  color: #e5e7eb;
+}
+
+/* Table styling for dark mode */
+.sol-table-cell {
+  border: 1px solid rgba(0, 0, 0, 0.15);
+}
+
+.dark .sol-table-cell {
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}

@@ -53,7 +53,7 @@ const InlineTabRenderer: React.FC<{ content: string }> = React.memo(({ content }
         parts.push(
           <span
             key={`mention-${tabId}-${match.index}`}
-            className="inline-flex items-center mx-0.5 px-1.5 py-0.5 bg-blue-50 text-blue-700 rounded border border-blue-200 text-sm font-medium"
+            className="inline-flex items-center mx-0.5 px-1.5 py-0.5 bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 rounded border border-blue-200 dark:border-blue-700 text-sm font-medium"
             title={`Tab: ${tab.title}`}
           >
             {tab.favIconUrl && (
@@ -72,7 +72,7 @@ const InlineTabRenderer: React.FC<{ content: string }> = React.memo(({ content }
       } else {
         // If tab not found, show a placeholder
         parts.push(
-          <span key={`unknown-${match.index}`} className="inline-flex items-center mx-0.5 px-1.5 py-0.5 bg-black/10 text-black/60 rounded text-sm">
+          <span key={`unknown-${match.index}`} className="inline-flex items-center mx-0.5 px-1.5 py-0.5 bg-black/10 dark:bg-white/20 text-black/60 dark:text-white/70 rounded text-sm">
             🗂️ {title.length > 25 ? title.substring(0, 25) + '...' : title}
           </span>
         );
@@ -100,12 +100,12 @@ const InlineTabRenderer: React.FC<{ content: string }> = React.memo(({ content }
 const MarkdownComponents = {
 
   // Style headings
-  h1: ({ children, ...props }: any) => <h3 className="text-base font-semibold text-black/90 mt-4 mb-2 first:mt-0" {...props}>{children}</h3>,
-  h2: ({ children, ...props }: any) => <h4 className="text-sm font-semibold text-black/90 mt-3 mb-2 first:mt-0" {...props}>{children}</h4>,
-  h3: ({ children, ...props }: any) => <h5 className="text-sm font-medium text-black/90 mt-3 mb-1 first:mt-0" {...props}>{children}</h5>,
-  h4: ({ children, ...props }: any) => <h6 className="text-sm font-medium text-black/80 mt-2 mb-1 first:mt-0" {...props}>{children}</h6>,
-  h5: ({ children, ...props }: any) => <h6 className="text-sm text-black/80 mt-2 mb-1 first:mt-0" {...props}>{children}</h6>,
-  h6: ({ children, ...props }: any) => <span className="text-sm text-black/70 font-medium" {...props}>{children}</span>,
+  h1: ({ children, ...props }: any) => <h3 className="text-base font-semibold text-black/90 dark:text-white/90 mt-4 mb-2 first:mt-0" {...props}>{children}</h3>,
+  h2: ({ children, ...props }: any) => <h4 className="text-sm font-semibold text-black/90 dark:text-white/90 mt-3 mb-2 first:mt-0" {...props}>{children}</h4>,
+  h3: ({ children, ...props }: any) => <h5 className="text-sm font-medium text-black/90 dark:text-white/90 mt-3 mb-1 first:mt-0" {...props}>{children}</h5>,
+  h4: ({ children, ...props }: any) => <h6 className="text-sm font-medium text-black/80 dark:text-white/80 mt-2 mb-1 first:mt-0" {...props}>{children}</h6>,
+  h5: ({ children, ...props }: any) => <h6 className="text-sm text-black/80 dark:text-white/80 mt-2 mb-1 first:mt-0" {...props}>{children}</h6>,
+  h6: ({ children, ...props }: any) => <span className="text-sm text-black/70 dark:text-white/70 font-medium" {...props}>{children}</span>,
   
   // Clean list styling
   ul: ({ children, ...props }: any) => <ul className="list-disc list-inside space-y-1 ml-2 my-2" {...props}>{children}</ul>,
@@ -132,17 +132,17 @@ const MarkdownComponents = {
           });
           return (
             <span 
-              className="inline-flex items-center bg-blue-50 text-blue-800 px-2 py-1 rounded text-sm border border-blue-200 mx-0.5"
+              className="inline-flex items-center bg-blue-50 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300 px-2 py-1 rounded text-sm border border-blue-200 dark:border-blue-700 mx-0.5"
               dangerouslySetInnerHTML={{ __html: mathMLString }}
             />
           );
         } catch (error) {
           // Fallback to plain text if LaTeX parsing fails
-          return <code className="bg-black/5 text-black/80 px-1.5 py-0.5 rounded text-sm font-mono" {...props}>{content}</code>;
+          return <code className="bg-black/5 dark:bg-white/10 text-black/80 dark:text-white/80 px-1.5 py-0.5 rounded text-sm font-mono" {...props}>{content}</code>;
         }
       }
       
-      return <code className="bg-black/5 text-black/80 px-1.5 py-0.5 rounded text-sm font-mono" {...props}>{children}</code>;
+      return <code className="bg-black/5 dark:bg-white/10 text-black/80 dark:text-white/80 px-1.5 py-0.5 rounded text-sm font-mono" {...props}>{children}</code>;
     }
     
     // Handle LaTeX code blocks
@@ -153,10 +153,10 @@ const MarkdownComponents = {
           throwOnError: false 
         });
         return (
-          <div className="my-4 p-4 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg border border-blue-200 overflow-x-auto">
+          <div className="my-4 p-4 bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 rounded-lg border border-blue-200 dark:border-blue-700 overflow-x-auto">
             <div className="text-center">
               <div 
-                className="inline-block bg-white px-4 py-3 rounded border border-blue-300 shadow-sm"
+                className="inline-block bg-white dark:bg-gray-800 px-4 py-3 rounded border border-blue-300 dark:border-blue-600 shadow-sm"
                 dangerouslySetInnerHTML={{ __html: mathMLString }}
               />
             </div>
@@ -165,7 +165,7 @@ const MarkdownComponents = {
       } catch (error) {
         // Fallback to code block if LaTeX parsing fails
         return (
-          <pre className="bg-black/5 p-3 rounded-lg my-2 overflow-x-auto">
+          <pre className="bg-black/5 dark:bg-white/10 p-3 rounded-lg my-2 overflow-x-auto">
             <code className="text-sm font-mono text-black/80" {...props}>{children}</code>
           </pre>
         );
@@ -173,7 +173,7 @@ const MarkdownComponents = {
     }
     
     return (
-      <pre className="bg-black/5 p-3 rounded-lg my-2 overflow-x-auto">
+      <pre className="bg-black/5 dark:bg-white/10 p-3 rounded-lg my-2 overflow-x-auto">
         <code className="text-sm font-mono text-black/80" {...props}>{children}</code>
       </pre>
     );
@@ -181,7 +181,7 @@ const MarkdownComponents = {
   
   // Blockquotes
   blockquote: ({ children, ...props }: any) => (
-    <blockquote className="border-l-3 border-black/10 pl-3 my-2 italic text-black/60" {...props}>
+    <blockquote className="border-l-3 border-black/10 dark:border-white/20 pl-3 my-2 italic text-black/60 dark:text-white/70" {...props}>
       {children}
     </blockquote>
   ),
@@ -192,7 +192,7 @@ const MarkdownComponents = {
       href={href} 
       target="_blank" 
       rel="noopener noreferrer"
-      className="text-black/60 hover:text-black/80 underline decoration-1 underline-offset-2"
+      className="text-black/60 dark:text-white/70 hover:text-black/80 dark:hover:text-white/90 underline decoration-1 underline-offset-2"
       {...props}
     >
       {children}
@@ -202,14 +202,14 @@ const MarkdownComponents = {
   // Tables with dynamic sizing and responsive design
   table: ({ children, ...props }: any) => (
     <div className="my-4 overflow-x-auto">
-      <table className="min-w-full bg-transparent border-collapse border border-gray-300 rounded-lg" {...props}>
+      <table className="min-w-full bg-transparent border-collapse border border-gray-300 dark:border-gray-600 rounded-lg" {...props}>
         {children}
       </table>
     </div>
   ),
   
   thead: ({ children, ...props }: any) => (
-    <thead className="bg-black/5" {...props}>
+    <thead className="bg-black/5 dark:bg-white/10" {...props}>
       {children}
     </thead>
   ),
@@ -228,13 +228,12 @@ const MarkdownComponents = {
   
   th: ({ children, ...props }: any) => (
     <th 
-      className="text-left text-sm font-semibold text-black/90 max-w-xs break-words" 
+      className="text-left text-sm font-semibold text-black/90 dark:text-white/90 max-w-xs break-words sol-table-cell" 
       {...props}
       style={{ 
         minWidth: '100px',
         maxWidth: '300px',
         width: 'auto',
-        border: '1px solid rgba(0,0,0,0.15)',
         padding: '8px 12px'
       }}
     >
@@ -246,13 +245,12 @@ const MarkdownComponents = {
   
   td: ({ children, ...props }: any) => (
     <td 
-      className="text-sm text-black/80 max-w-xs break-words align-top" 
+      className="text-sm text-black/80 dark:text-white/80 max-w-xs break-words align-top sol-table-cell" 
       {...props}
       style={{ 
         minWidth: '100px',
         maxWidth: '300px',
         width: 'auto',
-        border: '1px solid rgba(0,0,0,0.15)',
         padding: '8px 12px'
       }}
     >

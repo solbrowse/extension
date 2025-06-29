@@ -41,7 +41,7 @@ const TabHistoryChip: React.FC<{ tab: TabInfo; onClick: () => void }> = ({ tab, 
         }}
       />
     )}
-    <span className="text-gray-800 max-w-[100px] sol-text-truncate">
+    <span className="text-gray-800 dark:text-gray-200 max-w-[100px] sol-text-truncate">
       {tab.title.length > 15 ? `${tab.title.substring(0, 15)}...` : tab.title}
     </span>
   </button>
@@ -83,7 +83,7 @@ export const MessageItem: React.FC<MessageItemProps> = ({
           ${className}
         `}
       >
-        <div className="text-black font-medium text-base leading-relaxed text-right pr-0 mb-2">
+        <div className="text-black dark:text-white font-medium text-base leading-relaxed text-right pr-0 mb-2">
           {message.content}
         </div>
         
@@ -115,7 +115,7 @@ export const MessageItem: React.FC<MessageItemProps> = ({
     >
       <div 
         className={`
-          text-black text-base font-normal leading-relaxed pb-4 text-left
+          text-black dark:text-white text-base font-normal leading-relaxed pb-4 text-left
           ${isStreaming && isLastMessage ? 'sol-streaming' : ''}
         `}
       >
