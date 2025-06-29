@@ -283,6 +283,24 @@ button,
   transform: translateY(0px) scale(0.997) !important;
 }
 
+/* Dark mode tabs styling */
+.dark [data-slot="tabs-list"] {
+  background: rgba(255, 255, 255, 0.1) !important;
+}
+
+.dark [data-slot="tabs-trigger"] {
+  color: rgb(156, 163, 175) !important; /* gray-400 */
+}
+
+.dark [data-slot="tabs-trigger"]:hover {
+  color: rgb(209, 213, 219) !important; /* gray-300 */
+}
+
+.dark [data-slot="tabs-trigger"][data-state="active"] {
+  background: rgba(255, 255, 255, 0.15) !important;
+  color: rgb(243, 244, 246) !important; /* gray-100 */
+}
+
 /* Fixed save indicator */
 .sol-save-indicator {
   position: fixed;
