@@ -507,10 +507,9 @@ export default function Dashboard() {
                             onClick={() => updateSetting('model', model.id)}
                             className={`h-auto p-4 text-left justify-start rounded-lg font-medium text-sm transition-all duration-200 hover:scale-[1.02] active:scale-[0.98] ${
                               settings.model === model.id 
-                                ? 'bg-black text-white hover:bg-gray-800' 
-                                : 'text-gray-900 hover:bg-black/10'
+                                ? 'bg-black dark:bg-white text-white dark:text-black hover:bg-gray-800 dark:hover:bg-gray-200' 
+                                : 'text-gray-900 dark:text-gray-100 hover:bg-black/10 dark:hover:bg-white/10 bg-black/5 dark:bg-white/10'
                             }`}
-                            style={settings.model !== model.id ? { backgroundColor: 'rgba(0, 0, 0, 0.05)' } : {}}
                           >
                             <span className="text-sm font-medium truncate">{model.name}</span>
                           </Button>
