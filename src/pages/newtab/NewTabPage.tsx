@@ -63,14 +63,11 @@ export const NewTabPage: React.FC = () => {
   // Centered input mode (when no conversation)
   if (!isConversationMode) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 flex items-center justify-center p-8 sol-font-inter">
+      <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800 flex items-center justify-center p-8 sol-font-inter">
         <div className="w-full max-w-3xl min-w-[480px]">
           {/* Input container */}
           <div 
-            className="rounded-[20px] border-[0.5px] border-black/[0.07] sol-input-shadow-large sol-font-inter w-full"
-            style={{ 
-              backgroundColor: 'white'
-            }}
+            className="rounded-[20px] border-[0.5px] border-black/[0.07] dark:border-white/[0.08] sol-input-shadow-large sol-font-inter w-full bg-white dark:bg-gray-800"
           >
             <TabChipRow tabs={chatInput.selectedTabChips} onRemove={chatInput.handleTabRemoveById} />
 
@@ -101,7 +98,7 @@ export const NewTabPage: React.FC = () => {
                   showCloseButton={false}
                 />
               {chatInput.error && (
-                <div className="mt-2 text-red-600 text-sm">{chatInput.error}</div>
+                <div className="mt-2 text-red-600 dark:text-red-400 text-sm">{chatInput.error}</div>
               )}
             </div>
           </div>
@@ -112,9 +109,9 @@ export const NewTabPage: React.FC = () => {
 
   // Conversation mode (full chat interface)
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 flex flex-col sol-font-inter">
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800 flex flex-col sol-font-inter">
       {/* Header */}
-      <div className="bg-white/80 backdrop-blur-sm border-b border-black/[0.07] p-4 relative z-50">
+      <div className="bg-white/80 dark:bg-gray-900/80 backdrop-blur-sm border-b border-black/[0.07] dark:border-white/[0.08] p-4 relative z-50">
         <div className="max-w-4xl mx-auto flex items-center justify-between">
           <ChatHeader
             conversations={conversationService.conversations}
@@ -147,10 +144,7 @@ export const NewTabPage: React.FC = () => {
         {/* Input Area */}
         <div className="sticky bottom-0">
           <div 
-            className="rounded-[20px] border-[0.5px] border-black/[0.07] sol-input-shadow sol-font-inter"
-            style={{ 
-              backgroundColor: 'white'
-            }}
+            className="rounded-[20px] border-[0.5px] border-black/[0.07] dark:border-white/[0.08] sol-input-shadow sol-font-inter bg-white dark:bg-gray-800"
           >
             <TabChipRow tabs={chatInput.selectedTabChips} onRemove={chatInput.handleTabRemoveById} />
 
@@ -181,7 +175,7 @@ export const NewTabPage: React.FC = () => {
                 showCloseButton={false}
               />
               {chatInput.error && (
-                <div className="mt-2 text-red-600 text-sm">{chatInput.error}</div>
+                <div className="mt-2 text-red-600 dark:text-red-400 text-sm">{chatInput.error}</div>
               )}
             </div>
           </div>
