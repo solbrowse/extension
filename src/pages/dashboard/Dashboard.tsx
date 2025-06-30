@@ -8,7 +8,10 @@ import {
   DocumentArrowDownIcon,
   ClipboardDocumentIcon
 } from '@heroicons/react/24/outline';
-import { get, set, StorageData, getConversations, deleteConversation, deleteAllConversations as deleteAllConversationsStorage, exportConversationToMarkdown, exportAllConversationsToMarkdown, Conversation, resetToDefaults } from '../../services/storage';
+import { StorageData, Conversation } from '../../services/storage';
+import settingsService from '../../utils/settings';
+import conversation from '../../services/conversation';
+import exportService from '../../utils/export';
 import { ApiService, PROVIDERS, Model } from '@src/services/api';
 import { Button } from '@src/components/ui/button';
 import { Input } from '@src/components/ui/input';
@@ -54,8 +57,8 @@ export default function Dashboard() {
   const loadData = useCallback(async () => {
     try {
       const [settingsData, conversationsData] = await Promise.all([
-        get(),
-        getConversations()
+        settingsService.getAll(),
+        conversation.getConversations()
       ]);
       
       setSettings(settingsData);
@@ -80,7 +83,7 @@ export default function Dashboard() {
     setSaveStatus('syncing');
     const timeoutId = setTimeout(async () => {
       try {
-        await set(settings);
+        await settingsService.setAll(settings);
         setSaveStatus('synced');
         setTimeout(() => setSaveStatus('idle'), 2000);
       } catch (error) {
@@ -174,7 +177,7 @@ export default function Dashboard() {
     if (!confirm('Are you sure you want to delete this conversation?')) return;
     
     try {
-      await deleteConversation(id);
+              await conversation.deleteConversation(id);
       setConversations(prev => prev.filter(c => c.id !== id));
     } catch (error) {
       console.error('Error deleting conversation:', error);
@@ -183,7 +186,7 @@ export default function Dashboard() {
 
   const exportConversation = async (conversation: Conversation) => {
     try {
-      const markdown = exportConversationToMarkdown(conversation);
+      const markdown = exportService.exportConversationToMarkdown(conversation);
       const blob = new Blob([markdown], { type: 'text/markdown' });
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
@@ -200,7 +203,7 @@ export default function Dashboard() {
 
   const exportAllConversations = async () => {
     try {
-      const markdown = await exportAllConversationsToMarkdown();
+      const markdown = await exportService.exportAllConversationsToMarkdown();
       const blob = new Blob([markdown], { type: 'text/markdown' });
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
@@ -217,7 +220,7 @@ export default function Dashboard() {
 
   const copyConversation = async (conversation: Conversation) => {
     try {
-      const markdown = exportConversationToMarkdown(conversation);
+      const markdown = exportService.exportConversationToMarkdown(conversation);
       await navigator.clipboard.writeText(markdown);
     } catch (error) {
       console.error('Error copying conversation:', error);
@@ -228,7 +231,7 @@ export default function Dashboard() {
     if (!confirm('Are you sure you want to delete ALL conversations? This action cannot be undone.')) return;
     
     try {
-      await deleteAllConversationsStorage();
+              await conversation.deleteAllConversations();
       setConversations([]);
     } catch (error) {
       console.error('Error deleting all conversations:', error);
@@ -239,7 +242,7 @@ export default function Dashboard() {
     if (!confirm('Are you sure you want to reset ALL settings and conversations? This will clear everything and cannot be undone.')) return;
     
     try {
-      await resetToDefaults();
+      await settingsService.resetToDefaults();
       window.location.reload();
     } catch (error) {
       console.error('Error resetting storage:', error);

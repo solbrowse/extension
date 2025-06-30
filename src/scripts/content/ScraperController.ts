@@ -1,5 +1,5 @@
 import '@src/utils/logger';
-import { ContentScraperService } from '@src/services/scraping/scape';
+import { ContentScraperService } from '@src/services/scraping/scrape';
 import { portManager } from './portManager';
 import { ContentInitMsg, ContentDeltaMsg } from '@src/types/messaging';
 

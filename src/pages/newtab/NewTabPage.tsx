@@ -1,8 +1,7 @@
 import '@src/utils/logger';
 import React, { useState, useEffect } from 'react';
 import { useCopyMessage, ChatHeader, useConversationService, useChatInput } from '@src/components/index';
-import { MemoisedMessages } from '@src/components/chat/MemoisedMessages';
-import { useStickToBottom } from '@src/components/hooks/useStickToBottom';
+import { MemoisedMessages } from '@src/components/shared/MemoisedMessages';
 import TabChipRow from '../../components/shared/TabChipRow';
 import InputArea from '../../components/shared/InputArea';
 
@@ -16,25 +15,11 @@ export const NewTabPage: React.FC = () => {
   // Consolidated chat input hook - handles all input, tabs, dropdown logic
   const chatInput = useChatInput();
 
-  // Scroll management for conversation mode
-  const { scrollRef, scrollToBottom } = useStickToBottom({
-    enabled: isConversationMode,
-    threshold: 100,
-    behavior: 'smooth'
-  });
-
   // Switch to conversation mode when we have messages
   useEffect(() => {
     const hasMessages = conversationService.messages.length > 0;
     setIsConversationMode(hasMessages);
   }, [conversationService.messages.length]);
-
-  // Auto-scroll when new messages arrive or streaming updates
-  useEffect(() => {
-    if (isConversationMode && (conversationService.messages.length > 0 || chatInput.isStreaming)) {
-      scrollToBottom();
-    }
-  }, [conversationService.messages.length, chatInput.isStreaming, isConversationMode, scrollToBottom]);
 
   // Chat header handlers
   const handleNewConversation = async () => {
@@ -128,8 +113,7 @@ export const NewTabPage: React.FC = () => {
       {/* Main content */}
       <div className="flex-1 flex flex-col max-w-4xl mx-auto w-full p-6">
         {/* Conversation Messages with optimized rendering */}
-        <div 
-          ref={scrollRef}
+        <div
           className="flex-1 mb-6 overflow-y-auto"
         >
           <MemoisedMessages

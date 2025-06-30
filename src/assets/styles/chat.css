@@ -1,5 +1,5 @@
-@import "../../assets/styles/tailwind.css";
-@import url("https://fonts.googleapis.com/css2?family=Inter:wght@100;200;300;400;500;600;700;800;900&display=swap");
+@import "tailwindcss";
+@import "tw-animate-css";
 
 /* Custom styles for iframe-based AskBar */
 
@@ -494,4 +494,141 @@ html {
 /* Fast dropdown item hover transitions */
 .sol-dropdown-item-hover {
   transition: background-color 0.08s ease-out;
+}
+
+/* Markdown Specific Styles */
+.sol-markdown h1 {
+  font-size: 1.5rem;
+  font-weight: 600;
+  margin-top: 1.5rem;
+  margin-bottom: 1rem;
+  color: rgba(0, 0, 0, 0.9);
+}
+
+.sol-markdown h2 {
+  font-size: 1.25rem;
+  font-weight: 600;
+  margin-top: 1.25rem;
+  margin-bottom: 0.75rem;
+  color: rgba(0, 0, 0, 0.9);
+}
+
+.sol-markdown h3 {
+  font-size: 1.125rem;
+  font-weight: 600;
+  margin-top: 1rem;
+  margin-bottom: 0.75rem;
+  color: rgba(0, 0, 0, 0.9);
+}
+
+.sol-markdown h4,
+.sol-markdown h5,
+.sol-markdown h6 {
+  font-size: 1rem;
+  font-weight: 600;
+  margin-top: 0.75rem;
+  margin-bottom: 0.5rem;
+  color: rgba(0, 0, 0, 0.9);
+}
+
+.sol-markdown ul {
+  list-style-type: disc;
+  margin-left: 1.5rem;
+  margin-top: 0.5rem;
+  margin-bottom: 0.5rem;
+}
+
+.sol-markdown ol {
+  list-style-type: decimal;
+  margin-left: 1.5rem;
+  margin-top: 0.5rem;
+  margin-bottom: 0.5rem;
+}
+
+.sol-markdown li {
+  margin-bottom: 0.25rem;
+  line-height: 1.6;
+}
+
+.sol-markdown li > ul,
+.sol-markdown li > ol {
+  margin-top: 0.25rem;
+  margin-bottom: 0.25rem;
+}
+
+.sol-markdown blockquote {
+  border-left: 4px solid rgba(0, 0, 0, 0.1);
+  padding-left: 1rem;
+  margin: 1rem 0;
+  color: rgba(0, 0, 0, 0.7);
+  font-style: italic;
+}
+
+.sol-markdown code {
+  background-color: rgba(0, 0, 0, 0.05);
+  padding: 0.2em 0.4em;
+  border-radius: 3px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 0.9em;
+}
+
+.sol-markdown pre {
+  background-color: rgba(0, 0, 0, 0.05);
+  padding: 1rem;
+  border-radius: 6px;
+  overflow-x: auto;
+  margin: 1rem 0;
+}
+
+.sol-markdown pre code {
+  background-color: transparent;
+  padding: 0;
+  border-radius: 0;
+  font-size: 0.9em;
+  line-height: 1.5;
+}
+
+.sol-markdown table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 1rem 0;
+}
+
+.sol-markdown th,
+.sol-markdown td {
+  border: 1px solid rgba(0, 0, 0, 0.1);
+  padding: 0.5rem;
+  text-align: left;
+}
+
+.sol-markdown th {
+  background-color: rgba(0, 0, 0, 0.05);
+  font-weight: 600;
+}
+
+.sol-markdown hr {
+  border: 0;
+  border-top: 1px solid rgba(0, 0, 0, 0.1);
+  margin: 1.5rem 0;
+}
+
+.sol-markdown a {
+  color: #2563eb;
+  text-decoration: underline;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 2px;
+}
+
+.sol-markdown a:hover {
+  color: #1d4ed8;
+}
+
+/* Ensure first elements don't have top margin */
+.sol-markdown > *:first-child {
+  margin-top: 0;
+}
+
+/* Ensure last elements don't have bottom margin */
+.sol-markdown > *:last-child {
+  margin-bottom: 0;
 }

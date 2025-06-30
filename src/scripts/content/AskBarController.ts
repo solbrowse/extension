@@ -1,6 +1,6 @@
 import '@src/utils/logger';
 import browser from 'webextension-polyfill';
-import { get } from '@src/services/storage';
+import settingsService from '@src/utils/settings';
 import { IframeInjector, IframeInstance } from '@src/utils/inject';
 import conversation, { TabConversation } from '@src/services/conversation';
 import { PortManager } from '@src/services/messaging/portManager';
@@ -56,7 +56,7 @@ export class AskBarController {
   async show(): Promise<void> {
     if (!this.askBarEnabled || this.isAskBarVisible) return;
 
-    const settings = await get();
+    const settings = await settingsService.getAll();
     const existingConversation = conversation.getTabState(this.tabId);
 
     this.askBarInstance = await IframeInjector.inject({
@@ -112,8 +112,8 @@ export class AskBarController {
   // ---------------------------------------------------------
 
   private async loadSettings(): Promise<void> {
-    const settings = await get();
-    this.askBarEnabled = settings.features.askBar.isEnabled ?? false;
+    const settings = await settingsService.getAll();
+    this.askBarEnabled = settings.features.askBar.isEnabled ?? true;
     this.targetKeybindString = settings.features.askBar.keybind || 'Ctrl+F';
 
     if (this.askBarEnabled) {
@@ -240,6 +240,10 @@ export class AskBarController {
     window.addEventListener('message', (event) => {
       if (event.data?.type === 'sol-expand-to-sidebar') {
         this.expandToSidebar();
+      } else if (event.data?.type === 'sol-open-sidebar') {
+        this.expandToSidebar();
+      } else if (event.data?.type === 'sol-close-askbar') {
+        this.hide(); // Direct hide like expand button
       }
     });
   }
@@ -257,20 +261,20 @@ export class AskBarController {
     if (tabState.messages.length > 0) {
       conversation.syncTabToGlobal(this.tabId)
         .then(() => {
-          // Show sidebar after sync
-          this.sideBarController.show();
+          // Show sidebar after sync with force=true
+          this.sideBarController.show(true);
           // Hide ask bar
           this.hide();
         })
         .catch(error => {
           console.error('Sol AskBar: Failed to sync conversation to global:', error);
           // Still show sidebar even if sync fails
-          this.sideBarController.show();
+          this.sideBarController.show(true);
           this.hide();
         });
     } else {
-      // No conversation to sync, just show sidebar
-      this.sideBarController.show();
+      // No conversation to sync, just show sidebar with force=true
+      this.sideBarController.show(true);
       this.hide();
     }
   }

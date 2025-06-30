@@ -1,7 +1,7 @@
 import '@src/utils/logger';
 import browser from 'webextension-polyfill';
 import { ApiService } from '@src/services/api';
-import { needsSchemaReset, resetToDefaults, get } from '@src/services/storage';
+import settingsService from '@src/utils/settings';
 import { PortManager } from '@src/services/messaging/portManager';
 import { TabSnapshotManager } from '@src/services/scraping/snapshotManager';
 import { createSystemPrompt, createWebsiteContext } from '@src/utils/promptBuilder';
@@ -42,9 +42,9 @@ browser.storage.onChanged.addListener((changes, area) => {
 // Check for schema updates and reset if needed
 const checkAndResetSchema = async () => {
   try {
-    if (await needsSchemaReset()) {
+    if (await settingsService.needsSchemaReset()) {
       console.log('Sol Background: Resetting storage due to schema change');
-      await resetToDefaults();
+      await settingsService.resetToDefaults();
       console.log('Sol Background: Storage reset completed');
     }
   } catch (error) {
@@ -230,7 +230,7 @@ const setupMessageHandlers = () => {
 
       console.log('Sol Background: Retrieved page snapshots:', pages.map(p => ({ id: p.tabId, title: p.title, contentLen: p.content.length })));
 
-      const settings = await get();
+      const settings = await settingsService.getAll();
       
       // Separate available and unavailable content
       const availablePages = pages.filter(page => page.content && page.content !== '[No content available]');

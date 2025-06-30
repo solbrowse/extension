@@ -1,6 +1,6 @@
 import { useState, useCallback, useRef } from 'react';
 import { UiPortService } from '@src/services/messaging/uiPortService';
-import { Message, getConversation, updateConversation } from '@src/services/storage';
+import { Message } from '@src/services/storage';
 import conversation from '@src/services/conversation';
 
 export interface SimpleChatState {
@@ -81,7 +81,7 @@ export const useChat = (
             } else {
               // Update storage directly for background conversation
               try {
-                const conv = await getConversation(conversationId);
+                const conv = await conversation.getConversation(conversationId);
                 if (conv) {
                   let msgs = conv.messages;
                   // Update last assistant message or push new
@@ -92,7 +92,7 @@ export const useChat = (
                   } else {
                     msgs = [...msgs, { type: 'assistant' as const, content: delta, timestamp: Date.now() }];
                   }
-                  await updateConversation(conversationId, { messages: msgs });
+                  await conversation.updateConversation(conversationId, { messages: msgs });
                 }
               } catch(err) {
                 console.warn('Sol useChat: failed to update background conversation during stream', err);
@@ -114,10 +114,10 @@ export const useChat = (
               if (conversation.getGlobalActiveConversationId() === conversationId) {
                 onMessageComplete?.({ type: 'assistant', content: fullResponse, timestamp: Date.now() });
               } else {
-                const conv = await getConversation(conversationId);
+                const conv = await conversation.getConversation(conversationId);
                 if (conv) {
                   const updatedMsgs = [...conv.messages, { type: 'assistant' as const, content: fullResponse, timestamp: Date.now() }];
-                  await updateConversation(conversationId, { messages: updatedMsgs });
+                  await conversation.updateConversation(conversationId, { messages: updatedMsgs });
                 }
               }
             } catch(err) {

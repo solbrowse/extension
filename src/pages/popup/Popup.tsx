@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Cog6ToothIcon, FaceSmileIcon, VariableIcon } from '@heroicons/react/24/outline';
 import browser from 'webextension-polyfill';
-import { get, set } from '@src/services/storage';
+import settingsService from '@src/utils/settings';
 import { Button } from '@src/components/ui/button';
 import { Switch } from '@src/components/ui/switch';
 import logo from '@assets/img/logo.svg';
@@ -20,7 +20,7 @@ export default function Popup() {
 
   const loadSettings = async () => {
     try {
-      const data = await get();
+      const data = await settingsService.getAll();
       setAskEnabled(data.features.askBar.isEnabled);
       setSideEnabled(data.features.sideBar?.isEnabled || false);
       setIsConfigured(!!data.apiKey || data.provider === 'custom');
@@ -44,8 +44,8 @@ export default function Popup() {
 
   const handleAskToggle = async (enabled: boolean) => {
     try {
-      const currentSettings = await get();
-      await set({ 
+      const currentSettings = await settingsService.getAll();
+      await settingsService.setAll({ 
         features: { 
           ...currentSettings.features,
           askBar: {
@@ -62,8 +62,8 @@ export default function Popup() {
 
   const handleSideToggle = async (enabled: boolean) => {
     try {
-      const currentSettings = await get();
-      await set({ 
+      const currentSettings = await settingsService.getAll();
+      await settingsService.setAll({ 
         features: { 
           ...currentSettings.features,
           sideBar: {

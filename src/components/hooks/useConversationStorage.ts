@@ -1,5 +1,6 @@
 import { useCallback, useEffect } from 'react';
-import { Message, saveConversation, updateConversation } from '../../services/storage';
+import { Message } from '../../services/storage';
+import conversation from '../../services/conversation';
 
 export const useConversationStorage = (
   conversationHistory: Message[],
@@ -13,7 +14,7 @@ export const useConversationStorage = (
       if (!currentConversationId) {
         // Create new conversation
         const title = conversationHistory[0]?.content.substring(0, 50) + '...' || 'New Conversation';
-        const newId = await saveConversation({
+        const newId = await conversation.saveConversation({
           url: currentUrl,
           title,
           messages: conversationHistory
@@ -22,13 +23,13 @@ export const useConversationStorage = (
       } else {
         // Update existing conversation
         try {
-          await updateConversation(currentConversationId, {
+          await conversation.updateConversation(currentConversationId, {
             messages: conversationHistory
           });
         } catch (updateError) {
           // If update fails (conversation not found), create a new one
           const title = conversationHistory[0]?.content.substring(0, 50) + '...' || 'New Conversation';
-          const newId = await saveConversation({
+          const newId = await conversation.saveConversation({
             url: currentUrl,
             title,
             messages: conversationHistory

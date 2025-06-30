@@ -1,6 +1,4 @@
-import { ScrapedContent } from '@src/services/scraping/scape';
-import github from './plugins/github';
-import wikipedia from './plugins/wikipedia';
+import { ScrapedContent } from '@src/services/scraping/scrape';
 import youtube from './plugins/youtube';
 
 // Plugin scraper function type
@@ -107,7 +105,7 @@ class PluginScraperRegistry {
    * Register built-in plugins for common sites
    */
   private registerBuiltinPlugins(): void {
-    [github, wikipedia, youtube].forEach(p => this.registerPlugin(p));
+    [youtube].forEach(p => this.registerPlugin(p));
   }
 }
 

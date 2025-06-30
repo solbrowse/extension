@@ -1,7 +1,8 @@
 import '@src/utils/logger';
 import browser from 'webextension-polyfill';
-import { get } from '@src/services/storage';
+import settingsService from '@src/utils/settings';
 import { IframeInjector, IframeInstance } from '@src/utils/inject';
+import conversation, { TabConversation } from '@src/services/conversation';
 import { PortManager } from '@src/services/messaging/portManager';
 import { attachToggleKeybind } from '@src/services/keybind';
 import { IframeActionMsg, IframeCloseMsg, IframeGetCurrentTabMsg, IframeCurrentTabResponseMsg } from '@src/types/messaging';
@@ -13,18 +14,24 @@ export class SideBarController {
   private targetKeybindString = '';
   private keypressDisposer: (() => void) | null = null;
   private portManager = PortManager.getInstance();
+  private stateChangeCleanup: (() => void) | null = null;
+  private tabId: string;
 
-  constructor() {}
+  constructor() {
+    this.tabId = (window as any).solTabId ?? '';
+  }
 
   async init(): Promise<void> {
     await this.loadSettings();
     this.setupMessageHandlers();
+    this.setupStateSync();
   }
 
   cleanup(): void {
     this.hide();
     this.portManager.cleanup();
     this.keypressDisposer?.();
+    this.stateChangeCleanup?.();
   }
 
   /** Public accessor for SideBar visibility state */
@@ -39,7 +46,7 @@ export class SideBarController {
   async show(force = false): Promise<void> {
     if ((!this.sideBarEnabled && !force) || this.isSideBarVisible) return;
 
-    const settings = await get();
+    const settings = await settingsService.getAll();
 
     this.sideBarInstance = await IframeInjector.inject({
       iframeUrl: browser.runtime.getURL('src/pages/sidebar/index.html'),
@@ -86,7 +93,7 @@ export class SideBarController {
   // ---------------------------------------------------------
 
   private async loadSettings(): Promise<void> {
-    const settings = await get();
+    const settings = await settingsService.getAll();
     // Handle potential missing nested fields due to shallow merges of stored settings
     const sideBarSettings = settings.features?.sideBar ?? {
       isEnabled: true,
@@ -94,7 +101,7 @@ export class SideBarController {
       position: 'left',
     };
 
-    this.sideBarEnabled = sideBarSettings.isEnabled ?? false;
+    this.sideBarEnabled = sideBarSettings.isEnabled ?? true;
     this.targetKeybindString = sideBarSettings.keybind || 'Ctrl+Enter';
 
     if (this.sideBarEnabled) {
@@ -153,5 +160,28 @@ export class SideBarController {
       };
       this.portManager.sendToIframe(source, response);
     });
+  }
+
+  private setupStateSync(): void {
+    // Listen for state changes from unified conversation service for this tab
+    this.stateChangeCleanup = conversation.subscribeToTab(this.tabId, (state: TabConversation) => {
+      this.updateIframeState();
+    });
+  }
+
+  private updateIframeState(): void {
+    if (this.sideBarInstance && this.isSideBarVisible && this.sideBarInstance.iframe.contentWindow) {
+      const state = conversation.getTabState(this.tabId);
+      // Send state update via postMessage
+      this.sideBarInstance.iframe.contentWindow.postMessage({
+        type: 'sol-state-update',
+        conversationHistory: state.messages.map(msg => ({
+          type: msg.type,
+          content: msg.content,
+          timestamp: msg.timestamp
+        })),
+        conversationId: state.conversationId
+      }, '*');
+    }
   }
 } 

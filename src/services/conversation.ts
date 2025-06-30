@@ -1,5 +1,5 @@
 import browser from 'webextension-polyfill';
-import unifiedStorage, { Message, Conversation, DbMessage, MessagePart, SyncListener } from './storage';
+import storage, { Message, Conversation, DbMessage, MessagePart, SyncListener, DbConversation } from './storage';
 
 // ============================================================================
 // TYPES & INTERFACES
@@ -51,7 +51,6 @@ export class conversation {
   private tabListeners: Map<string, TabConversationListener[]> = new Map();
   
   // Services
-  private storage = unifiedStorage;
   private syncUnsubscribe?: () => void;
   
   // Navigation handlers for tab contexts
@@ -71,6 +70,213 @@ export class conversation {
   }
 
   // ============================================================================
+  // DATABASE CRUD OPERATIONS
+  // ============================================================================
+
+  async getConversations(): Promise<Conversation[]> {
+    try {
+      const dbConversations = await storage.database.conversations
+        .orderBy('updatedAt')
+        .reverse()
+        .toArray();
+      
+      return await Promise.all(
+        dbConversations.map(async (dbConv) => {
+          try {
+            const messages = await this.getMessages(dbConv.id);
+            return this.dbConversationToLegacy(dbConv, messages);
+          } catch (msgError) {
+            console.warn(`Sol Conversation: Failed to load messages for conversation ${dbConv.id}:`, msgError);
+            return this.dbConversationToLegacy(dbConv, []);
+          }
+        })
+      );
+    } catch (error) {
+      console.error('Sol Conversation: Failed to get conversations:', error);
+      return [];
+    }
+  }
+
+  async getConversation(id: string): Promise<Conversation | null> {
+    try {
+      const dbConv = await storage.database.conversations.get(id);
+      if (!dbConv) return null;
+      
+      const messages = await this.getMessages(id);
+      return this.dbConversationToLegacy(dbConv, messages);
+    } catch (error) {
+      console.error('Sol Conversation: Failed to get conversation:', error);
+      return null;
+    }
+  }
+
+  async saveConversation(conversation: Omit<Conversation, 'id' | 'createdAt' | 'updatedAt'>): Promise<string> {
+    try {
+      const now = Date.now();
+      const id = `conv_${now}_${Math.random().toString(36).substr(2, 9)}`;
+      
+      const dbConv: DbConversation = {
+        id,
+        title: conversation.title,
+        url: conversation.url,
+        createdAt: now,
+        updatedAt: now
+      };
+
+      await storage.database.conversations.add(dbConv);
+      storage.broadcast({ type: 'CONVERSATION_UPDATED', convId: id });
+      return id;
+    } catch (error) {
+      console.error('Sol Conversation: Failed to save conversation:', error);
+      throw error;
+    }
+  }
+
+  async updateConversation(id: string, updates: Partial<Pick<Conversation, 'messages' | 'title'>>): Promise<void> {
+    try {
+      // Build dynamic update object
+      const convUpdates: any = { updatedAt: Date.now() };
+      if (updates.title !== undefined) {
+        convUpdates.title = updates.title;
+      }
+
+      // Update conversation metadata (conditionally updating title)
+      await storage.database.conversations.update(id, convUpdates);
+
+      // Handle message updates if provided
+      if (updates.messages) {
+        await storage.database.transaction('rw', storage.database.messages, async () => {
+          // Clear existing messages for this conversation
+          await storage.database.messages.where('convId').equals(id).delete();
+          
+          // Add all new messages
+          for (let i = 0; i < updates.messages!.length; i++) {
+            const message = updates.messages![i];
+            const dbMsg: DbMessage = {
+              id: `${id}_msg_${i}`,
+              convId: id,
+              idx: i,
+              type: message.type,
+              parts: [{ type: 'text', text: message.content }],
+              timestamp: message.timestamp,
+              tabIds: message.tabIds
+            };
+            await storage.database.messages.add(dbMsg);
+          }
+        });
+      }
+
+      storage.broadcast({ type: 'CONVERSATION_UPDATED', convId: id });
+    } catch (error) {
+      console.error('Sol Conversation: Failed to update conversation:', error);
+      throw error;
+    }
+  }
+
+  async deleteConversation(id: string): Promise<void> {
+    try {
+      await storage.database.transaction('rw', storage.database.conversations, storage.database.messages, async () => {
+        await storage.database.conversations.delete(id);
+        await storage.database.messages.where('convId').equals(id).delete();
+      });
+      storage.broadcast({ type: 'CONVERSATION_DELETED', convId: id });
+    } catch (error) {
+      console.error('Sol Conversation: Failed to delete conversation:', error);
+      throw error;
+    }
+  }
+
+  async deleteAllConversations(): Promise<void> {
+    try {
+      await storage.database.transaction('rw', storage.database.conversations, storage.database.messages, async () => {
+        await storage.database.conversations.clear();
+        await storage.database.messages.clear();
+      });
+    } catch (error) {
+      console.error('Sol Conversation: Failed to delete all conversations:', error);
+      throw error;
+    }
+  }
+
+  async getMessages(convId: string, limit?: number): Promise<DbMessage[]> {
+    try {
+      let query = storage.database.messages.where('[convId+idx]').between([convId, 0], [convId, Infinity]);
+      if (limit) {
+        query = query.limit(limit);
+      }
+      return await query.toArray();
+    } catch (error) {
+      console.error('Sol Conversation: Failed to get messages:', error);
+      return [];
+    }
+  }
+
+  async addMessage(convId: string, message: Omit<DbMessage, 'id' | 'idx' | 'convId'>): Promise<string> {
+    try {
+      const lastMsg = await storage.database.messages
+        .where('[convId+idx]')
+        .between([convId, 0], [convId, Infinity])
+        .reverse()
+        .first();
+      
+      const idx = lastMsg ? lastMsg.idx + 1 : 0;
+      const id = `${convId}_msg_${idx}`;
+
+      const dbMsg: DbMessage = {
+        ...message,
+        id,
+        convId,
+        idx
+      };
+
+      await storage.database.messages.add(dbMsg);
+      await storage.database.conversations.update(convId, { updatedAt: Date.now() });
+      storage.broadcast({ type: 'MESSAGE_ADDED', convId });
+      return id;
+    } catch (error) {
+      console.error('Sol Conversation: Failed to add message:', error);
+      throw error;
+    }
+  }
+
+  async updateMessage(id: string, updates: Partial<Pick<DbMessage, 'parts' | 'streamId'>>): Promise<void> {
+    try {
+      await storage.database.messages.update(id, updates);
+    } catch (error) {
+      console.error('Sol Conversation: Failed to update message:', error);
+      throw error;
+    }
+  }
+
+  private dbConversationToLegacy(dbConv: DbConversation, messages: DbMessage[]): Conversation {
+    return {
+      id: dbConv.id,
+      url: dbConv.url,
+      title: dbConv.title,
+      messages: messages.map(msg => {
+        const textPart = msg.parts.find(p => p.type === 'text');
+        return {
+          type: msg.type,
+          content: textPart?.text || '',
+          timestamp: msg.timestamp,
+          tabIds: msg.tabIds
+        };
+      }),
+      createdAt: dbConv.createdAt,
+      updatedAt: dbConv.updatedAt
+    };
+  }
+
+  legacyMessageToDbMessage(message: Message): Omit<DbMessage, 'id' | 'idx' | 'convId'> {
+    return {
+      type: message.type,
+      parts: [{ type: 'text', text: message.content }] as MessagePart[],
+      timestamp: message.timestamp,
+      tabIds: message.tabIds
+    };
+  }
+
+  // ============================================================================
   // INITIALIZATION
   // ============================================================================
 
@@ -84,7 +290,7 @@ export class conversation {
   }
 
   private setupSyncListener(): void {
-    this.syncUnsubscribe = this.storage.addSyncListener((message) => {
+    this.syncUnsubscribe = storage.addSyncListener((message) => {
       // Handle cross-tab sync updates
       switch (message.type) {
         case 'CONVERSATION_UPDATED':
@@ -152,7 +358,7 @@ export class conversation {
 
   async loadGlobalConversations(): Promise<void> {
     try {
-      const conversations = await this.storage.getConversations();
+      const conversations = await this.getConversations();
       this.globalState.conversations = conversations;
       this.notifyGlobalListeners();
     } catch (error) {
@@ -166,7 +372,7 @@ export class conversation {
     if (!this.globalState.activeConversationId) return;
 
     try {
-      const conversation = await this.storage.getConversation(this.globalState.activeConversationId);
+      const conversation = await this.getConversation(this.globalState.activeConversationId);
       this.globalState.messages = conversation?.messages || [];
       this.notifyGlobalListeners();
     } catch (error) {
@@ -182,7 +388,7 @@ export class conversation {
         messages: []
       };
 
-      const conversationId = await this.storage.saveConversation(newConversation);
+      const conversationId = await this.saveConversation(newConversation);
       
       // Update global state
       this.globalState.activeConversationId = conversationId;
@@ -200,7 +406,7 @@ export class conversation {
 
   async switchToGlobalConversation(conversationId: string): Promise<void> {
     try {
-      const conversation = await this.storage.getConversation(conversationId);
+      const conversation = await this.getConversation(conversationId);
       if (!conversation) {
         throw new Error(`Conversation ${conversationId} not found`);
       }
@@ -221,7 +427,7 @@ export class conversation {
 
       // Update storage if we have an active conversation
       if (this.globalState.activeConversationId) {
-        await this.storage.updateConversation(this.globalState.activeConversationId, { 
+        await this.updateConversation(this.globalState.activeConversationId, { 
           messages: newMessages 
         });
       }
@@ -431,11 +637,46 @@ export class conversation {
     return [...this.globalState.conversations];
   }
 
+  private generateConversationTitle(content: string): string {
+    // Clean and truncate the content to create a meaningful title
+    const cleaned = content
+      .replace(/\s+/g, ' ')  // Replace multiple spaces with single space
+      .replace(/[^\w\s\-.,!?]/g, '') // Remove special characters except basic punctuation
+      .trim();
+    
+    if (cleaned.length === 0) return 'Untitled Conversation';
+    
+    if (cleaned.length <= 50) {
+      return cleaned;
+    }
+    
+    // Try to break at word boundary
+    const truncated = cleaned.substring(0, 47);
+    const lastSpace = truncated.lastIndexOf(' ');
+    
+    if (lastSpace > 20) { // If we can break at a reasonable word boundary
+      return truncated.substring(0, lastSpace) + '...';
+    } else {
+      return truncated + '...';
+    }
+  }
+
   async addGlobalUserMessage(content: string, tabIds?: number[]): Promise<void> {
     await this.globalDispatch({
       type: 'ADD_USER_MESSAGE',
       payload: { content, tabIds }
     });
+
+    // Auto-generate title for new conversations from first user message
+    if (this.globalState.activeConversationId && this.globalState.messages.length === 1) {
+      const conversation = await this.getConversation(this.globalState.activeConversationId);
+      if (conversation && conversation.title === 'New Conversation') {
+        const newTitle = this.generateConversationTitle(content);
+        await this.updateConversation(this.globalState.activeConversationId, { title: newTitle });
+        await this.loadGlobalConversations(); // Refresh to show new title
+        this.notifyGlobalListeners(); // Ensure UI gets updated
+      }
+    }
   }
 
   async addGlobalAssistantMessage(content: string): Promise<void> {
@@ -458,7 +699,7 @@ export class conversation {
 
   async deleteGlobalConversation(conversationId: string): Promise<void> {
     try {
-      await this.storage.deleteConversation(conversationId);
+      await this.deleteConversation(conversationId);
       
       // If we deleted the active conversation, clear the state
       if (this.globalState.activeConversationId === conversationId) {
@@ -467,6 +708,7 @@ export class conversation {
       }
       
       await this.loadGlobalConversations();
+      this.notifyGlobalListeners(); // Ensure UI gets updated
     } catch (error) {
       console.error('Sol conversation: Failed to delete global conversation:', error);
       throw error;
@@ -475,8 +717,9 @@ export class conversation {
 
   async renameGlobalConversation(conversationId: string, title: string): Promise<void> {
     try {
-      await this.storage.updateConversation(conversationId, { title });
+      await this.updateConversation(conversationId, { title });
       await this.loadGlobalConversations();
+      this.notifyGlobalListeners(); // Ensure UI gets updated
     } catch (error) {
       console.error('Sol conversation: Failed to rename global conversation:', error);
       throw error;
@@ -542,9 +785,19 @@ export class conversation {
       }
 
       // Update global conversation with tab messages
-      await this.storage.updateConversation(conversationId, {
+      await this.updateConversation(conversationId, {
         messages: tabState.messages
       });
+
+      // Ensure conversation has a meaningful title
+      const convAfterUpdate = await this.getConversation(conversationId);
+      if (convAfterUpdate && (!convAfterUpdate.title || convAfterUpdate.title === 'New Conversation')) {
+        const firstUserMsg = tabState.messages.find(m => m.type === 'user') || tabState.messages[0];
+        if (firstUserMsg) {
+          const newTitle = this.generateConversationTitle(firstUserMsg.content);
+          await this.updateConversation(conversationId, { title: newTitle });
+        }
+      }
 
       // Switch to this conversation globally
       await this.switchToGlobalConversation(conversationId);
@@ -561,7 +814,7 @@ export class conversation {
       const targetId = conversationId || this.globalState.activeConversationId;
       if (!targetId) return;
 
-      const conversation = await this.storage.getConversation(targetId);
+      const conversation = await this.getConversation(targetId);
       if (!conversation) return;
 
       this.setTabConversation(tabId, conversation.messages, targetId);

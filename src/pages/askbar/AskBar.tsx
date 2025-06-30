@@ -178,8 +178,10 @@ export const AskBar: React.FC = () => {
     setIsVisible(false);
     
     setTimeout(() => {
-      const closeMsg: IframeCloseMsg = { type: 'IFRAME_CLOSE' };
-      portManager.current.sendToParent(closeMsg);
+      // Use direct message like expand button instead of portManager
+      window.parent.postMessage({
+        type: 'sol-close-askbar'
+      }, '*');
     }, 300);
   };
 
@@ -213,53 +215,59 @@ export const AskBar: React.FC = () => {
       tabIndex={0}
     >
       {isExpanded ? (
-        // Expanded Mode - Full Conversation Container  
+        // Expanded Mode - Full Conversation Container with proper flexbox
         <div 
-          className="backdrop-blur-[16px] rounded-[28px] border-[0.5px] border-black/[0.07] transition-all duration-300 ease-in-out sol-conversation-shadow sol-font-inter"
+          className="backdrop-blur-[16px] rounded-[28px] border-[0.5px] border-black/[0.07] transition-all duration-300 ease-in-out sol-conversation-shadow sol-font-inter flex flex-col"
            style={{ 
             width: '436px',
-            maxHeight: '600px',
-            height: 'auto',
+            height: '600px', // Fixed height instead of auto
             backgroundColor: 'rgba(255, 255, 255, 0.8)'
           }}
         >
-          <div className="p-2"></div>
+          <div className="p-2 flex-shrink-0"></div>
 
-          {/* Chat Header */}
-          <ChatHeader
-            conversations={conversationService.conversations}
-            activeConversationId={conversationService.activeConversationId}
-            onConversationSelect={handleConversationSelect}
-            onNewConversation={handleNewConversation}
-            showExpandButton={true}
-            onExpand={handleExpandToSideBar}
-            disableNewButton={chatInput.isStreaming}
-            showCloseButton={true}
-            onClose={handleClose}
-          />
-
-          {/* Conversation Messages */}
-          <div className="px-[14px] pb-2 max-h-[400px] overflow-y-auto">
-            <ConversationList
-              messages={conversationService.messages}
-              copiedMessageIndex={copiedMessageIndex}
-              onCopyMessage={handleCopyMessage}
-              isStreaming={chatInput.isStreaming}
-              availableTabs={chatInput.availableTabs}
-              onTabReAdd={chatInput.handleTabReAdd}
+          {/* Chat Header - fixed at top */}
+          <div className="flex-shrink-0">
+            <ChatHeader
+              conversations={conversationService.conversations}
+              activeConversationId={conversationService.activeConversationId}
+              onConversationSelect={handleConversationSelect}
+              onNewConversation={handleNewConversation}
+              showExpandButton={true}
+              onExpand={handleExpandToSideBar}
+              disableNewButton={chatInput.isStreaming}
+              showCloseButton={true}
+              onClose={handleClose}
             />
           </div>
 
-          {/* Input Area within conversation container */}
-          <div className="p-2">
+          {/* Conversation Messages - flex-grow with internal scroll */}
+          <div className="flex-grow overflow-hidden px-[14px] pb-2">
+            <div className="h-full overflow-y-auto">
+              <ConversationList
+                messages={conversationService.messages}
+                copiedMessageIndex={copiedMessageIndex}
+                onCopyMessage={handleCopyMessage}
+                isStreaming={chatInput.isStreaming}
+                availableTabs={chatInput.availableTabs}
+                onTabReAdd={chatInput.handleTabReAdd}
+              />
+            </div>
+          </div>
+
+          {/* Input Area - fixed at bottom */}
+          <div className="flex-shrink-0 p-2">
             <div 
-              className="rounded-[20px] border-[0.5px] border-black/[0.07] sol-input-shadow sol-font-inter"
+              className="rounded-[20px] border-[0.5px] border-black/[0.07] sol-input-shadow sol-font-inter overflow-hidden"
               style={{ 
                 width: '420px',
+                maxWidth: '420px',
                 backgroundColor: 'white'
               }}
             >
-              <TabChipRow tabs={chatInput.selectedTabChips} onRemove={chatInput.handleTabRemoveById} />
+              <div style={{ maxWidth: '420px', overflow: 'hidden' }}>
+                <TabChipRow tabs={chatInput.selectedTabChips} onRemove={chatInput.handleTabRemoveById} />
+              </div>
 
               <div
                 style={{
@@ -296,13 +304,16 @@ export const AskBar: React.FC = () => {
         </div>
       ) : (
         <div 
-          className="rounded-[20px] border-[0.5px] border-black/[0.07] transition-all duration-300 ease-in-out transform sol-input-shadow-large sol-font-inter"
+          className="rounded-[20px] border-[0.5px] border-black/[0.07] transition-all duration-300 ease-in-out transform sol-input-shadow-large sol-font-inter overflow-hidden"
           style={{ 
             width: '420px',
+            maxWidth: '420px',
             backgroundColor: 'white'
           }}
         >
-          <TabChipRow tabs={chatInput.selectedTabChips} onRemove={chatInput.handleTabRemoveById} />
+          <div style={{ maxWidth: '420px', overflow: 'hidden' }}>
+            <TabChipRow tabs={chatInput.selectedTabChips} onRemove={chatInput.handleTabRemoveById} />
+          </div>
 
           <div
             style={{
