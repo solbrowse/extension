@@ -5,6 +5,7 @@ export default {
       "./src/**/*.{js,ts,jsx,tsx}",
       "./src/pages/**/*.{js,ts,jsx,tsx,html}",
     ],
+    darkMode: 'class',
     theme: {
       extend: {},
     },

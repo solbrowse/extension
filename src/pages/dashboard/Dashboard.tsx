@@ -6,7 +6,9 @@ import {
   EyeSlashIcon,
   TrashIcon,
   DocumentArrowDownIcon,
-  ClipboardDocumentIcon
+  ClipboardDocumentIcon,
+  SunIcon,
+  MoonIcon
 } from '@heroicons/react/24/outline';
 import { get, set, StorageData, getConversations, deleteConversation, deleteAllConversations as deleteAllConversationsStorage, exportConversationToMarkdown, exportAllConversationsToMarkdown, Conversation, resetToDefaults } from '../../services/storage';
 import { ApiService, PROVIDERS, Model } from '@src/services/api';
@@ -16,7 +18,8 @@ import { Label } from '@src/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@src/components/ui/select';
 import { Switch } from '@src/components/ui/switch';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@src/components/ui/tabs';
-import logo from '@assets/img/logo.svg';
+import { useTheme } from '@src/hooks/useTheme';
+import Logo from '@src/components/Logo';
 
 export default function Dashboard() {
   const [settings, setSettings] = useState<StorageData | null>(null);
@@ -27,6 +30,7 @@ export default function Dashboard() {
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [isLoadingConversations, setIsLoadingConversations] = useState(false);
   const [activeTab, setActiveTab] = useState('general');
+  const { isDarkMode, toggleTheme } = useTheme();
 
   // Handle URL hash routing
   useEffect(() => {
@@ -255,7 +259,7 @@ export default function Dashboard() {
   }
 
   return (
-    <div className="min-h-screen">
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
       {/* Fixed Save Indicator */}
       {saveStatus === 'syncing' && (
         <div className="sol-save-indicator syncing">
@@ -270,10 +274,10 @@ export default function Dashboard() {
       )}
 
       {/* Big Logo Header */}
-      <div className="bg-white/80 backdrop-blur-sm border-b border-gray-200/50 sticky top-0 z-10">
+      <div className="bg-white/80 dark:bg-gray-900/80 backdrop-blur-sm border-b border-gray-200/50 dark:border-gray-700/50 sticky top-0 z-10">
         <div className="max-w-4xl mx-auto px-6">
           <div className="flex flex-col items-center">
-            <img src={logo} alt="Sol" className="w-32 h-32" />
+            <Logo className="w-32 h-32" />
           </div>
         </div>
       </div>
@@ -289,38 +293,57 @@ export default function Dashboard() {
 
           <TabsContent value="general" className="space-y-6">
             {/* Personalization */}
-            <div className="bg-white rounded-xl border border-gray-200/60 p-6 shadow-sm">
+            <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200/60 dark:border-gray-700/60 p-6 shadow-sm">
               <div className="space-y-4">
                 <div>
-                  <h2 className="text-lg font-semibold text-gray-900 mb-1">Personalization</h2>
-                  <p className="text-sm text-gray-600">Customize Sol to match your preferences</p>
+                  <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-1">Personalization</h2>
+                  <p className="text-sm text-gray-600 dark:text-gray-400">Customize Sol to match your preferences</p>
                 </div>
-                <div className="text-center py-12 text-gray-500">
-                  <p>Personalization settings coming soon...</p>
+                
+                {/* Dark Mode Toggle */}
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center space-x-3">
+                    <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-gray-100 dark:bg-gray-700">
+                      {isDarkMode ? (
+                        <MoonIcon className="w-4 h-4 text-gray-700 dark:text-gray-300" />
+                      ) : (
+                        <SunIcon className="w-4 h-4 text-gray-700 dark:text-gray-300" />
+                      )}
+                    </div>
+                    <div>
+                      <h3 className="text-base font-medium text-gray-900 dark:text-gray-100">Dark Mode</h3>
+                      <p className="text-sm text-gray-600 dark:text-gray-400">Switch between light and dark themes</p>
+                    </div>
+                  </div>
+                  <Switch
+                    id="dark-mode-toggle"
+                    checked={isDarkMode}
+                    onCheckedChange={toggleTheme}
+                  />
                 </div>
               </div>
             </div>
 
             {/* Abilities */}
-            <div className="bg-white rounded-xl border border-gray-200/60 p-6 shadow-sm">
+            <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200/60 dark:border-gray-700/60 p-6 shadow-sm">
               <div className="space-y-4">
                 <div>
-                  <h2 className="text-lg font-semibold text-gray-900 mb-1">Abilities</h2>
-                  <p className="text-sm text-gray-600">Enhance Sol with additional capabilities</p>
+                  <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-1">Abilities</h2>
+                  <p className="text-sm text-gray-600 dark:text-gray-400">Enhance Sol with additional capabilities</p>
                 </div>
-                <div className="text-center py-12 text-gray-500">
+                <div className="text-center py-12 text-gray-500 dark:text-gray-400">
                   <p>Ability configuration coming soon...</p>
                 </div>
               </div>
             </div>
 
             {/* Debug Mode */}
-            <div className="bg-white rounded-xl border border-gray-200/60 p-6 shadow-sm">
+            <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200/60 dark:border-gray-700/60 p-6 shadow-sm">
               <div className="space-y-4">
                 <div className="flex items-center justify-between">
                   <div>
-                    <h2 className="text-lg font-semibold text-gray-900 mb-1">Debug Mode</h2>
-                    <p className="text-sm text-gray-600">Enable verbose logging for troubleshooting</p>
+                    <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-1">Debug Mode</h2>
+                    <p className="text-sm text-gray-600 dark:text-gray-400">Enable verbose logging for troubleshooting</p>
                   </div>
                   <Switch
                     id="debug-toggle"
@@ -329,7 +352,7 @@ export default function Dashboard() {
                   />
                 </div>
                 {settings.debug && (
-                  <p className="text-xs text-gray-500">Debug logs will now appear in the browser console.</p>
+                  <p className="text-xs text-gray-500 dark:text-gray-400">Debug logs will now appear in the browser console.</p>
                 )}
               </div>
             </div>
@@ -337,17 +360,17 @@ export default function Dashboard() {
 
           <TabsContent value="features" className="space-y-6">
             {/* Features */}
-            <div className="bg-white rounded-xl border border-gray-200/60 p-6 shadow-sm">
+            <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200/60 dark:border-gray-700/60 p-6 shadow-sm">
               <div className="space-y-6">
                 <div>
-                  <h2 className="text-lg font-semibold text-gray-900 mb-1">Features</h2>
-                  <p className="text-sm text-gray-600">Configure Sol features</p>
+                  <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-1">Features</h2>
+                  <p className="text-sm text-gray-600 dark:text-gray-400">Configure Sol features</p>
                 </div>
 
                 <div className="space-y-6">
                   <div className="space-y-4">
                     <div className="flex items-center justify-between">
-                      <Label htmlFor="ask-toggle" className="text-base font-medium">Ask Bar</Label>
+                      <Label htmlFor="ask-toggle" className="text-base font-medium text-gray-900 dark:text-gray-100">Ask Bar</Label>
                       <Switch
                         id="ask-toggle"
                         checked={settings.features.askBar.isEnabled}
@@ -356,10 +379,10 @@ export default function Dashboard() {
                     </div>
 
                     {settings.features.askBar.isEnabled && (
-                      <div className="space-y-4 pl-4 border-l-2 border-gray-100">
+                      <div className="space-y-4 pl-4 border-l-2 border-gray-100 dark:border-gray-700">
                         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                           <div className="space-y-2">
-                            <Label htmlFor="shortcut">Shortcut Key</Label>
+                            <Label htmlFor="shortcut" className="text-gray-900 dark:text-gray-100">Shortcut Key</Label>
                             <Input
                               id="shortcut"
                               value={settings.features.askBar.keybind}
@@ -369,7 +392,7 @@ export default function Dashboard() {
                             />
                           </div>
                           <div className="space-y-2">
-                            <Label htmlFor="position">Position</Label>
+                            <Label htmlFor="position" className="text-gray-900 dark:text-gray-100">Position</Label>
                             <Select
                               value={settings.features.askBar.position}
                               onValueChange={(value) => updateFeatureConfig('askBar', 'position', value)}
@@ -395,17 +418,17 @@ export default function Dashboard() {
           </TabsContent>
 
           <TabsContent value="ai-provider" className="space-y-6">
-            <div className="bg-white rounded-xl border border-gray-200/60 p-6 shadow-sm">
+            <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200/60 dark:border-gray-700/60 p-6 shadow-sm">
               <div className="space-y-6">
                 <div>
-                  <h2 className="text-lg font-semibold text-gray-900 mb-1">AI Configuration</h2>
-                  <p className="text-sm text-gray-600">Configure your AI provider and model settings</p>
+                  <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-1">AI Configuration</h2>
+                  <p className="text-sm text-gray-600 dark:text-gray-400">Configure your AI provider and model settings</p>
                 </div>
 
                 {/* Provider & API Key */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div className="space-y-3">
-                    <Label htmlFor="provider">Provider</Label>
+                    <Label htmlFor="provider" className="text-gray-900 dark:text-gray-100">Provider</Label>
                     <Select value={settings.provider} onValueChange={(value) => updateSetting('provider', value)}>
                       <SelectTrigger>
                         <SelectValue placeholder="Select provider" />
@@ -421,7 +444,7 @@ export default function Dashboard() {
                   </div>
                   
                   <div className="space-y-3">
-                    <Label htmlFor="apikey">API Key</Label>
+                    <Label htmlFor="apikey" className="text-gray-900 dark:text-gray-100">API Key</Label>
                     <div className="relative">
                       <Input
                         id="apikey"
@@ -448,7 +471,7 @@ export default function Dashboard() {
                 {/* Custom Endpoint URL */}
                 {settings.provider === 'custom' && (
                   <div className="space-y-3">
-                    <Label htmlFor="endpoint">Custom Endpoint URL</Label>
+                    <Label htmlFor="endpoint" className="text-gray-900 dark:text-gray-100">Custom Endpoint URL</Label>
                     <Input
                       id="endpoint"
                       type="url"
@@ -456,9 +479,9 @@ export default function Dashboard() {
                       onChange={(e) => updateSetting('customEndpoint', e.target.value)}
                       placeholder="https://your-api-endpoint.com"
                     />
-                    <p className="text-xs text-gray-500">
+                    <p className="text-xs text-gray-500 dark:text-gray-400">
                       Enter the base URL for your OpenAI-compatible API endpoint. Check our{' '}
-                      <a href="https://solbrowse.notion.site/" target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:text-blue-800 underline">
+                      <a href="https://solbrowse.notion.site/" target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 underline">
                         help center
                       </a>{' '}
                       for detailed setup instructions.
@@ -469,14 +492,14 @@ export default function Dashboard() {
                 {/* Model Selection */}
                 <div className="space-y-4">
                   <div>
-                    <Label>Model Selection</Label>
-                    <p className="text-sm text-gray-600">Choose the AI model to use for conversations</p>
+                    <Label className="text-gray-900 dark:text-gray-100">Model Selection</Label>
+                    <p className="text-sm text-gray-600 dark:text-gray-400">Choose the AI model to use for conversations</p>
                   </div>
                   
                   {/* Recommended Models */}
                   {ApiService.getDefaultModels(settings.provider).length > 0 && (
                     <div>
-                      <Label className="text-xs font-medium text-gray-500 mb-3 block">Recommended</Label>
+                      <Label className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-3 block">Recommended</Label>
                       <div className="grid grid-cols-2 lg:grid-cols-3 gap-3">
                         {ApiService.getDefaultModels(settings.provider).map((model) => (
                           <Button
@@ -484,10 +507,9 @@ export default function Dashboard() {
                             onClick={() => updateSetting('model', model.id)}
                             className={`h-auto p-4 text-left justify-start rounded-lg font-medium text-sm transition-all duration-200 hover:scale-[1.02] active:scale-[0.98] ${
                               settings.model === model.id 
-                                ? 'bg-black text-white hover:bg-gray-800' 
-                                : 'text-gray-900 hover:bg-black/10'
+                                ? 'bg-black dark:bg-white text-white dark:text-black hover:bg-gray-800 dark:hover:bg-gray-200' 
+                                : 'text-gray-900 dark:text-gray-100 hover:bg-black/10 dark:hover:bg-white/10 bg-black/5 dark:bg-white/10'
                             }`}
-                            style={settings.model !== model.id ? { backgroundColor: 'rgba(0, 0, 0, 0.05)' } : {}}
                           >
                             <span className="text-sm font-medium truncate">{model.name}</span>
                           </Button>
@@ -498,7 +520,7 @@ export default function Dashboard() {
 
                   {/* All Models Dropdown */}
                   <div className="space-y-3">
-                    <Label className="text-xs font-medium text-gray-500">All Models</Label>
+                    <Label className="text-xs font-medium text-gray-500 dark:text-gray-400">All Models</Label>
                     <Select 
                       value={settings.model} 
                       onValueChange={(value) => updateSetting('model', value)}
@@ -520,8 +542,8 @@ export default function Dashboard() {
                       </SelectContent>
                     </Select>
                     {isLoadingModels && (
-                      <div className="flex items-center space-x-2 text-sm text-gray-600">
-                        <div className="w-4 h-4 border-2 border-gray-900 border-t-transparent rounded-full animate-spin"></div>
+                      <div className="flex items-center space-x-2 text-sm text-gray-600 dark:text-gray-400">
+                        <div className="w-4 h-4 border-2 border-gray-900 dark:border-gray-100 border-t-transparent rounded-full animate-spin"></div>
                         <span>Loading models...</span>
                       </div>
                     )}
@@ -531,11 +553,11 @@ export default function Dashboard() {
             </div>
 
             {/* Get API Key */}
-            <div className="bg-white rounded-xl border border-gray-200/60 p-6 shadow-sm">
+            <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200/60 dark:border-gray-700/60 p-6 shadow-sm">
               <div className="space-y-4">
                 <div>
-                  <h2 className="text-lg font-semibold text-gray-900">Get API Key</h2>
-                  <p className="text-sm text-gray-600">Get your OpenAI API key</p>
+                  <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Get API Key</h2>
+                  <p className="text-sm text-gray-600 dark:text-gray-400">Get your OpenAI API key</p>
                 </div>
                 <Button asChild className="sol-button-external w-full">
                   <a
@@ -553,12 +575,12 @@ export default function Dashboard() {
           </TabsContent>
 
           <TabsContent value="history" className="space-y-6">
-            <div className="bg-white rounded-xl border border-gray-200/60 p-6 shadow-sm">
+            <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200/60 dark:border-gray-700/60 p-6 shadow-sm">
               <div className="space-y-6">
                 <div className="flex items-center justify-between">
                   <div>
-                    <h2 className="text-lg font-semibold text-gray-900">Conversation History</h2>
-                    <p className="text-sm text-gray-600">Manage your past conversations</p>
+                    <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Conversation History</h2>
+                    <p className="text-sm text-gray-600 dark:text-gray-400">Manage your past conversations</p>
                   </div>
                   <div className="flex gap-2">
                     <Button
@@ -582,21 +604,21 @@ export default function Dashboard() {
 
                 {isLoadingConversations ? (
                   <div className="flex items-center justify-center py-8">
-                    <div className="w-6 h-6 border-2 border-gray-200 border-t-gray-900 rounded-full animate-spin"></div>
+                    <div className="w-6 h-6 border-2 border-gray-200 dark:border-gray-700 border-t-gray-900 dark:border-t-gray-100 rounded-full animate-spin"></div>
                   </div>
                 ) : conversations.length === 0 ? (
-                  <div className="text-center py-12 text-gray-500">
+                  <div className="text-center py-12 text-gray-500 dark:text-gray-400">
                     <p>No conversations yet. Start using Sol to see your conversation history here.</p>
                   </div>
                 ) : (
                   <div className="space-y-3">
                     {conversations.map((conversation) => (
-                      <div key={conversation.id} className="border border-gray-200/60 rounded-lg p-4 hover:bg-gray-50/50 hover:border-gray-300/60 transition-all duration-200 hover:shadow-sm">
+                      <div key={conversation.id} className="border border-gray-200/60 dark:border-gray-700/60 rounded-lg p-4 hover:bg-gray-50/50 dark:hover:bg-gray-700/30 hover:border-gray-300/60 dark:hover:border-gray-600/60 transition-all duration-200 hover:shadow-sm">
                         <div className="flex items-start justify-between">
                           <div className="flex-1 min-w-0 space-y-2">
-                            <h3 className="font-medium text-gray-900 truncate">{conversation.title}</h3>
-                            <p className="text-sm text-gray-500 truncate">{conversation.url}</p>
-                            <div className="flex items-center space-x-4 text-xs text-gray-400">
+                            <h3 className="font-medium text-gray-900 dark:text-gray-100 truncate">{conversation.title}</h3>
+                            <p className="text-sm text-gray-500 dark:text-gray-400 truncate">{conversation.url}</p>
+                            <div className="flex items-center space-x-4 text-xs text-gray-400 dark:text-gray-500">
                               <span>{conversation.messages.length} messages</span>
                               <span>{new Date(conversation.updatedAt).toLocaleDateString()}</span>
                             </div>
@@ -604,7 +626,7 @@ export default function Dashboard() {
                           <div className="flex items-center space-x-1 ml-4">
                             <Button
                               onClick={() => copyConversation(conversation)}
-                              className="h-8 w-8 p-0 text-gray-600 hover:bg-black/5 rounded-lg transition-all duration-200 hover:scale-[1.05] active:scale-[0.95] truncate"
+                              className="h-8 w-8 p-0 text-gray-600 dark:text-gray-400 hover:bg-black/5 dark:hover:bg-white/10 rounded-lg transition-all duration-200 hover:scale-[1.05] active:scale-[0.95] truncate"
                               style={{ backgroundColor: 'rgba(0, 0, 0, 0.05)' }}
                               title="Copy conversation"
                             >
@@ -612,7 +634,7 @@ export default function Dashboard() {
                             </Button>
                             <Button
                               onClick={() => exportConversation(conversation)}
-                              className="h-8 w-8 p-0 text-gray-600 hover:bg-black/5 rounded-lg transition-all duration-200 hover:scale-[1.05] active:scale-[0.95] truncate"
+                              className="h-8 w-8 p-0 text-gray-600 dark:text-gray-400 hover:bg-black/5 dark:hover:bg-white/10 rounded-lg transition-all duration-200 hover:scale-[1.05] active:scale-[0.95] truncate"
                               style={{ backgroundColor: 'rgba(0, 0, 0, 0.05)' }}
                               title="Export conversation as Markdown"
                             >
@@ -636,20 +658,20 @@ export default function Dashboard() {
             </div>
 
             {/* Help & Settings for History Tab */}
-            <div className="bg-white rounded-xl border border-gray-200/60 p-6 shadow-sm">
+            <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200/60 dark:border-gray-700/60 p-6 shadow-sm">
               <div className="space-y-6">
                 <div>
-                  <h2 className="text-lg font-semibold text-gray-900">Help & Settings</h2>
-                  <p className="text-sm text-gray-600">Information and advanced options</p>
+                  <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Help & Settings</h2>
+                  <p className="text-sm text-gray-600 dark:text-gray-400">Information and advanced options</p>
                 </div>
                 
-                <div className="space-y-4 text-sm text-gray-600">
+                <div className="space-y-4 text-sm text-gray-600 dark:text-gray-400">
                   <div>
-                    <h4 className="font-medium text-gray-900 mb-1">Keyboard Shortcut</h4>
-                    <p>Press <kbd className="px-2 py-1 bg-gray-100 rounded text-xs font-mono border border-gray-200">{settings.features.askBar.keybind}</kbd> on any webpage to open Sol</p>
+                    <h4 className="font-medium text-gray-900 dark:text-gray-100 mb-1">Keyboard Shortcut</h4>
+                    <p>Press <kbd className="px-2 py-1 bg-gray-100 dark:bg-gray-700 rounded text-xs font-mono border border-gray-200 dark:border-gray-600 text-gray-900 dark:text-gray-100">{settings.features.askBar.keybind}</kbd> on any webpage to open Sol</p>
                   </div>
                   <div>
-                    <h4 className="font-medium text-gray-900 mb-1">Privacy</h4>
+                    <h4 className="font-medium text-gray-900 dark:text-gray-100 mb-1">Privacy</h4>
                     <p>All settings are stored locally in your browser. Sol never sees your API keys or data.</p>
                   </div>
                 </div>
@@ -660,7 +682,7 @@ export default function Dashboard() {
                 >
                   Reset All Settings
                 </Button>
-                <p className="text-xs text-red-500">This will clear all settings and conversations</p>
+                <p className="text-xs text-red-500 dark:text-red-400">This will clear all settings and conversations</p>
               </div>
             </div>
           </TabsContent>

@@ -5,6 +5,7 @@ import { PortManager } from '@src/services/messaging/portManager';
 import { IframeCloseMsg, IframeGetCurrentTabMsg, IframeCurrentTabResponseMsg } from '@src/types/messaging';
 import TabChipRow from '../../components/shared/TabChipRow';
 import InputArea from '../../components/shared/InputArea';
+import { useTheme } from '@src/hooks/useTheme';
 
 export const AskBar: React.FC = () => {
   // UI-specific state (not handled by useChatInput)
@@ -24,6 +25,7 @@ export const AskBar: React.FC = () => {
   // Custom hooks
   const { copiedMessageIndex, handleCopyMessage } = useCopyMessage();
   const conversationService = useConversationService();
+  const { isDarkMode } = useTheme();
   
   // Consolidated chat input hook - handles all input, tabs, dropdown logic
   const chatInput = useChatInput();
@@ -215,12 +217,12 @@ export const AskBar: React.FC = () => {
       {isExpanded ? (
         // Expanded Mode - Full Conversation Container  
         <div 
-          className="backdrop-blur-[16px] rounded-[28px] border-[0.5px] border-black/[0.07] transition-all duration-300 ease-in-out sol-conversation-shadow sol-font-inter"
+          className={`backdrop-blur-[16px] rounded-[28px] border-[0.5px] ${isDarkMode ? 'border-white/10' : 'border-black/[0.07]'} transition-all duration-300 ease-in-out sol-conversation-shadow sol-font-inter`}
            style={{ 
             width: '436px',
             maxHeight: '600px',
             height: 'auto',
-            backgroundColor: 'rgba(255, 255, 255, 0.8)'
+            backgroundColor: isDarkMode ? 'rgba(31, 41, 55, 0.8)' : 'rgba(255, 255, 255, 0.8)'
           }}
         >
           <div className="p-2"></div>
@@ -253,10 +255,10 @@ export const AskBar: React.FC = () => {
           {/* Input Area within conversation container */}
           <div className="p-2">
             <div 
-              className="rounded-[20px] border-[0.5px] border-black/[0.07] sol-input-shadow sol-font-inter"
+              className={`rounded-[20px] border-[0.5px] ${isDarkMode ? 'border-white/10' : 'border-black/[0.07]'} sol-input-shadow sol-font-inter`}
               style={{ 
                 width: '420px',
-                backgroundColor: 'white'
+                backgroundColor: isDarkMode ? 'rgb(55, 65, 81)' : 'white'
               }}
             >
               <TabChipRow tabs={chatInput.selectedTabChips} onRemove={chatInput.handleTabRemoveById} />
@@ -288,7 +290,7 @@ export const AskBar: React.FC = () => {
                   showCloseButton={false}
                 />
                 {chatInput.error && (
-                  <div className="mt-2 text-red-600 text-sm">{chatInput.error}</div>
+                  <div className={`mt-2 text-sm ${isDarkMode ? 'text-red-400' : 'text-red-600'}`}>{chatInput.error}</div>
                 )}
               </div>
             </div>
@@ -296,10 +298,10 @@ export const AskBar: React.FC = () => {
         </div>
       ) : (
         <div 
-          className="rounded-[20px] border-[0.5px] border-black/[0.07] transition-all duration-300 ease-in-out transform sol-input-shadow-large sol-font-inter"
+          className={`rounded-[20px] border-[0.5px] ${isDarkMode ? 'border-white/10' : 'border-black/[0.07]'} transition-all duration-300 ease-in-out transform sol-input-shadow-large sol-font-inter`}
           style={{ 
             width: '420px',
-            backgroundColor: 'white'
+            backgroundColor: isDarkMode ? 'rgb(55, 65, 81)' : 'white'
           }}
         >
           <TabChipRow tabs={chatInput.selectedTabChips} onRemove={chatInput.handleTabRemoveById} />
@@ -330,7 +332,7 @@ export const AskBar: React.FC = () => {
               isStreaming={chatInput.isStreaming}
             />
             {chatInput.error && (
-              <div className="mt-2 text-red-600 text-sm">{chatInput.error}</div>
+              <div className={`mt-2 text-sm ${isDarkMode ? 'text-red-400' : 'text-red-600'}`}>{chatInput.error}</div>
             )}
           </div>
         </div>

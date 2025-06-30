@@ -72,7 +72,7 @@ const InputArea: React.FC<Props> = ({
           onKeyDown={onInputKeyDown}
           placeholder="Ask a question about this page..."
           rows={1}
-          className="flex-grow border-none resize-none bg-transparent sol-font-inter sol-input-text placeholder:text-black/40 placeholder:font-medium focus:outline-none p-0"
+          className="flex-grow border-none resize-none bg-transparent sol-font-inter sol-input-text placeholder:text-black/40 dark:placeholder:text-white/40 placeholder:font-medium focus:outline-none p-0 text-black dark:text-white"
           style={{
             lineHeight: input ? '1.5' : '24px',
             minWidth: '50px' // Ensure it doesn't collapse completely
@@ -84,10 +84,10 @@ const InputArea: React.FC<Props> = ({
           {showCloseButton && (
             <button
               onClick={onClose}
-              className="w-8 h-8 hover:bg-black/5 rounded-md flex items-center justify-center transition-colors"
+              className="w-8 h-8 hover:bg-black/5 dark:hover:bg-white/10 rounded-md flex items-center justify-center transition-colors"
               title="Close chat"
             >
-              <XMarkIcon className="w-5 h-5 text-gray-600" />
+              <XMarkIcon className="w-5 h-5 text-gray-600 dark:text-gray-400" />
             </button>
           )}
           
@@ -96,16 +96,16 @@ const InputArea: React.FC<Props> = ({
             disabled={!input.trim() || isStreaming}
             className={`w-8 h-8 rounded-full flex items-center justify-center transition-colors ${
               isStreaming
-                ? 'bg-black/5 cursor-not-allowed animate-pulse'
+                ? 'bg-black/5 dark:bg-white/10 cursor-not-allowed animate-pulse'
                 : input.trim()
-                ? 'bg-black hover:bg-black/80'
-                : 'bg-black/5'
+                ? 'bg-black dark:bg-white hover:bg-black/80 dark:hover:bg-white/80'
+                : 'bg-black/5 dark:bg-white/10'
             }`}
             title={isStreaming ? "Submitting..." : (input.trim() ? "Submit" : "Enter a question to submit")}
           >
             <ArrowUpIcon
               className={`w-5 h-5 ${
-                isStreaming || !input.trim() ? 'text-gray-500' : 'text-white'
+                isStreaming || !input.trim() ? 'text-gray-500 dark:text-gray-400' : 'text-white dark:text-black'
               }`}
             />
           </button>
@@ -116,7 +116,7 @@ const InputArea: React.FC<Props> = ({
       {showDropdown && (
         <div
           ref={dropdownRef}
-          className="absolute z-50 w-full top-full mt-1 backdrop-blur-sm sol-rounded-dropdown border border-black/[0.04] sol-dropdown-shadow max-h-60 overflow-y-auto sol-bg-translucent sol-font-apple sol-dropdown-enter"
+          className="absolute z-50 w-full top-full mt-1 backdrop-blur-sm sol-rounded-dropdown border border-black/[0.04] dark:border-white/10 sol-dropdown-shadow max-h-60 overflow-y-auto sol-bg-translucent sol-font-apple sol-dropdown-enter"
         >
           {/* All tabs/visible results option */}
                       <div
@@ -134,11 +134,11 @@ const InputArea: React.FC<Props> = ({
             onMouseEnter={() => setDropdownSelectedIndex(0)}
           >
             <div className="w-4 h-4 flex items-center justify-center flex-shrink-0">
-              <RectangleStackIcon className="w-3.5 h-3.5 text-blue-600" />
+              <RectangleStackIcon className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />
             </div>
             <div className="flex-1 min-w-0">
               <div
-                className="text-gray-900 sol-text-truncate sol-font-apple-clean sol-dropdown-item"
+                className="text-gray-900 dark:text-gray-100 sol-text-truncate sol-font-apple-clean sol-dropdown-item"
               >
                 {isSearching ? `All visible results (${filteredTabs.length})` : `All open tabs (${filteredTabs.length})`}
               </div>
@@ -173,13 +173,13 @@ const InputArea: React.FC<Props> = ({
                       }}
                     />
                   ) : (
-                    <div className="w-4 h-4 bg-gray-200 rounded-sm"></div>
+                    <div className="w-4 h-4 bg-gray-200 dark:bg-gray-600 rounded-sm"></div>
                   )}
                 </div>
 
                 <div className="flex-1 min-w-0">
                   <div
-                    className="text-gray-900 sol-text-truncate sol-font-apple-clean sol-dropdown-secondary"
+                    className="text-gray-900 dark:text-gray-100 sol-text-truncate sol-font-apple-clean sol-dropdown-secondary"
                   >
                     {truncateTitle(tab.title || 'Untitled', 50)}
                   </div>
@@ -188,7 +188,7 @@ const InputArea: React.FC<Props> = ({
             ))
           ) : (
             <div
-              className="px-3 py-2 text-gray-500 text-center sol-font-apple-clean sol-dropdown-item"
+              className="px-3 py-2 text-gray-500 dark:text-gray-400 text-center sol-font-apple-clean sol-dropdown-item"
             >
               No matching tabs found
             </div>

@@ -47,9 +47,9 @@ const TabChip: React.FC<TabChipProps> = ({ tab, onRemove }) => {
       title={isCollective ? `${tab.title} - ${tab.count} tabs` : tab.url}
     >
       {/* Favicon holder */}
-      <div className="w-4 h-4 mr-3 flex-shrink-0 bg-gray-200 rounded-sm flex items-center justify-center">
+      <div className="w-4 h-4 mr-3 flex-shrink-0 bg-gray-200 dark:bg-gray-600 rounded-sm flex items-center justify-center">
         {isCollective ? (
-          <RectangleStackIcon className="w-3.5 h-3.5 text-blue-600" />
+          <RectangleStackIcon className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />
         ) : tab.favIconUrl ? (
           <img
             src={tab.favIconUrl}
@@ -60,19 +60,19 @@ const TabChip: React.FC<TabChipProps> = ({ tab, onRemove }) => {
             }}
           />
         ) : (
-          <div className="w-2 h-2 bg-gray-400 rounded-[1px]"></div>
+          <div className="w-2 h-2 bg-gray-400 dark:bg-gray-500 rounded-[1px]"></div>
         )}
       </div>
 
       {/* Text content */}
       <div className="flex-1 min-w-0">
         <div
-          className="text-black leading-tight text-left sol-text-truncate sol-font-inter sol-chip-title"
+          className="text-black dark:text-white leading-tight text-left sol-text-truncate sol-font-inter sol-chip-title"
         >
           {truncateTitle(tab.title)}
         </div>
         <div
-          className="text-black/55 leading-tight text-left sol-text-truncate sol-font-inter sol-chip-subtitle"
+          className="text-black/55 dark:text-white/55 leading-tight text-left sol-text-truncate sol-font-inter sol-chip-subtitle"
         >
           {isCollective 
             ? (tab.count+" tabs")
@@ -83,10 +83,10 @@ const TabChip: React.FC<TabChipProps> = ({ tab, onRemove }) => {
 
       {onRemove && (
         <div 
-          className="absolute top-1 right-1 w-4 h-4 bg-black/20 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 sol-transition-opacity"
+          className="absolute top-1 right-1 w-4 h-4 bg-black/20 dark:bg-white/20 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 sol-transition-opacity"
           title="Remove from context"
         >
-          <XMarkIcon className="w-2.5 h-2.5 text-black/60" />
+          <XMarkIcon className="w-2.5 h-2.5 text-black/60 dark:text-white/60" />
         </div>
       )}
     </button>

@@ -60,6 +60,15 @@ html {
   background: rgba(0, 0, 0, 0.3);
 }
 
+/* Dark mode scrollbar */
+.dark .sol-conversation::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+.dark .sol-conversation::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.3);
+}
+
 /* Streaming animation for text */
 @keyframes solPulse {
   0% {
@@ -133,9 +142,19 @@ html {
   opacity: 1 !important;
 }
 
+/* Dark mode placeholder */
+.dark .sol-ask-bar textarea::placeholder {
+  color: rgba(255, 255, 255, 0.4) !important;
+}
+
 /* Dividing line for expanded conversation */
 .sol-conversation-divider {
   border-bottom: 1px solid rgba(0, 0, 0, 0.07) !important;
+}
+
+/* Dark mode divider */
+.dark .sol-conversation-divider {
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1) !important;
 }
 
 /* Mode transition animations */
@@ -397,6 +416,36 @@ html {
   background-color: rgba(0, 0, 0, 0.1);
 }
 
+/* Dark mode background patterns */
+.dark .sol-bg-translucent {
+  background-color: rgba(31, 41, 55, 0.85);
+}
+
+.dark .sol-bg-chip {
+  background-color: rgba(255, 255, 255, 0.1);
+}
+
+.dark .sol-bg-chip-collective {
+  background-color: rgba(59, 130, 246, 0.15);
+  border: 1px solid rgba(59, 130, 246, 0.3);
+}
+
+.dark .sol-bg-chip-history {
+  background-color: rgba(255, 255, 255, 0.1);
+}
+
+.dark .sol-bg-selected {
+  background-color: rgba(59, 130, 246, 0.3);
+}
+
+.dark .sol-bg-hover {
+  background-color: rgba(255, 255, 255, 0.05);
+}
+
+.dark .sol-bg-hover-chip {
+  background-color: rgba(255, 255, 255, 0.15);
+}
+
 /* Border Radius Patterns */
 .sol-rounded-dropdown {
   border-radius: 8px;
@@ -494,4 +543,54 @@ html {
 /* Fast dropdown item hover transitions */
 .sol-dropdown-item-hover {
   transition: background-color 0.08s ease-out;
+}
+
+/* Message text styling for dark mode */
+.sol-message-text {
+  color: #1f2937;
+  transition: color 0.2s ease-in-out;
+}
+
+.dark .sol-message-text {
+  color: #f9fafb;
+}
+
+/* AI response content styling */
+.sol-ai-response {
+  color: #374151;
+}
+
+.dark .sol-ai-response {
+  color: #e5e7eb;
+}
+
+/* User message styling */
+.sol-user-message {
+  color: #1f2937;
+}
+
+.dark .sol-user-message {
+  color: #f3f4f6;
+}
+
+/* General message container text color */
+.sol-message-container,
+.sol-message-container p,
+.sol-message-container div {
+  color: inherit;
+}
+
+.dark .sol-message-container,
+.dark .sol-message-container p,
+.dark .sol-message-container div {
+  color: #e5e7eb;
+}
+
+/* Table styling for dark mode */
+.sol-table-cell {
+  border: 1px solid rgba(0, 0, 0, 0.15);
+}
+
+.dark .sol-table-cell {
+  border: 1px solid rgba(255, 255, 255, 0.2);
 }

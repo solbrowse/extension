@@ -105,7 +105,7 @@ const ChatHeader: React.FC<ChatHeaderProps> = ({
         <button
           onClick={handleHistoryClick}
           onKeyDown={handleKeyDown}
-          className="flex items-center gap-2 px-3 py-2 text-gray-700 hover:bg-gray-50 rounded-lg transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+          className="flex items-center gap-2 px-3 py-2 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700/50 rounded-lg transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
           aria-label="Conversation History"
         >
           <ClockIcon className="w-5 h-5" />
@@ -115,10 +115,10 @@ const ChatHeader: React.FC<ChatHeaderProps> = ({
         {/* History Dropdown */}
         {showDropdown && (
           <div 
-            className="absolute top-full left-0 mt-1 w-80 max-h-80 overflow-y-auto sol-rounded-dropdown border border-black/[0.04] sol-dropdown-shadow z-50 backdrop-blur-sm bg-white/80 sol-bg-translucent"
+            className="absolute top-full left-0 mt-1 w-80 max-h-80 overflow-y-auto sol-rounded-dropdown border border-black/[0.04] dark:border-white/[0.08] sol-dropdown-shadow z-50 backdrop-blur-sm bg-white/80 dark:bg-gray-800/90 sol-bg-translucent"
           >
             {conversations.length === 0 ? (
-              <div className="p-4 text-center text-gray-500 text-sm">
+              <div className="p-4 text-center text-gray-500 dark:text-gray-400 text-sm">
                 No conversations yet
               </div>
             ) : (
@@ -133,10 +133,10 @@ const ChatHeader: React.FC<ChatHeaderProps> = ({
                     onMouseEnter={() => setDropdownSelectedIndex(index)}
                   >
                     <div className="flex-1 min-w-0">
-                      <div className="text-gray-900 sol-text-truncate text-sm font-medium">
+                      <div className="text-gray-900 dark:text-gray-100 sol-text-truncate text-sm font-medium">
                         {truncateTitle(conversation.title)}
                       </div>
-                      <div className="text-xs text-gray-500">
+                      <div className="text-xs text-gray-500 dark:text-gray-400">
                         {formatDate(conversation.updatedAt)}
                       </div>
                     </div>
@@ -144,7 +144,7 @@ const ChatHeader: React.FC<ChatHeaderProps> = ({
                     <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity" onClick={(e) => e.stopPropagation()}>
                       <button
                         title="Rename"
-                        className="p-1 hover:bg-black/5 rounded"
+                        className="p-1 hover:bg-black/5 dark:hover:bg-white/10 rounded"
                         onClick={async () => {
                           const newTitle = prompt('Rename conversation:', conversation.title);
                           if (newTitle && newTitle.trim() && newTitle !== conversation.title) {
@@ -152,11 +152,11 @@ const ChatHeader: React.FC<ChatHeaderProps> = ({
                           }
                         }}
                       >
-                        <PencilSquareIcon className="w-4 h-4 text-gray-600" />
+                        <PencilSquareIcon className="w-4 h-4 text-gray-600 dark:text-gray-400" />
                       </button>
                       <button
                         title="Delete"
-                        className="p-1 hover:bg-red-100 rounded"
+                        className="p-1 hover:bg-red-100 dark:hover:bg-red-900/30 rounded"
                         onClick={async () => {
                           if (confirm('Delete this conversation?')) {
                             await convService.deleteConversation(conversation.id);
@@ -180,7 +180,7 @@ const ChatHeader: React.FC<ChatHeaderProps> = ({
         {showExpandButton && onExpand && (
           <button
             onClick={onExpand}
-            className="flex items-center gap-2 px-3 py-2 text-gray-700 hover:bg-gray-50 rounded-lg transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+            className="flex items-center gap-2 px-3 py-2 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700/50 rounded-lg transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
             aria-label="Expand to SideBar"
           >
             <ArrowsPointingOutIcon className="w-5 h-5" />
@@ -191,7 +191,7 @@ const ChatHeader: React.FC<ChatHeaderProps> = ({
         <button
           onClick={disableNewButton ? undefined : onNewConversation}
           disabled={disableNewButton}
-          className="flex items-center gap-2 px-3 py-2 text-gray-700 hover:bg-gray-50 rounded-lg transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500/20 disabled:opacity-50 disabled:cursor-not-allowed"
+          className="flex items-center gap-2 px-3 py-2 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700/50 rounded-lg transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500/20 disabled:opacity-50 disabled:cursor-not-allowed"
           aria-label="New Conversation"
         >
           <PlusIcon className="w-5 h-5" />
@@ -202,7 +202,7 @@ const ChatHeader: React.FC<ChatHeaderProps> = ({
         {showCloseButton && onClose && (
           <button
             onClick={onClose}
-            className="flex items-center gap-2 px-3 py-2 text-gray-700 hover:bg-gray-50 rounded-lg transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+            className="flex items-center gap-2 px-3 py-2 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700/50 rounded-lg transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
             aria-label="Close"
           >
             <XMarkIcon className="w-5 h-5" />
