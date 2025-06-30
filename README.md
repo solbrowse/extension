@@ -9,6 +9,7 @@ A browser extension that brings AI into your browsing experience.
 ## Features
 - **Multi-tab context**: Query across tabs with `@tabName`
 - **Real-time scraping**: Captures dynamic page content (SPA support)
+- **Abilities**: Custom snippets of prompts that can be added quickly using a /
 - **Plugin system**: Built-in scrapers for popular sites, extendable via custom plugins
 - **Caching**: Versioned, compressed content for instant responses
 
