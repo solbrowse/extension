@@ -242,8 +242,8 @@ export const AskBar: React.FC = () => {
           </div>
 
           {/* Conversation Messages - flex-grow with internal scroll */}
-          <div className="flex-grow overflow-hidden px-[14px] pb-2">
-            <div className="h-full overflow-y-auto">
+          <div className="flex-grow overflow-hidden px-[14px] pb-2 sol-fade-mask">
+            <div className="h-full overflow-y-auto mt-2">
               <ConversationList
                 messages={conversationService.messages}
                 copiedMessageIndex={copiedMessageIndex}
