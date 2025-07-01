@@ -4,647 +4,671 @@
 /* Custom styles for iframe-based AskBar */
 
 html {
-  background: transparent !important;
+    background: transparent !important;
 }
 
 .sol-ask-bar {
-  position: relative !important;
-  pointer-events: auto !important;
-  z-index: 1 !important;
+    position: relative !important;
+    pointer-events: auto !important;
+    z-index: 1 !important;
 }
 
 .sol-ask-bar * {
-  pointer-events: auto !important;
+    pointer-events: auto !important;
 }
 
 .sol-ask-bar button {
-  pointer-events: auto !important;
-  cursor: pointer !important;
+    pointer-events: auto !important;
+    cursor: pointer !important;
 }
 
 .sol-ask-bar input,
 .sol-ask-bar textarea {
-  pointer-events: auto !important;
-  cursor: text !important;
-  color: #111 !important;
+    pointer-events: auto !important;
+    cursor: text !important;
+    color: #111 !important;
 }
 
 .sol-ask-bar.sol-visible {
-  animation: animate-in 0.3s ease-out forwards;
+    animation: animate-in 0.3s ease-out forwards;
 }
 
 /* Hide scrollbar for horizontal tab chips scroll */
 .scrollbar-hide {
-  -ms-overflow-style: none; /* Internet Explorer 10+ */
-  scrollbar-width: none; /* Firefox */
+    -ms-overflow-style: none; /* Internet Explorer 10+ */
+    scrollbar-width: none; /* Firefox */
 }
 
 .scrollbar-hide::-webkit-scrollbar {
-  display: none; /* Safari and Chrome */
+    display: none; /* Safari and Chrome */
 }
 
 /* Custom scrollbar for conversation area */
 .sol-conversation::-webkit-scrollbar {
-  width: 4px;
+    width: 4px;
 }
 
 .sol-conversation::-webkit-scrollbar-track {
-  background: transparent;
+    background: transparent;
 }
 
 .sol-conversation::-webkit-scrollbar-thumb {
-  background: rgba(0, 0, 0, 0.2);
-  border-radius: 2px;
+    background: rgba(0, 0, 0, 0.2);
+    border-radius: 2px;
 }
 
 .sol-conversation::-webkit-scrollbar-thumb:hover {
-  background: rgba(0, 0, 0, 0.3);
+    background: rgba(0, 0, 0, 0.3);
 }
 
 /* Streaming animation for text */
 @keyframes solPulse {
-  0% {
-    opacity: 0.6;
-  }
-  50% {
-    opacity: 1;
-  }
-  100% {
-    opacity: 0.6;
-  }
+    0% {
+        opacity: 0.6;
+    }
+    50% {
+        opacity: 1;
+    }
+    100% {
+        opacity: 0.6;
+    }
 }
 
 .sol-streaming {
-  animation: solPulse 1.4s ease-in-out infinite;
+    animation: solPulse 1.4s ease-in-out infinite;
 }
 
 /* Message entrance animation */
 @keyframes animate-in {
-  from {
-    opacity: 0;
-    transform: scale(0.95) translateY(-8px);
-  }
-  to {
-    opacity: 1;
-    transform: scale(1) translateY(0);
-  }
+    from {
+        opacity: 0;
+        transform: scale(0.95) translateY(-8px);
+    }
+    to {
+        opacity: 1;
+        transform: scale(1) translateY(0);
+    }
 }
 
 @keyframes animate-out {
-  from {
-    opacity: 1;
-    transform: scale(1) translateY(0);
-  }
-  to {
-    opacity: 0;
-    transform: scale(0.95) translateY(-8px);
-  }
+    from {
+        opacity: 1;
+        transform: scale(1) translateY(0);
+    }
+    to {
+        opacity: 0;
+        transform: scale(0.95) translateY(-8px);
+    }
 }
 
 .animate-in {
-  animation: animate-in 0.3s ease-out forwards;
+    animation: animate-in 0.3s ease-out forwards;
 }
 
 .animate-out {
-  animation: animate-out 0.3s ease-out forwards;
+    animation: animate-out 0.3s ease-out forwards;
 }
 
 /* Enhanced focus states */
 .sol-ask-bar textarea:focus {
-  outline: none !important;
-  border: none !important;
-  box-shadow: none !important;
+    outline: none !important;
+    border: none !important;
+    box-shadow: none !important;
 }
 
 /* Ensure Inter font is applied consistently */
 .font-inter,
 .font-inter * {
-  font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
-    sans-serif !important;
+    font-family:
+        "Inter",
+        -apple-system,
+        BlinkMacSystemFont,
+        "Segoe UI",
+        Roboto,
+        sans-serif !important;
 }
 
 /* Placeholder styling override */
 .sol-ask-bar textarea::placeholder {
-  font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
-    sans-serif !important;
-  font-size: 16px !important;
-  font-weight: 500 !important;
-  letter-spacing: -0.025em !important;
-  color: rgba(0, 0, 0, 0.4) !important;
-  opacity: 1 !important;
+    font-family:
+        "Inter",
+        -apple-system,
+        BlinkMacSystemFont,
+        "Segoe UI",
+        Roboto,
+        sans-serif !important;
+    font-size: 16px !important;
+    font-weight: 500 !important;
+    letter-spacing: -0.025em !important;
+    color: rgba(0, 0, 0, 0.4) !important;
+    opacity: 1 !important;
 }
 
 /* Dividing line for expanded conversation */
 .sol-conversation-divider {
-  border-bottom: 1px solid rgba(0, 0, 0, 0.07) !important;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.07) !important;
 }
 
 /* Mode transition animations */
 @keyframes expand-mode {
-  from {
-    width: 420px;
-    height: 128px;
-  }
-  to {
-    width: 436px;
-    max-height: 600px;
-  }
+    from {
+        width: 420px;
+        height: 128px;
+    }
+    to {
+        width: 436px;
+        max-height: 600px;
+    }
 }
 
 @keyframes collapse-mode {
-  from {
-    width: 436px;
-    max-height: 600px;
-  }
-  to {
-    width: 420px;
-    height: 128px;
-  }
+    from {
+        width: 436px;
+        max-height: 600px;
+    }
+    to {
+        width: 420px;
+        height: 128px;
+    }
 }
 
 .mode-expanding {
-  animation: expand-mode 0.3s ease-in-out forwards;
+    animation: expand-mode 0.3s ease-in-out forwards;
 }
 
 .mode-collapsing {
-  animation: collapse-mode 0.3s ease-in-out forwards;
+    animation: collapse-mode 0.3s ease-in-out forwards;
 }
 
 /* Button hover states */
 .sol-ask-bar button:hover {
-  transition: all 0.2s ease-in-out !important;
+    transition: all 0.2s ease-in-out !important;
 }
 
 /* Tab chip hover effects - matching SwiftUI behavior */
 .tab-chip-title,
 .tab-chip-url {
-  transition: opacity 0.2s ease-in-out !important;
+    transition: opacity 0.2s ease-in-out !important;
 }
 
 /* Improved tab chip container styling */
 .sol-ask-bar button:hover .tab-chip-title,
 .sol-ask-bar button:hover .tab-chip-url {
-  opacity: 0.8 !important;
+    opacity: 0.8 !important;
 }
 
 /* Responsive behavior for no tagged tabs */
 .sol-ask-bar .tab-chips-container {
-  display: flex;
-  flex-wrap: nowrap;
-  overflow-x: auto;
-  gap: 8px;
+    display: flex;
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    gap: 8px;
 }
 
 .sol-ask-bar .tab-chips-container:empty {
-  display: none;
+    display: none;
 }
 
 /* Shadow adjustments to match SwiftUI specifications */
 .sol-ask-bar .expanded-container {
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1) !important;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1) !important;
 }
 
 .sol-ask-bar .input-container {
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1) !important;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1) !important;
 }
 
 /* Ensure proper border radius matching SwiftUI */
 .sol-ask-bar .rounded-container {
-  border-radius: 20px !important;
+    border-radius: 20px !important;
 }
 
 .sol-ask-bar .rounded-chip {
-  border-radius: 12px !important;
+    border-radius: 12px !important;
 }
 
 /* Border styling matching SwiftUI stroke */
 .sol-ask-bar .border-container {
-  border: 0.5px solid rgba(0, 0, 0, 0.07) !important;
+    border: 0.5px solid rgba(0, 0, 0, 0.07) !important;
 }
 
 /* Background blur matching SwiftUI */
 .sol-ask-bar .backdrop-blur-container {
-  backdrop-filter: blur(16px) !important;
-  -webkit-backdrop-filter: blur(16px) !important;
+    backdrop-filter: blur(16px) !important;
+    -webkit-backdrop-filter: blur(16px) !important;
 }
 
 /* Proper spacing and alignment */
 .sol-ask-bar .input-field-container {
-  padding-top: 16px;
-  padding-left: 16px;
-  padding-right: 14px;
-  padding-bottom: 14px;
+    padding-top: 16px;
+    padding-left: 16px;
+    padding-right: 14px;
+    padding-bottom: 14px;
 }
 
 .sol-ask-bar .input-field-container.with-chips {
-  padding-top: 8px;
+    padding-top: 8px;
 }
 
 /* Button states matching SwiftUI */
 .sol-ask-bar .submit-button-active {
-  background-color: black !important;
+    background-color: black !important;
 }
 
 .sol-ask-bar .submit-button-inactive {
-  background-color: rgba(0, 0, 0, 0.05) !important;
+    background-color: rgba(0, 0, 0, 0.05) !important;
 }
 
 /* Improved X indicator styling */
 .sol-ask-bar .x-indicator {
-  position: absolute;
-  top: 4px;
-  right: 4px;
-  width: 16px;
-  height: 16px;
-  background-color: rgba(0, 0, 0, 0.2);
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  opacity: 0;
-  transition: opacity 0.2s ease-in-out;
+    position: absolute;
+    top: 4px;
+    right: 4px;
+    width: 16px;
+    height: 16px;
+    background-color: rgba(0, 0, 0, 0.2);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    transition: opacity 0.2s ease-in-out;
 }
 
 .sol-ask-bar button:hover .x-indicator {
-  opacity: 1;
+    opacity: 1;
 }
 
 /* Drop Shadow Classes - SwiftUI Specifications */
 .sol-conversation-shadow {
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1) !important;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1) !important;
 }
 
 .sol-input-shadow {
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1) !important;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1) !important;
 }
 
 .sol-input-shadow-large {
-  box-shadow: 0 4px 32px rgba(0, 0, 0, 0.1) !important;
+    box-shadow: 0 4px 32px rgba(0, 0, 0, 0.1) !important;
 }
 
 .sol-dropdown-shadow {
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08) !important;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08) !important;
 }
 
 /* Enhanced input with inline chip styling */
 .sol-input-with-chips {
-  /* Base input styling will be handled by the textarea */
+    /* Base input styling will be handled by the textarea */
 }
 
 /* Style inline chip mentions */
 .sol-input-with-chips::placeholder {
-  color: rgba(0, 0, 0, 0.4);
-  font-weight: 500;
+    color: rgba(0, 0, 0, 0.4);
+    font-weight: 500;
 }
 
 /* This would be applied via JavaScript to style 🔗text🔗 patterns */
 .sol-inline-chip {
-  display: inline-flex;
-  align-items: center;
-  background-color: rgba(0, 0, 0, 0.06);
-  border-radius: 4px;
-  padding: 2px 6px;
-  margin: 0 2px;
-  font-weight: 500;
-  color: #374151;
-  font-size: 16px;
-  line-height: 1.5;
-  vertical-align: baseline;
+    display: inline-flex;
+    align-items: center;
+    background-color: rgba(0, 0, 0, 0.06);
+    border-radius: 4px;
+    padding: 2px 6px;
+    margin: 0 2px;
+    font-weight: 500;
+    color: #374151;
+    font-size: 16px;
+    line-height: 1.5;
+    vertical-align: baseline;
 }
 
 /* Centralized Font Families */
 .sol-font-inter {
-  font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
-    sans-serif !important;
+    font-family:
+        "Inter",
+        -apple-system,
+        BlinkMacSystemFont,
+        "Segoe UI",
+        Roboto,
+        sans-serif !important;
 }
 
 .sol-font-apple {
-  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI",
-    Roboto, sans-serif !important;
+    font-family:
+        -apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", Roboto,
+        sans-serif !important;
 }
 
 .sol-font-apple-clean {
-  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", sans-serif !important;
+    font-family:
+        -apple-system, BlinkMacSystemFont, "SF Pro Display", sans-serif !important;
 }
 
 /* Typography Patterns */
 .sol-input-text {
-  font-size: 16px;
-  font-weight: 500;
-  line-height: 1.5;
+    font-size: 16px;
+    font-weight: 500;
+    line-height: 1.5;
 }
 
 .sol-input-placeholder {
-  font-size: 16px;
-  font-weight: 500;
-  line-height: 24px;
+    font-size: 16px;
+    font-weight: 500;
+    line-height: 24px;
 }
 
 .sol-dropdown-item {
-  font-size: 13px;
-  font-weight: 500;
+    font-size: 13px;
+    font-weight: 500;
 }
 
 .sol-dropdown-secondary {
-  font-size: 13px;
-  font-weight: 400;
-  line-height: 18px;
+    font-size: 13px;
+    font-weight: 400;
+    line-height: 18px;
 }
 
 .sol-chip-title {
-  font-size: 12px;
-  font-weight: 500;
+    font-size: 12px;
+    font-weight: 500;
 }
 
 .sol-chip-subtitle {
-  font-size: 12px;
-  font-weight: 400;
+    font-size: 12px;
+    font-weight: 400;
 }
 
 .sol-tab-history {
-  font-size: 12px;
-  font-weight: 500;
-  text-decoration: none;
+    font-size: 12px;
+    font-weight: 500;
+    text-decoration: none;
 }
 
 /* Common Background Patterns */
 .sol-bg-translucent {
-  background-color: rgba(255, 255, 255, 0.85);
+    background-color: rgba(255, 255, 255, 0.85);
 }
 
 .sol-bg-chip {
-  background-color: rgba(0, 0, 0, 0.06);
+    background-color: rgba(0, 0, 0, 0.06);
 }
 
 .sol-bg-chip-collective {
-  background-color: rgba(59, 130, 246, 0.08);
-  border: 1px solid rgba(59, 130, 246, 0.2);
+    background-color: rgba(59, 130, 246, 0.08);
+    border: 1px solid rgba(59, 130, 246, 0.2);
 }
 
 .sol-bg-chip-history {
-  background-color: rgba(0, 0, 0, 0.06);
+    background-color: rgba(0, 0, 0, 0.06);
 }
 
 .sol-bg-selected {
-  background-color: rgba(59, 130, 246, 0.2);
-  backdrop-filter: blur(4px);
+    background-color: rgba(59, 130, 246, 0.2);
+    backdrop-filter: blur(4px);
 }
 
 .sol-bg-hover {
-  background-color: rgba(0, 0, 0, 0.03);
+    background-color: rgba(0, 0, 0, 0.03);
 }
 
 .sol-bg-hover-chip {
-  background-color: rgba(0, 0, 0, 0.1);
+    background-color: rgba(0, 0, 0, 0.1);
 }
 
 /* Border Radius Patterns */
 .sol-rounded-dropdown {
-  border-radius: 8px;
+    border-radius: 8px;
 }
 
 .sol-rounded-chip {
-  border-radius: 12px;
+    border-radius: 12px;
 }
 
 /* Transition Patterns */
 .sol-transition-colors {
-  transition: all 0.2s ease-in-out;
+    transition: all 0.2s ease-in-out;
 }
 
 .sol-transition-opacity {
-  transition: opacity 0.2s ease-in-out;
+    transition: opacity 0.2s ease-in-out;
 }
 
 /* Common Layout Patterns */
 .sol-message-container {
-  margin-bottom: 12px;
+    margin-bottom: 12px;
 }
 
 .sol-message-container:last-child {
-  margin-bottom: 0;
+    margin-bottom: 0;
 }
 
 /* Button Hover States */
 .sol-button-hover {
-  transition: all 0.2s ease-in-out;
+    transition: all 0.2s ease-in-out;
 }
 
 .sol-button-hover:hover {
-  background-color: rgba(0, 0, 0, 0.05);
+    background-color: rgba(0, 0, 0, 0.05);
 }
 
 /* Text Truncation Pattern */
 .sol-text-truncate {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
 /* Ensure dropdown fonts cascade to all children */
 .sol-font-apple,
 .sol-font-apple * {
-  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI",
-    Roboto, sans-serif !important;
+    font-family:
+        -apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", Roboto,
+        sans-serif !important;
 }
 
 .sol-font-apple-clean,
 .sol-font-apple-clean * {
-  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", sans-serif !important;
+    font-family:
+        -apple-system, BlinkMacSystemFont, "SF Pro Display", sans-serif !important;
 }
 
 /* Force font override for any stubborn elements */
 .sol-font-apple div,
 .sol-font-apple span,
 .sol-font-apple p {
-  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI",
-    Roboto, sans-serif !important;
+    font-family:
+        -apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", Roboto,
+        sans-serif !important;
 }
 
 /* Snappy Dropdown Animation */
 @keyframes dropdown-appear {
-  from {
-    opacity: 0;
-    transform: translateY(-4px) scale(0.98);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0) scale(1);
-  }
+    from {
+        opacity: 0;
+        transform: translateY(-4px) scale(0.98);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
 }
 
 @keyframes dropdown-disappear {
-  from {
-    opacity: 1;
-    transform: translateY(0) scale(1);
-  }
-  to {
-    opacity: 0;
-    transform: translateY(-4px) scale(0.98);
-  }
+    from {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+    to {
+        opacity: 0;
+        transform: translateY(-4px) scale(0.98);
+    }
 }
 
 .sol-dropdown-enter {
-  animation: dropdown-appear 0.15s cubic-bezier(0.2, 0, 0.2, 1) forwards;
+    animation: dropdown-appear 0.15s cubic-bezier(0.2, 0, 0.2, 1) forwards;
 }
 
 .sol-dropdown-exit {
-  animation: dropdown-disappear 0.1s cubic-bezier(0.4, 0, 1, 1) forwards;
+    animation: dropdown-disappear 0.1s cubic-bezier(0.4, 0, 1, 1) forwards;
 }
 
 /* Fast dropdown item hover transitions */
 .sol-dropdown-item-hover {
-  transition: background-color 0.08s ease-out;
+    transition: background-color 0.08s ease-out;
 }
 
 /* Markdown Specific Styles */
 .sol-markdown h1 {
-  font-size: 1.5rem;
-  font-weight: 600;
-  margin-top: 1.5rem;
-  margin-bottom: 1rem;
-  color: rgba(0, 0, 0, 0.9);
+    font-size: 1.5rem;
+    font-weight: 600;
+    margin-top: 1.5rem;
+    margin-bottom: 1rem;
+    color: rgba(0, 0, 0, 0.9);
 }
 
 .sol-markdown h2 {
-  font-size: 1.25rem;
-  font-weight: 600;
-  margin-top: 1.25rem;
-  margin-bottom: 0.75rem;
-  color: rgba(0, 0, 0, 0.9);
+    font-size: 1.25rem;
+    font-weight: 600;
+    margin-top: 1.25rem;
+    margin-bottom: 0.75rem;
+    color: rgba(0, 0, 0, 0.9);
 }
 
 .sol-markdown h3 {
-  font-size: 1.125rem;
-  font-weight: 600;
-  margin-top: 1rem;
-  margin-bottom: 0.75rem;
-  color: rgba(0, 0, 0, 0.9);
+    font-size: 1.125rem;
+    font-weight: 600;
+    margin-top: 1rem;
+    margin-bottom: 0.75rem;
+    color: rgba(0, 0, 0, 0.9);
 }
 
 .sol-markdown h4,
 .sol-markdown h5,
 .sol-markdown h6 {
-  font-size: 1rem;
-  font-weight: 600;
-  margin-top: 0.75rem;
-  margin-bottom: 0.5rem;
-  color: rgba(0, 0, 0, 0.9);
+    font-size: 1rem;
+    font-weight: 600;
+    margin-top: 0.75rem;
+    margin-bottom: 0.5rem;
+    color: rgba(0, 0, 0, 0.9);
 }
 
 .sol-markdown ul {
-  list-style-type: disc;
-  margin-left: 1.5rem;
-  margin-top: 0.5rem;
-  margin-bottom: 0.5rem;
+    list-style-type: disc;
+    margin-left: 1.5rem;
+    margin-top: 0.5rem;
+    margin-bottom: 0.5rem;
 }
 
 .sol-markdown ol {
-  list-style-type: decimal;
-  margin-left: 1.5rem;
-  margin-top: 0.5rem;
-  margin-bottom: 0.5rem;
+    list-style-type: decimal;
+    margin-left: 1.5rem;
+    margin-top: 0.5rem;
+    margin-bottom: 0.5rem;
 }
 
 .sol-markdown li {
-  margin-bottom: 0.25rem;
-  line-height: 1.6;
+    margin-bottom: 0.25rem;
+    line-height: 1.6;
 }
 
 .sol-markdown li > ul,
 .sol-markdown li > ol {
-  margin-top: 0.25rem;
-  margin-bottom: 0.25rem;
+    margin-top: 0.25rem;
+    margin-bottom: 0.25rem;
 }
 
 .sol-markdown blockquote {
-  border-left: 4px solid rgba(0, 0, 0, 0.1);
-  padding-left: 1rem;
-  margin: 1rem 0;
-  color: rgba(0, 0, 0, 0.7);
-  font-style: italic;
+    border-left: 4px solid rgba(0, 0, 0, 0.1);
+    padding-left: 1rem;
+    margin: 1rem 0;
+    color: rgba(0, 0, 0, 0.7);
+    font-style: italic;
 }
 
 .sol-markdown code {
-  background-color: rgba(0, 0, 0, 0.05);
-  padding: 0.2em 0.4em;
-  border-radius: 3px;
-  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
-  font-size: 0.9em;
+    background-color: rgba(0, 0, 0, 0.05);
+    padding: 0.2em 0.4em;
+    border-radius: 3px;
+    font-family:
+        ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    font-size: 0.9em;
 }
 
 .sol-markdown pre {
-  background-color: rgba(0, 0, 0, 0.05);
-  padding: 1rem;
-  border-radius: 6px;
-  overflow-x: auto;
-  margin: 1rem 0;
+    background-color: rgba(0, 0, 0, 0.05);
+    padding: 1rem;
+    border-radius: 6px;
+    overflow-x: auto;
+    margin: 1rem 0;
 }
 
 .sol-markdown pre code {
-  background-color: transparent;
-  padding: 0;
-  border-radius: 0;
-  font-size: 0.9em;
-  line-height: 1.5;
+    background-color: transparent;
+    padding: 0;
+    border-radius: 0;
+    font-size: 0.9em;
+    line-height: 1.5;
 }
 
 .sol-markdown table {
-  width: 100%;
-  border-collapse: collapse;
-  margin: 1rem 0;
+    width: 100%;
+    border-collapse: collapse;
+    margin: 1rem 0;
 }
 
 .sol-markdown th,
 .sol-markdown td {
-  border: 1px solid rgba(0, 0, 0, 0.1);
-  padding: 0.5rem;
-  text-align: left;
+    border: 1px solid rgba(0, 0, 0, 0.1);
+    padding: 0.5rem;
+    text-align: left;
 }
 
 .sol-markdown th {
-  background-color: rgba(0, 0, 0, 0.05);
-  font-weight: 600;
+    background-color: rgba(0, 0, 0, 0.05);
+    font-weight: 600;
 }
 
 .sol-markdown hr {
-  border: 0;
-  border-top: 1px solid rgba(0, 0, 0, 0.1);
-  margin: 1.5rem 0;
+    border: 0;
+    border-top: 1px solid rgba(0, 0, 0, 0.1);
+    margin: 1.5rem 0;
 }
 
 .sol-markdown a {
-  color: #2563eb;
-  text-decoration: underline;
-  text-decoration-thickness: 1px;
-  text-underline-offset: 2px;
+    color: #2563eb;
+    text-decoration: underline;
+    text-decoration-thickness: 1px;
+    text-underline-offset: 2px;
 }
 
 .sol-markdown a:hover {
-  color: #1d4ed8;
+    color: #1d4ed8;
 }
 
 /* Ensure first elements don't have top margin */
 .sol-markdown > *:first-child {
-  margin-top: 0;
+    margin-top: 0;
 }
 
 /* Ensure last elements don't have bottom margin */
 .sol-markdown > *:last-child {
-  margin-bottom: 0;
+    margin-bottom: 0;
 }
 
 /* Fade mask for subtle chat fade effect */
 .sol-fade-mask {
-  max-height: 400px;
-  overflow-y: auto;
-  mask-image: linear-gradient(
-    to bottom,
-    transparent 2%,
-    black 5%,
-    black 95%,
-    transparent 98%
-  );
-  mask-repeat: no-repeat;
-  mask-mode: alpha;
+    overflow-y: auto;
+    mask-image: linear-gradient(
+        to bottom,
+        transparent 2%,
+        black 5%,
+        black 94%,
+        transparent 100%
+    );
+    mask-repeat: no-repeat;
+    mask-mode: alpha;
+}
+
+.sol-ask-gradient-bg {
+    background: linear-gradient(to top, #f7f8fa 76%, transparent 100%);
 }
