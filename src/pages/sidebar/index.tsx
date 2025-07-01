@@ -1,7 +1,7 @@
 import React from 'react';
 import { createRoot } from 'react-dom/client';
 import SideBar from './SideBar';
-import '@src/assets/styles/tailwind.css';
+import '@src/assets/styles/chat.css';
 
 const container = document.getElementById('sidebar-root');
 if (!container) {

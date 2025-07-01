@@ -13,6 +13,7 @@ export interface InjectionConfig {
     createdAt: number;
     updatedAt: number;
   } | null;
+  colorScheme?: 'light' | 'dark';
 }
 
 export interface IframeInstance {
@@ -26,7 +27,7 @@ export class IframeInjector {
   private static instances = new Map<string, IframeInstance>();
   
   static async inject(config: InjectionConfig): Promise<IframeInstance> {
-    const { iframeUrl, containerId, position, existingConversation } = config;
+    const { iframeUrl, containerId, position, existingConversation, colorScheme } = config;
     
     // Remove existing instance if it exists
     if (this.instances.has(containerId)) {
@@ -41,16 +42,16 @@ export class IframeInjector {
     this.applyIframeStyles(iframe);
     
     // Set up pointer events management
-    const pointerEventsManager = this.createPointerEventsManager(iframe);
+    const pointerEventsManager = this.createPointerEventsManager(iframe, containerId);
     
     // Set up iframe load handler
     iframe.onload = () => {
-      this.initializeIframe(iframe, { existingConversation, position });
+      this.initializeIframe(iframe, { existingConversation, position, colorScheme }, containerId);
     };
     
     // Inject iframe
     document.body.appendChild(iframe);
-    console.log('Sol Content Script: Ask Bar iframe injected');
+    console.log(`Sol Content Script: ${containerId} iframe injected`);
     
     const instance: IframeInstance = {
       iframe,
@@ -94,9 +95,10 @@ export class IframeInjector {
     iframe.setAttribute('allowtransparency', 'true');
   }
   
-  private static createPointerEventsManager(iframe: HTMLIFrameElement) {
+  private static createPointerEventsManager(iframe: HTMLIFrameElement, containerId: string) {
     let isPointerEventsEnabled = false;
-    let askBarBounds: any = null;
+    // Store overlay bounds (AskBar or SideBar) specific to this iframe instance
+    let overlayBounds: any = null;
     
     const togglePointerEvents = (enable: boolean) => {
       if (enable !== isPointerEventsEnabled) {
@@ -106,18 +108,18 @@ export class IframeInjector {
     };
     
     const handleMouseMove = (e: MouseEvent) => {
-      if (!askBarBounds) return;
+      if (!overlayBounds) return;
       
       // More generous padding for dropdowns and expanded UI
       const padding = 50;
       
       // Check if mouse is near the AskBar area (including potential dropdowns)
-      const isNearAskBar = e.clientX >= askBarBounds.left - padding &&
-                          e.clientX <= askBarBounds.right + padding &&
-                          e.clientY >= askBarBounds.top - padding &&
-                          e.clientY <= askBarBounds.bottom + 300; // Extra space below for dropdowns
+      const isNearOverlay = e.clientX >= overlayBounds.left - padding &&
+                            e.clientX <= overlayBounds.right + padding &&
+                            e.clientY >= overlayBounds.top - padding &&
+                            e.clientY <= overlayBounds.bottom + 300; // Extra space below for dropdowns / menus
       
-      togglePointerEvents(isNearAskBar);
+      togglePointerEvents(isNearOverlay);
     };
     
     const handlePointerLockMsg = (event: MessageEvent) => {
@@ -127,8 +129,11 @@ export class IframeInjector {
     };
     
     const handleBoundsMessage = (event: MessageEvent) => {
-      if (event.data?.type === 'sol-askbar-bounds') {
-        askBarBounds = event.data.bounds;
+      // Update bounds only if the message corresponds to this iframe's container
+      if (containerId === 'sol-askbar-container' && event.data?.type === 'sol-askbar-bounds') {
+        overlayBounds = event.data.bounds;
+      } else if (containerId === 'sol-sidebar-container' && event.data?.type === 'sol-sidebar-bounds') {
+        overlayBounds = event.data.bounds;
       }
     };
     
@@ -149,9 +154,10 @@ export class IframeInjector {
   private static initializeIframe(iframe: HTMLIFrameElement, data: {
     existingConversation: any;
     position: string;
-  }): void {
+    colorScheme?: 'light' | 'dark';
+  }, containerId: string): void {
     try {
-      console.log('Sol: Initializing iframe');
+      console.log(`Sol: Initializing ${containerId} iframe`);
 
       // Send initialization data - simplified to avoid duplication
       iframe.contentWindow?.postMessage({
@@ -162,17 +168,22 @@ export class IframeInjector {
           content: msg.content,
           timestamp: msg.timestamp
         })) || [],
-        conversationId: data.existingConversation?.id || null
+        conversationId: data.existingConversation?.id || null,
+        colorScheme: data.colorScheme || null
       }, '*');
 
-      console.log('Sol: Iframe initialized');
+      console.log(`Sol: ${containerId} iframe initialized`);
 
-      // Request AskBar bounds
+      // Request initial bounds for overlays so we can enable click-through accurately
       setTimeout(() => {
-        iframe.contentWindow?.postMessage({ type: 'sol-request-askbar-bounds' }, '*');
+        if (containerId === 'sol-askbar-container') {
+          iframe.contentWindow?.postMessage({ type: 'sol-request-askbar-bounds' }, '*');
+        } else if (containerId === 'sol-sidebar-container') {
+          iframe.contentWindow?.postMessage({ type: 'sol-request-sidebar-bounds' }, '*');
+        }
       }, 100);
     } catch (error) {
-      console.error('Sol: Failed to initialize iframe:', error);
+      console.error(`Sol: Failed to initialize ${containerId} iframe:`, error);
     }
   }
   

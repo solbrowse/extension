@@ -2,10 +2,9 @@ import '@src/utils/logger';
 import browser from 'webextension-polyfill';
 import settingsService from '@src/utils/settings';
 import { IframeInjector, IframeInstance } from '@src/utils/inject';
-import conversation, { TabConversation } from '@src/services/conversation';
 import { PortManager } from '@src/services/messaging/portManager';
 import { attachToggleKeybind } from '@src/services/keybind';
-import { IframeActionMsg, IframeCloseMsg, IframeGetCurrentTabMsg, IframeCurrentTabResponseMsg } from '@src/types/messaging';
+import { IframeCloseMsg } from '@src/types/messaging';
 
 export class SideBarController {
   private sideBarInstance: IframeInstance | null = null;
@@ -13,25 +12,26 @@ export class SideBarController {
   private sideBarEnabled = false;
   private targetKeybindString = '';
   private keypressDisposer: (() => void) | null = null;
+  private onSideBarOpenCallback: (() => void) | null = null;
   private portManager = PortManager.getInstance();
-  private stateChangeCleanup: (() => void) | null = null;
-  private tabId: string;
 
-  constructor() {
-    this.tabId = (window as any).solTabId ?? '';
+  constructor() {}
+
+  /** Set callback to trigger when Side Bar opens */
+  setOnOpenCallback(callback: () => void): void {
+    this.onSideBarOpenCallback = callback;
   }
 
   async init(): Promise<void> {
     await this.loadSettings();
     this.setupMessageHandlers();
-    this.setupStateSync();
+    this.setupIframeMessageListener();
   }
 
   cleanup(): void {
     this.hide();
     this.portManager.cleanup();
     this.keypressDisposer?.();
-    this.stateChangeCleanup?.();
   }
 
   /** Public accessor for SideBar visibility state */
@@ -47,15 +47,22 @@ export class SideBarController {
     if ((!this.sideBarEnabled && !force) || this.isSideBarVisible) return;
 
     const settings = await settingsService.getAll();
+    const colorScheme = this.detectColorScheme();
 
     this.sideBarInstance = await IframeInjector.inject({
       iframeUrl: browser.runtime.getURL('src/pages/sidebar/index.html'),
       containerId: 'sol-sidebar-container',
       settings,
       position: settings.features?.sideBar?.position ?? 'left',
+      colorScheme,
     });
 
     this.isSideBarVisible = true;
+    
+    // Trigger callback when Side Bar opens
+    if (this.onSideBarOpenCallback) {
+      this.onSideBarOpenCallback();
+    }
   }
 
   hide(): void {
@@ -149,39 +156,43 @@ export class SideBarController {
     this.portManager.addIframeHandler<IframeCloseMsg>('IFRAME_CLOSE', (message, source) => {
       if (this.isSideBarVisible) this.hide();
     });
+  }
 
-    // Handle current tab requests
-    this.portManager.addIframeHandler<IframeGetCurrentTabMsg>('IFRAME_GET_CURRENT_TAB', (message, source) => {
-      const response: IframeCurrentTabResponseMsg = {
-        type: 'IFRAME_CURRENT_TAB_RESPONSE',
-        tabId: (window as any).solTabId ?? null,
-        url: window.location.href,
-        title: document.title,
-      };
-      this.portManager.sendToIframe(source, response);
+  private setupIframeMessageListener(): void {
+    // Listen for close requests from the iframe
+    window.addEventListener('message', (event) => {
+      if (event.data?.type === 'sol-close-sidebar') {
+        this.hide(); // Direct hide like expand button
+      }
     });
   }
 
-  private setupStateSync(): void {
-    // Listen for state changes from unified conversation service for this tab
-    this.stateChangeCleanup = conversation.subscribeToTab(this.tabId, (state: TabConversation) => {
-      this.updateIframeState();
-    });
-  }
+  // Utility similar to AskBarController
+  private detectColorScheme(): 'light' | 'dark' {
+    try {
+      const meta = document.querySelector('meta[name="color-scheme"]') as HTMLMetaElement | null;
+      if (meta?.content?.includes('dark') && !meta.content.includes('light')) {
+        return 'dark';
+      }
 
-  private updateIframeState(): void {
-    if (this.sideBarInstance && this.isSideBarVisible && this.sideBarInstance.iframe.contentWindow) {
-      const state = conversation.getTabState(this.tabId);
-      // Send state update via postMessage
-      this.sideBarInstance.iframe.contentWindow.postMessage({
-        type: 'sol-state-update',
-        conversationHistory: state.messages.map(msg => ({
-          type: msg.type,
-          content: msg.content,
-          timestamp: msg.timestamp
-        })),
-        conversationId: state.conversationId
-      }, '*');
+      // Use only <body> background, ignore <html>
+      const bg = getComputedStyle(document.body).backgroundColor;
+      if (!bg || bg === 'transparent' || bg === 'rgba(0, 0, 0, 0)') {
+        return 'light';
+      }
+      const rgbMatch = bg.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)(?:,\s*([\d.]+))?\)/);
+      if (rgbMatch) {
+        const r = parseInt(rgbMatch[1], 10);
+        const g = parseInt(rgbMatch[2], 10);
+        const b = parseInt(rgbMatch[3], 10);
+        const a = rgbMatch[4] !== undefined ? parseFloat(rgbMatch[4]) : 1;
+        if (a < 0.95) return 'light'; // Only treat as dark if fully opaque
+        const luminance = 0.2126 * r + 0.7152 * g + 0.0722 * b;
+        return luminance < 128 ? 'dark' : 'light';
+      }
+    } catch (e) {
+      console.warn('Sol: Failed to detect page color scheme, defaulting to light', e);
     }
+    return 'light';
   }
 } 

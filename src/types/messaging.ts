@@ -158,4 +158,13 @@ export const PORT_NAMES = {
   CONTENT_PORT: 'CONTENT_PORT',
   UI_PORT: 'UI_PORT',
   IFRAME_PORT: 'IFRAME_PORT',
-} as const; 
+} as const;
+
+// Add interface extension for Sol init if not defined
+export interface SolInitMsg {
+  type: 'sol-init';
+  position?: string;
+  conversationHistory?: any[];
+  conversationId?: string | null;
+  colorScheme?: 'light' | 'dark';
+} 

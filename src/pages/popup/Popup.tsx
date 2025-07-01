@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Cog6ToothIcon, FaceSmileIcon, VariableIcon } from '@heroicons/react/24/outline';
+import { Cog6ToothIcon, FaceSmileIcon, VariableIcon, ShieldCheckIcon, WrenchScrewdriverIcon } from '@heroicons/react/24/outline';
 import browser from 'webextension-polyfill';
 import settingsService from '@src/utils/settings';
 import { Button } from '@src/components/ui/button';
@@ -110,15 +110,13 @@ export default function Popup() {
     return (
       <div className="h-96 p-6 flex flex-col justify-center">
         <div className="text-center space-y-5">
-          <div className="w-14 h-14 mx-auto mb-4 flex items-center justify-center bg-amber-50 rounded-xl">
-            <img src={logo} alt="Sol" className="w-8 h-8" />
-          </div>
+          <ShieldCheckIcon className="w-14 h-14 mx-auto mb-4" />
           <div className="space-y-2">
             <h2 className="text-xl font-semibold text-gray-900 tracking-tight">
               Permission Required
             </h2>
             <p className="text-[13px] text-gray-600 leading-relaxed px-2">
-              Firefox requires explicit permission for Sol to work on all websites. Click below to grant access.
+              Your browser requires explicit permission for Sol to work on all websites. Click below to grant access.
             </p>
           </div>
           <Button
@@ -136,22 +134,20 @@ export default function Popup() {
     return (
       <div className="h-96 p-6 flex flex-col justify-center">
         <div className="text-center space-y-5">
-          <div className="w-14 h-14 mx-auto mb-4 flex items-center justify-center bg-blue-50 rounded-xl">
-            <img src={logo} alt="Sol" className="w-8 h-8" />
-          </div>
+          <WrenchScrewdriverIcon className="w-14 h-14 mx-auto mb-4" />
           <div className="space-y-2">
             <h2 className="text-xl font-semibold text-gray-900 tracking-tight">
               Setup Required
             </h2>
             <p className="text-[13px] text-gray-600 leading-relaxed px-2">
-              Please configure your AI provider in the dashboard to begin using Sol.
+              Please configure your AI provider to begin using Sol.
             </p>
           </div>
           <Button
             onClick={() => openDashboard('ai-provider')}
             className="sol-button-primary sol-large-button w-full h-11"
           >
-            Setup AI Provider
+            Open Dashboard
           </Button>
         </div>
       </div>
@@ -184,14 +180,16 @@ export default function Popup() {
         </div>
 
         {/* Side Feature */}
-        <div className="space-y-3">
+        <div className="space-y-3 opacity-60 pointer-events-none select-none">
           <div className="flex items-center justify-between">
-            <h2 className="text-xl font-semibold text-gray-900">
+            <h2 className="text-xl font-semibold text-gray-900 flex items-center gap-2">
               Side
+              <span className="ml-2 px-2 py-0.5 rounded bg-gray-200 text-xs font-medium text-gray-700">Coming soon</span>
             </h2>
             <Switch
-              checked={sideEnabled}
-              onCheckedChange={handleSideToggle}
+              checked={false}
+              disabled
+              onCheckedChange={() => {}}
             />
           </div>
           <p className="text-[14px] text-gray-600 leading-relaxed">
