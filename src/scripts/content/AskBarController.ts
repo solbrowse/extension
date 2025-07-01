@@ -59,12 +59,15 @@ export class AskBarController {
     const settings = await settingsService.getAll();
     const existingConversation = conversation.getTabState(this.tabId);
 
+    const colorScheme = this.detectColorScheme();
+
     this.askBarInstance = await IframeInjector.inject({
       iframeUrl: browser.runtime.getURL('src/pages/askbar/index.html'),
       containerId: 'sol-askbar-container',
       settings,
       position: settings.features.askBar.position,
       existingConversation: existingConversation as any,
+      colorScheme,
     });
 
     this.isAskBarVisible = true;
@@ -277,5 +280,38 @@ export class AskBarController {
       this.sideBarController.show(true);
       this.hide();
     }
+  }
+
+  // ---------------------------------------------------------
+  // Helper to infer whether the host page is predominantly dark
+  // ---------------------------------------------------------
+
+  private detectColorScheme(): 'light' | 'dark' {
+    try {
+      // Prefer explicit meta if host declares it
+      const meta = document.querySelector('meta[name="color-scheme"]') as HTMLMetaElement | null;
+      if (meta?.content?.includes('dark') && !meta.content.includes('light')) {
+        return 'dark';
+      }
+
+      // Use only <body> background, ignore <html>
+      const bg = getComputedStyle(document.body).backgroundColor;
+      if (!bg || bg === 'transparent' || bg === 'rgba(0, 0, 0, 0)') {
+        return 'light';
+      }
+      const rgbMatch = bg.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)(?:,\s*([\d.]+))?\)/);
+      if (rgbMatch) {
+        const r = parseInt(rgbMatch[1], 10);
+        const g = parseInt(rgbMatch[2], 10);
+        const b = parseInt(rgbMatch[3], 10);
+        const a = rgbMatch[4] !== undefined ? parseFloat(rgbMatch[4]) : 1;
+        if (a < 0.95) return 'light'; // Only treat as dark if fully opaque
+        const luminance = 0.2126 * r + 0.7152 * g + 0.0722 * b;
+        return luminance < 128 ? 'dark' : 'light';
+      }
+    } catch (e) {
+      console.warn('Sol: Failed to detect page color scheme, defaulting to light', e);
+    }
+    return 'light';
   }
 } 

@@ -40,6 +40,7 @@ interface MemoisedMessagesProps {
   isStreaming: boolean;
   availableTabs: any[];
   onTabReAdd: (tab: any) => void;
+  activeConversationId?: string | null;
 }
 
 // Main memoized messages component
@@ -50,7 +51,7 @@ export const MemoisedMessages = memo<MemoisedMessagesProps>(
     onCopyMessage, 
     isStreaming, 
     availableTabs, 
-    onTabReAdd 
+    onTabReAdd
   }) => {
     // Always call useThrottle to avoid hooks rule violations
     const lastMessageContent = messages.length > 0 ? messages[messages.length - 1].content : '';
@@ -84,6 +85,10 @@ export const MemoisedMessages = memo<MemoisedMessagesProps>(
     );
   },
   (prevProps, nextProps) => {
+    // Re-render if the active conversation has changed
+    if (prevProps.activeConversationId !== nextProps.activeConversationId) {
+      return false;
+    }
     // Only re-render if messages array length changed or streaming state changed
     if (prevProps.messages.length !== nextProps.messages.length) {
       return false;

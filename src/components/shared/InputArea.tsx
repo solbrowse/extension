@@ -59,6 +59,30 @@ const InputArea: React.FC<Props> = ({
     autoResize();
   }, [input, autoResize]);
 
+  // Re-position the dropdown so it never overflows past the bottom edge
+  useEffect(() => {
+    if (!showDropdown || !dropdownRef.current) return;
+
+    const el = dropdownRef.current;
+
+    // Reset to default downward placement first
+    el.style.top = '100%';
+    el.style.bottom = '';
+    el.style.marginTop = '4px';
+    el.style.marginBottom = '';
+
+    const rect = el.getBoundingClientRect();
+    const overflowPx = rect.bottom - window.innerHeight;
+
+    if (overflowPx > 0) {
+      // Place the dropdown above the input area instead
+      el.style.top = '';
+      el.style.bottom = '100%';
+      el.style.marginTop = '';
+      el.style.marginBottom = '4px';
+    }
+  }, [showDropdown, filteredTabs.length]);
+
   const isSearching = searchTerm.trim().length > 0;
 
   return (
@@ -116,7 +140,7 @@ const InputArea: React.FC<Props> = ({
       {showDropdown && (
         <div
           ref={dropdownRef}
-          className="absolute z-50 w-full top-full mt-1 backdrop-blur-sm sol-rounded-dropdown border border-black/[0.04] sol-dropdown-shadow max-h-60 overflow-y-auto sol-bg-translucent sol-font-apple sol-dropdown-enter"
+          className="absolute z-50 w-full backdrop-blur-sm sol-rounded-dropdown border border-black/[0.04] sol-dropdown-shadow max-h-60 overflow-y-auto sol-bg-translucent sol-font-apple sol-dropdown-enter"
         >
           {/* All tabs/visible results option */}
                       <div

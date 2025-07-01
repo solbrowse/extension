@@ -1,5 +1,5 @@
 import '@src/utils/logger';
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useLayoutEffect } from 'react';
 import { useCopyMessage, ChatHeader, useConversationService, useChatInput } from '@src/components/index';
 import { MemoisedMessages } from '@src/components/shared/MemoisedMessages';
 import TabChipRow from '../../components/shared/TabChipRow';
@@ -46,7 +46,20 @@ export const NewTabPage: React.FC = () => {
   // Centered input mode (when no conversation)
   if (!isConversationMode) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 flex items-center justify-center p-8 sol-font-inter">
+      <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 flex items-center justify-center p-8 sol-font-inter relative">
+
+        {/* History / New Conversation header (top-left) */}
+        <div className="absolute top-4 left-4">
+          <ChatHeader
+            conversations={conversationService.conversations}
+            activeConversationId={conversationService.activeConversationId}
+            onConversationSelect={handleConversationSelect}
+            onNewConversation={handleNewConversation}
+            showExpandButton={false}
+            disableNewButton={chatInput.isStreaming}
+          />
+        </div>
+
         <div className="w-full max-w-3xl min-w-[480px]">
           {/* Input container */}
           <div 
@@ -97,7 +110,7 @@ export const NewTabPage: React.FC = () => {
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 flex flex-col sol-font-inter">
       {/* Header */}
-      <div className="bg-white/80 backdrop-blur-sm border-b border-black/[0.07] p-4 relative z-50">
+      <div className="bg-white/80 backdrop-blur-sm border-b border-black/[0.07] p-4 sticky top-0 left-0 z-50">
         <div className="max-w-4xl mx-auto flex items-center justify-between">
           <ChatHeader
             conversations={conversationService.conversations}
@@ -110,29 +123,26 @@ export const NewTabPage: React.FC = () => {
         </div>
       </div>
 
-      {/* Main content */}
-      <div className="flex-1 flex flex-col max-w-4xl mx-auto w-full p-6">
-        {/* Conversation Messages with optimized rendering */}
-        <div
-          className="flex-1 mb-6 overflow-y-auto"
-        >
-          <MemoisedMessages
-            messages={conversationService.messages}
-            copiedMessageIndex={copiedMessageIndex}
-            onCopyMessage={(content: string, index: number) => handleCopyMessage(content, index)}
-            isStreaming={chatInput.isStreaming}
-            availableTabs={chatInput.availableTabs}
-            onTabReAdd={chatInput.handleTabReAdd}
-          />
-        </div>
+      {/* Messages Area */}
+      <div 
+        className="flex-1 overflow-y-auto p-6 max-w-4xl mx-auto w-full pb-32"
+      >
+        <MemoisedMessages
+          messages={conversationService.messages}
+          copiedMessageIndex={copiedMessageIndex}
+          onCopyMessage={(content: string, index: number) => handleCopyMessage(content, index)}
+          isStreaming={chatInput.isStreaming}
+          availableTabs={chatInput.availableTabs}
+          onTabReAdd={chatInput.handleTabReAdd}
+          activeConversationId={conversationService.activeConversationId}
+        />
+      </div>
 
-        {/* Input Area */}
-        <div className="sticky bottom-0">
+      {/* Sticky Bottom Navbar with Input */}
+      <div className="sticky bottom-0 left-0 right-0 p-6 bg-transparent">
+        <div className="max-w-4xl mx-auto">
           <div 
-            className="rounded-[20px] border-[0.5px] border-black/[0.07] sol-input-shadow sol-font-inter"
-            style={{ 
-              backgroundColor: 'white'
-            }}
+            className="rounded-[20px] border-[0.5px] border-black/[0.07] sol-input-shadow sol-font-inter bg-white"
           >
             <TabChipRow tabs={chatInput.selectedTabChips} onRemove={chatInput.handleTabRemoveById} />
 

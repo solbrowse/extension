@@ -1,6 +1,6 @@
 import '@src/utils/logger';
 import React, { useState, useEffect, useRef, useLayoutEffect } from 'react';
-import { ConversationList, useCopyMessage, ChatHeader, useConversationService, useChatInput } from '@src/components/index';
+import { MemoisedMessages, useCopyMessage, ChatHeader, useConversationService, useChatInput } from '@src/components/index';
 import { PortManager } from '@src/services/messaging/portManager';
 import { IframeCloseMsg, IframeGetCurrentTabMsg, IframeCurrentTabResponseMsg } from '@src/types/messaging';
 import TabChipRow from '../../components/shared/TabChipRow';
@@ -123,6 +123,12 @@ export const AskBar: React.FC = () => {
         if (event.data.position) {
           setPosition(event.data.position);
         }
+        // Apply colour-scheme so UA paints scrollbars and form controls correctly
+        if (event.data.colorScheme) {
+          (document.documentElement as HTMLElement).style.colorScheme = event.data.colorScheme;
+          (document.documentElement as HTMLElement).style.background = 'transparent';
+          (document.body as HTMLElement).style.background = 'transparent';
+        }
         // Conversation state is now managed by ConversationService
         // Just expand if there are messages
         if (event.data.conversationHistory && event.data.conversationHistory.length > 0) {
@@ -244,13 +250,14 @@ export const AskBar: React.FC = () => {
           {/* Conversation Messages - flex-grow with internal scroll */}
           <div className="flex-grow overflow-hidden px-[14px] pb-2">
             <div className="h-full overflow-y-auto">
-              <ConversationList
+              <MemoisedMessages
                 messages={conversationService.messages}
                 copiedMessageIndex={copiedMessageIndex}
                 onCopyMessage={handleCopyMessage}
                 isStreaming={chatInput.isStreaming}
                 availableTabs={chatInput.availableTabs}
                 onTabReAdd={chatInput.handleTabReAdd}
+                activeConversationId={conversationService.activeConversationId}
               />
             </div>
           </div>

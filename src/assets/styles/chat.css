@@ -26,6 +26,7 @@ html {
 .sol-ask-bar textarea {
   pointer-events: auto !important;
   cursor: text !important;
+  color: #111 !important;
 }
 
 .sol-ask-bar.sol-visible {
