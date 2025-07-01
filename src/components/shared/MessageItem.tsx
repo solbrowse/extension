@@ -76,7 +76,7 @@ export const MessageItem: React.FC<MessageItemProps> = ({
     return (
       <div
         className={`
-          mb-3 last:mb-0 relative group
+          mb-1 last:mb-0 relative group
           ${isNew ? 'opacity-0 translate-y-2 animate-in' : ''}
           sol-transition-colors
           text-right
@@ -106,7 +106,7 @@ export const MessageItem: React.FC<MessageItemProps> = ({
   return (
     <div
       className={`
-        mb-3 last:mb-0 relative group
+        mb-1 last:mb-0 relative group
         ${isNew ? 'opacity-0 translate-y-2 animate-in' : ''}
         sol-transition-colors
         text-left

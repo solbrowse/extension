@@ -26,6 +26,7 @@ interface Props {
   onSubmit: () => void;
   isStreaming: boolean;
   showCloseButton?: boolean;
+  placeholder?: string;
 }
 
 const InputArea: React.FC<Props> = ({
@@ -45,6 +46,7 @@ const InputArea: React.FC<Props> = ({
   onSubmit,
   isStreaming,
   showCloseButton = true,
+  placeholder,
 }) => {
   // Simple auto-resize - let the browser do the work.
   const autoResize = useCallback(() => {
@@ -94,7 +96,7 @@ const InputArea: React.FC<Props> = ({
           value={input}
           onChange={(e) => onInputChange(e.target.value)}
           onKeyDown={onInputKeyDown}
-          placeholder="What would you like to know?"
+          placeholder={placeholder || "Ask a question about this page..."}
           rows={1}
           className="flex-grow border-none resize-none bg-transparent sol-font-inter sol-input-text placeholder:text-black/40 placeholder:font-medium focus:outline-none p-0"
           style={{

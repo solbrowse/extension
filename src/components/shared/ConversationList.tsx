@@ -51,21 +51,25 @@ export const ConversationList: React.FC<ConversationListProps> = ({
         ${className}
       `}
     >
-      {messages.map((message, index) => (
-        <MessageItem
-          key={index}
-          message={message}
-          index={index}
-          isStreaming={isStreaming}
-          isLastMessage={index === messages.length - 1}
-          copiedMessageIndex={copiedMessageIndex}
-          onCopy={onCopyMessage}
-          showCopyButton={showCopyButtons}
-          mountTime={mountTime}
-          availableTabs={availableTabs}
-          onTabReAdd={onTabReAdd}
-        />
-      ))}
+      {messages.length === 0 ? (
+        <div className="text-black/40 text-center py-8 select-none">No messages yet...</div>
+      ) : (
+        messages.map((message, index) => (
+          <MessageItem
+            key={index}
+            message={message}
+            index={index}
+            isStreaming={isStreaming}
+            isLastMessage={index === messages.length - 1}
+            copiedMessageIndex={copiedMessageIndex}
+            onCopy={onCopyMessage}
+            showCopyButton={showCopyButtons}
+            mountTime={mountTime}
+            availableTabs={availableTabs}
+            onTabReAdd={onTabReAdd}
+          />
+        ))
+      )}
     </div>
   );
 };

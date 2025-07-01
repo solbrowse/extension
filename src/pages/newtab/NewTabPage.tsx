@@ -134,7 +134,9 @@ export const NewTabPage: React.FC = () => {
       </div>
 
       {/* Messages Area */}
-      <div className="flex-1 overflow-y-auto p-6 max-w-4xl mx-auto w-full pb-32">
+      <div 
+        className="flex-1 overflow-y-auto p-6 max-w-4xl mx-auto w-full pb-4"
+      >
         <MemoisedMessages
           messages={conversationService.messages}
           copiedMessageIndex={copiedMessageIndex}
