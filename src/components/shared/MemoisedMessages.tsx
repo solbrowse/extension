@@ -41,6 +41,7 @@ interface MemoisedMessagesProps {
   availableTabs: any[];
   onTabReAdd: (tab: any) => void;
   activeConversationId?: string | null;
+  className?: string;
 }
 
 // Main memoized messages component
@@ -51,7 +52,8 @@ export const MemoisedMessages = memo<MemoisedMessagesProps>(
     onCopyMessage, 
     isStreaming, 
     availableTabs, 
-    onTabReAdd
+    onTabReAdd,
+    className = ''
   }) => {
     // Always call useThrottle to avoid hooks rule violations
     const lastMessageContent = messages.length > 0 ? messages[messages.length - 1].content : '';
@@ -81,6 +83,7 @@ export const MemoisedMessages = memo<MemoisedMessagesProps>(
         isStreaming={isStreaming}
         availableTabs={availableTabs}
         onTabReAdd={onTabReAdd}
+        className={className}
       />
     );
   },

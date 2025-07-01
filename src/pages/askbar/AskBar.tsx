@@ -8,7 +8,6 @@ import InputArea from '../../components/shared/InputArea';
 
 export const AskBar: React.FC = () => {
   // UI-specific state (not handled by useChatInput)
-  const [isExpanded, setIsExpanded] = useState(false);
   const [isVisible, setIsVisible] = useState(false);
   const [isClosing, setIsClosing] = useState(false);
   const [hasAutoAddedCurrentTab, setHasAutoAddedCurrentTab] = useState(false);
@@ -84,13 +83,6 @@ export const AskBar: React.FC = () => {
     }
   }, [currentTabId, chatInput.availableTabs, hasAutoAddedCurrentTab]);
 
-  // Expand once first message sent
-  useEffect(() => {
-    if (conversationService.messages.length > 0) {
-      setIsExpanded(true);
-    }
-  }, [conversationService.messages.length]);
-
   // Position and resize logic (UI-specific)
   useLayoutEffect(() => {
     const sendBounds = () => {
@@ -132,13 +124,13 @@ export const AskBar: React.FC = () => {
         // Conversation state is now managed by ConversationService
         // Just expand if there are messages
         if (event.data.conversationHistory && event.data.conversationHistory.length > 0) {
-          setIsExpanded(true);
+          // setIsExpanded(true);
         }
       } else if (event.data?.type === 'sol-state-update') {
         // Conversation state updates are now handled by ConversationService
         // Just expand if there are messages
         if (event.data.conversationHistory && event.data.conversationHistory.length > 0) {
-          setIsExpanded(true);
+          // setIsExpanded(true);
         }
       } else if (event.data?.type === 'sol-trigger-close') {
         // Trigger the same close animation as the X button
@@ -154,7 +146,7 @@ export const AskBar: React.FC = () => {
       observer.disconnect();
       window.removeEventListener('message', messageHandler);
     };
-  }, [isExpanded, conversationService.messages.length]);
+  }, []);
 
   // Mouse interaction handlers for pointer events (UI-specific)
   useLayoutEffect(() => {
@@ -220,139 +212,75 @@ export const AskBar: React.FC = () => {
       onKeyDown={handleKeyDown}
       tabIndex={0}
     >
-      {isExpanded ? (
-        // Expanded Mode - Full Conversation Container with proper flexbox
-        <div 
-          className="backdrop-blur-[16px] rounded-[28px] border-[0.5px] border-black/[0.07] transition-all duration-300 ease-in-out sol-conversation-shadow sol-font-inter flex flex-col"
-           style={{ 
-            width: '436px',
-            height: '600px', // Fixed height instead of auto
-            backgroundColor: 'rgba(255, 255, 255, 0.8)'
-          }}
-        >
-          <div className="p-2 flex-shrink-0"></div>
+      <div
+        className="w-[436px] h-[600px] bg-white/80 backdrop-blur-lg rounded-[28px] border border-black/10 transition-all duration-300 ease-in-out sol-conversation-shadow sol-font-inter flex flex-col"
+      >
 
-          {/* Chat Header - fixed at top */}
-          <div className="flex-shrink-0">
-            <ChatHeader
-              conversations={conversationService.conversations}
-              activeConversationId={conversationService.activeConversationId}
-              onConversationSelect={handleConversationSelect}
-              onNewConversation={handleNewConversation}
-              showExpandButton={true}
-              onExpand={handleExpandToSideBar}
-              disableNewButton={chatInput.isStreaming}
-              showCloseButton={true}
-              onClose={handleClose}
-            />
-          </div>
-
-          {/* Conversation Messages - flex-grow with internal scroll */}
-          <div className="flex-grow overflow-hidden px-[14px] pb-2 sol-fade-mask">
-            <div className="h-full overflow-y-auto">
-              <MemoisedMessages
-                messages={conversationService.messages}
-                copiedMessageIndex={copiedMessageIndex}
-                onCopyMessage={handleCopyMessage}
-                isStreaming={chatInput.isStreaming}
-                availableTabs={chatInput.availableTabs}
-                onTabReAdd={chatInput.handleTabReAdd}
-                activeConversationId={conversationService.activeConversationId}
-              />
-            </div>
-          </div>
-
-          {/* Input Area - fixed at bottom */}
-          <div className="flex-shrink-0 p-2">
-            <div 
-              className="rounded-[20px] border-[0.5px] border-black/[0.07] sol-input-shadow sol-font-inter overflow-hidden"
-              style={{ 
-                width: '420px',
-                maxWidth: '420px',
-                backgroundColor: 'white'
-              }}
-            >
-              <div style={{ maxWidth: '420px', overflow: 'hidden' }}>
-                <TabChipRow tabs={chatInput.selectedTabChips} onRemove={chatInput.handleTabRemoveById} />
-              </div>
-
-              <div
-                style={{
-                  paddingTop: chatInput.selectedTabChips.length > 0 ? '8px' : '16px',
-                  paddingLeft: '16px',
-                  paddingRight: '14px',
-                  paddingBottom: '14px'
-                }}
-              >
-                <InputArea
-                  input={chatInput.input}
-                  onInputChange={chatInput.handleInputChange}
-                  onInputKeyDown={chatInput.handleInputKeyDown}
-                  inputRef={chatInput.inputRef}
-                  showDropdown={chatInput.showDropdown}
-                  filteredTabs={chatInput.filteredTabs}
-                  dropdownSelectedIndex={chatInput.dropdownSelectedIndex}
-                  insertTabMention={chatInput.insertTabMention as any}
-                  dropdownRef={chatInput.dropdownRef}
-                  setDropdownSelectedIndex={chatInput.setDropdownSelectedIndex}
-                  truncateTitle={chatInput.truncateTitle}
-                  searchTerm={chatInput.searchTerm}
-                  onClose={handleClose}
-                  onSubmit={chatInput.handleSubmit}
-                  isStreaming={chatInput.isStreaming}
-                  showCloseButton={false}
-                />
-                {chatInput.error && (
-                  <div className="mt-2 text-red-600 text-sm">{chatInput.error}</div>
-                )}
-              </div>
-            </div>
-          </div>
+        {/* Chat Header - fixed at top */}
+        <div className="flex-shrink-0 p-4">
+          <ChatHeader
+            conversations={conversationService.conversations}
+            activeConversationId={conversationService.activeConversationId}
+            onConversationSelect={handleConversationSelect}
+            onNewConversation={handleNewConversation}
+            showExpandButton={true}
+            onExpand={handleExpandToSideBar}
+            disableNewButton={chatInput.isStreaming}
+            showCloseButton={true}
+            onClose={handleClose}
+          />
         </div>
-      ) : (
-        <div 
-          className="rounded-[20px] border-[0.5px] border-black/[0.07] transition-all duration-300 ease-in-out transform sol-input-shadow-large sol-font-inter overflow-hidden"
-          style={{ 
-            width: '420px',
-            maxWidth: '420px',
-            backgroundColor: 'white'
-          }}
-        >
-          <div style={{ maxWidth: '420px', overflow: 'hidden' }}>
-            <TabChipRow tabs={chatInput.selectedTabChips} onRemove={chatInput.handleTabRemoveById} />
-          </div>
 
-          <div
-            style={{
-              paddingTop: chatInput.selectedTabChips.length > 0 ? '8px' : '16px',
-              paddingLeft: '16px',
-              paddingRight: '14px',
-              paddingBottom: '14px'
-            }}
-          >
-            <InputArea
-              input={chatInput.input}
-              onInputChange={chatInput.handleInputChange}
-              onInputKeyDown={chatInput.handleInputKeyDown}
-              inputRef={chatInput.inputRef}
-              showDropdown={chatInput.showDropdown}
-              filteredTabs={chatInput.filteredTabs}
-              dropdownSelectedIndex={chatInput.dropdownSelectedIndex}
-              insertTabMention={chatInput.insertTabMention as any}
-              dropdownRef={chatInput.dropdownRef}
-              setDropdownSelectedIndex={chatInput.setDropdownSelectedIndex}
-              truncateTitle={chatInput.truncateTitle}
-              searchTerm={chatInput.searchTerm}
-              onClose={handleClose}
-              onSubmit={chatInput.handleSubmit}
+        {/* Conversation Messages - flex-grow with internal scroll */}
+        <div className="flex-grow overflow-hidden px-[14px] pb-2 sol-fade-mask">
+          <div className="h-full overflow-y-auto">
+            <MemoisedMessages
+              messages={conversationService.messages}
+              copiedMessageIndex={copiedMessageIndex}
+              onCopyMessage={handleCopyMessage}
               isStreaming={chatInput.isStreaming}
+              availableTabs={chatInput.availableTabs}
+              onTabReAdd={chatInput.handleTabReAdd}
+              activeConversationId={conversationService.activeConversationId}
+              className="mt-4"
             />
-            {chatInput.error && (
-              <div className="mt-2 text-red-600 text-sm">{chatInput.error}</div>
-            )}
           </div>
         </div>
-      )}
+
+        {/* Input Area - fixed at bottom */}
+        <div className="flex-shrink-0 p-2">
+          <div 
+            className="rounded-[20px] border-[0.5px] border-black/[0.07] sol-input-shadow sol-font-inter w-full bg-white"
+          >
+            <div className="w-full overflow-hidden">
+              <TabChipRow tabs={chatInput.selectedTabChips} onRemove={chatInput.handleTabRemoveById} />
+            </div>
+            <div className="pt-2 pl-4 pr-4 pb-4">
+              <InputArea
+                input={chatInput.input}
+                onInputChange={chatInput.handleInputChange}
+                onInputKeyDown={chatInput.handleInputKeyDown}
+                inputRef={chatInput.inputRef}
+                showDropdown={chatInput.showDropdown}
+                filteredTabs={chatInput.filteredTabs}
+                dropdownSelectedIndex={chatInput.dropdownSelectedIndex}
+                insertTabMention={chatInput.insertTabMention as any}
+                dropdownRef={chatInput.dropdownRef}
+                setDropdownSelectedIndex={chatInput.setDropdownSelectedIndex}
+                truncateTitle={chatInput.truncateTitle}
+                searchTerm={chatInput.searchTerm}
+                onClose={handleClose}
+                onSubmit={chatInput.handleSubmit}
+                isStreaming={chatInput.isStreaming}
+                showCloseButton={false}
+              />
+              {chatInput.error && (
+                <div className="mt-2 text-red-600 text-sm">{chatInput.error}</div>
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
   );
 };

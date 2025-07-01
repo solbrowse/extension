@@ -105,7 +105,7 @@ const ChatHeader: React.FC<ChatHeaderProps> = ({
   };
 
   return (
-    <div className="flex items-center justify-between py-2 px-4">
+    <div className="flex items-center justify-between">
       {/* Left side buttons */}
       <div className="flex items-center gap-2">
         {/* Expand Button (AskBar only) - moved to left */}
