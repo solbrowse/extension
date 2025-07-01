@@ -94,7 +94,7 @@ const InputArea: React.FC<Props> = ({
           value={input}
           onChange={(e) => onInputChange(e.target.value)}
           onKeyDown={onInputKeyDown}
-          placeholder="What do you want to know?"
+          placeholder="What would you like to know?"
           rows={1}
           className="flex-grow border-none resize-none bg-transparent sol-font-inter sol-input-text placeholder:text-black/40 placeholder:font-medium focus:outline-none p-0"
           style={{

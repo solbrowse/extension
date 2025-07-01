@@ -280,7 +280,7 @@ export const AskBar: React.FC = () => {
             backgroundColor: "rgba(255, 255, 255, 0.8)",
           }}
         >
-          <div className="p-2 flex-shrink-0"></div>
+          <div className="p-1 flex-shrink-0"></div>
 
           {/* Chat Header - fixed at top */}
           <div className="flex-shrink-0">
@@ -299,7 +299,7 @@ export const AskBar: React.FC = () => {
 
           {/* Conversation Messages - flex-grow with internal scroll */}
           <div className="flex-grow overflow-hidden px-[14px] pb-0 sol-fade-mask">
-            <div className="h-full overflow-y-auto">
+            <div className="h-full overflow-y-auto mt-2.5">
               <MemoisedMessages
                 messages={conversationService.messages}
                 copiedMessageIndex={copiedMessageIndex}
