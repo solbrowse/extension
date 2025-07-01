@@ -633,3 +633,18 @@ html {
 .sol-markdown > *:last-child {
   margin-bottom: 0;
 }
+
+/* Fade mask for subtle chat fade effect */
+.sol-fade-mask {
+  max-height: 400px;
+  overflow-y: auto;
+  mask-image: linear-gradient(
+    to bottom,
+    transparent 2%,
+    black 5%,
+    black 95%,
+    transparent 98%
+  );
+  mask-repeat: no-repeat;
+  mask-mode: alpha;
+}
