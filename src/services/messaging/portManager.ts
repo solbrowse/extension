@@ -1,10 +1,9 @@
 import '@src/utils/logger';
 import browser from 'webextension-polyfill';
-import { ContentPortMsg, UiPortMsg, IframePortMsg, PORT_NAMES } from '@src/types/messaging';
+import { ContentPortMsg, UiPortMsg, PORT_NAMES } from '@src/types/messaging';
 
 type PortMessageHandler<T> = (message: T, port: browser.Runtime.Port) => void;
 type RequestHandler<T, R> = (message: T, port: browser.Runtime.Port) => Promise<R> | R;
-type IframeMessageHandler<T> = (message: T, source: Window) => void;
 
 export class PortManager {
   private static instance: PortManager;
@@ -14,9 +13,7 @@ export class PortManager {
   private uiHandlers = new Map<string, PortMessageHandler<any>>();
   private requestHandlers = new Map<string, RequestHandler<any, any>>();
   
-  // Iframe communication
-  private iframeHandlers = new Map<string, IframeMessageHandler<any>>();
-  private isIframeListening = false;
+
 
   private constructor() {
     this.setupPortListeners();
@@ -53,21 +50,7 @@ export class PortManager {
     this.requestHandlers.set(type, handler);
   }
 
-  // Iframe Message Registration
-  addIframeHandler<T extends IframePortMsg>(
-    type: T['type'],
-    handler: IframeMessageHandler<T>
-  ): () => void {
-    this.iframeHandlers.set(type, handler);
-    if (!this.isIframeListening) {
-      this.setupIframeListeners();
-    }
-    
-    // Return cleanup function
-    return () => {
-      this.iframeHandlers.delete(type);
-    };
-  }
+
 
   // Send message to specific content script
   sendToContentScript(tabId: number, message: any): boolean {
@@ -114,24 +97,7 @@ export class PortManager {
     }
   }
 
-  // Send message to iframe
-  sendToIframe(targetWindow: Window, message: IframePortMsg): boolean {
-    try {
-      targetWindow.postMessage(message, '*');
-      return true;
-    } catch (error) {
-      console.error('Sol PortManager: Failed to send to iframe:', error);
-      return false;
-    }
-  }
 
-  // Send message to parent (from iframe)
-  sendToParent(message: IframePortMsg): boolean {
-    if (window.parent !== window) {
-      return this.sendToIframe(window.parent, message);
-    }
-    return false;
-  }
 
   // Get active tab IDs
   getActiveTabIds(): number[] {
@@ -143,13 +109,9 @@ export class PortManager {
     return this.uiPorts.size;
   }
 
-  // Cleanup iframe listeners
+  // Cleanup
   cleanup(): void {
-    if (this.isIframeListening) {
-      window.removeEventListener('message', this.handleIframeMessage);
-      this.isIframeListening = false;
-    }
-    this.iframeHandlers.clear();
+    // Cleanup any remaining handlers if needed
   }
 
   private setupPortListeners(): void {
@@ -167,29 +129,7 @@ export class PortManager {
     });
   }
 
-  private setupIframeListeners(): void {
-    if (this.isIframeListening) return;
-    
-    window.addEventListener('message', this.handleIframeMessage);
-    this.isIframeListening = true;
-  }
 
-  private handleIframeMessage = (event: MessageEvent): void => {
-    if (!event.data || typeof event.data !== 'object' || !event.data.type) {
-      return;
-    }
-
-    const message = event.data as IframePortMsg;
-    const handler = this.iframeHandlers.get(message.type);
-    
-    if (handler) {
-      try {
-        handler(message, event.source as Window);
-      } catch (error) {
-        console.error(`Sol PortManager: Error in iframe handler for ${message.type}:`, error);
-      }
-    }
-  };
 
   private handleContentPort(port: browser.Runtime.Port): void {
     // Extract tabId from sender

@@ -2,7 +2,6 @@ import '@src/utils/logger';
 import React, { useState, useEffect, useRef, useLayoutEffect } from 'react';
 import { MemoisedMessages, useCopyMessage, ChatHeader, useConversationService, useChatInput } from '@src/components/index';
 import { PortManager } from '@src/services/messaging/portManager';
-import { IframeCloseMsg, IframeGetCurrentTabMsg, IframeCurrentTabResponseMsg } from '@src/types/messaging';
 import TabChipRow from '../../components/shared/TabChipRow';
 import InputArea from '../../components/shared/InputArea';
 
@@ -45,10 +44,15 @@ export const AskBar: React.FC = () => {
   };
 
   const handleExpandToSideBar = () => {
-    // Send message to parent window to open SideBar
-    window.parent.postMessage({
-      type: 'sol-open-sidebar'
-    }, '*');
+    // Send message through shadow DOM event system
+    const hostElement = document.querySelector('#sol-askbar-container');
+    if (hostElement) {
+      hostElement.dispatchEvent(new CustomEvent('sol-shadow-message', {
+        detail: { type: 'sol-open-sidebar' },
+        bubbles: false,
+        composed: false
+      }));
+    }
   };
 
   // Effects
@@ -59,16 +63,32 @@ export const AskBar: React.FC = () => {
 
   // Initialize messaging system to receive updates from controller
   useEffect(() => {
-    const cleanupTabHandler = portManager.current.addIframeHandler<IframeCurrentTabResponseMsg>('IFRAME_CURRENT_TAB_RESPONSE', (message) => {
-      setCurrentTabId(message.tabId);
-      setPageUrl(message.url);
-    });
+    // For shadow DOM, we'll handle tab info through the shadow host element
+    const handleShadowMessage = (event: CustomEvent) => {
+      const message = event.detail;
+      if (message.type === 'TAB_INFO_RESPONSE') {
+        setCurrentTabId(message.tabId);
+        setPageUrl(message.url);
+      }
+    };
 
-    const getCurrentTabMsg: IframeGetCurrentTabMsg = { type: 'IFRAME_GET_CURRENT_TAB' };
-    portManager.current.sendToParent(getCurrentTabMsg);
+    // Get the shadow host element and listen for custom events
+    const shadowHost = document.querySelector('sol-overlay-container') as HTMLElement;
+    if (shadowHost) {
+      shadowHost.addEventListener('sol-shadow-message', handleShadowMessage as EventListener);
+      
+      // Request current tab info through shadow event
+      shadowHost.dispatchEvent(new CustomEvent('sol-shadow-message', {
+        detail: { type: 'GET_CURRENT_TAB', requestId: 'askbar-init' },
+        bubbles: false,
+        composed: false
+      }));
+    }
 
     return () => {
-      cleanupTabHandler();
+      if (shadowHost) {
+        shadowHost.removeEventListener('sol-shadow-message', handleShadowMessage as EventListener);
+      }
     };
   }, []);
 
@@ -83,34 +103,10 @@ export const AskBar: React.FC = () => {
     }
   }, [currentTabId, chatInput.availableTabs, hasAutoAddedCurrentTab]);
 
-  // Position and resize logic (UI-specific)
+  // Shadow DOM message handling
   useLayoutEffect(() => {
-    const sendBounds = () => {
-      if (askBarRef.current) {
-        const rect = askBarRef.current.getBoundingClientRect();
-        window.parent.postMessage({
-          type: 'sol-askbar-bounds',
-          bounds: {
-            left: rect.left,
-            top: rect.top,
-            right: rect.right,
-            bottom: rect.bottom,
-            width: rect.width,
-            height: rect.height
-          }
-        }, '*');
-      }
-    };
-
-    const observer = new ResizeObserver(sendBounds);
-    if (askBarRef.current) {
-      observer.observe(askBarRef.current);
-    }
-
     const messageHandler = (event: MessageEvent) => {
-      if (event.data?.type === 'sol-request-askbar-bounds') {
-        sendBounds();
-      } else if (event.data?.type === 'sol-init') {
+      if (event.data?.type === 'sol-init') {
         // Initialize state from controller
         if (event.data.position) {
           setPosition(event.data.position);
@@ -139,35 +135,13 @@ export const AskBar: React.FC = () => {
     };
 
     window.addEventListener('message', messageHandler);
-    sendBounds();
-    setTimeout(sendBounds, 100);
 
     return () => {
-      observer.disconnect();
       window.removeEventListener('message', messageHandler);
     };
   }, []);
 
-  // Mouse interaction handlers for pointer events (UI-specific)
-  useLayoutEffect(() => {
-    const handleEnter = () => {
-      window.parent.postMessage({ type: 'sol-pointer-lock', enabled: true }, '*');
-    };
-
-    const handleLeave = () => {
-      window.parent.postMessage({ type: 'sol-pointer-lock', enabled: false }, '*');
-    };
-
-    const askBar = askBarRef.current;
-    if (askBar) {
-      askBar.addEventListener('mouseenter', handleEnter);
-      askBar.addEventListener('mouseleave', handleLeave);
-      return () => {
-        askBar.removeEventListener('mouseenter', handleEnter);
-        askBar.removeEventListener('mouseleave', handleLeave);
-      };
-    }
-  }, []);
+  // Note: Shadow DOM doesn't need pointer-events management like iframes
 
   const handleClose = () => {
     if (Date.now() - mountTimeRef.current < 200) return;
@@ -176,10 +150,15 @@ export const AskBar: React.FC = () => {
     setIsVisible(false);
     
     setTimeout(() => {
-      // Use direct message like expand button instead of portManager
-      window.parent.postMessage({
-        type: 'sol-close-askbar'
-      }, '*');
+      // Send message through shadow DOM event system
+      const hostElement = document.querySelector('#sol-askbar-container');
+      if (hostElement) {
+        hostElement.dispatchEvent(new CustomEvent('sol-shadow-message', {
+          detail: { type: 'sol-close-askbar' },
+          bubbles: false,
+          composed: false
+        }));
+      }
     }, 300);
   };
 

@@ -105,7 +105,7 @@ function getDefaultKeybind(key: string): string {
 }
 
 export const DEFAULT_STORAGE: Readonly<StorageData> = {
-  version: '2.5.0',
+  version: '2.6.0',
   features: {
     askBar: {
       isEnabled: true,

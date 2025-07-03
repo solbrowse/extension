@@ -1,7 +1,5 @@
 import '@src/utils/logger';
 import React, { useState, useEffect, useRef, useLayoutEffect } from 'react';
-import { PortManager } from '@src/services/messaging/portManager';
-import { IframeCloseMsg } from '@src/types/messaging';
 import { XMarkIcon } from '@heroicons/react/24/outline';
 
 export const SideBar: React.FC = () => {
@@ -13,76 +11,7 @@ export const SideBar: React.FC = () => {
   // Refs
   const sideBarRef = useRef<HTMLDivElement>(null);
   const mountTimeRef = useRef<number>(Date.now());
-  const portManager = useRef<PortManager>(PortManager.getInstance());
-
-  // ---------------------------------------------------------
-  // Click-through / Pointer events helpers
-  // ---------------------------------------------------------
-
-  // Send current bounds to parent so it can enable pointer-events when needed
-  useLayoutEffect(() => {
-    const sendBounds = () => {
-      if (sideBarRef.current) {
-        const rect = sideBarRef.current.getBoundingClientRect();
-        window.parent.postMessage({
-          type: 'sol-sidebar-bounds',
-          bounds: {
-            left: rect.left,
-            top: rect.top,
-            right: rect.right,
-            bottom: rect.bottom,
-            width: rect.width,
-            height: rect.height,
-          }
-        }, '*');
-      }
-    };
-
-    // Observe size changes to keep bounds fresh
-    const observer = new ResizeObserver(sendBounds);
-    if (sideBarRef.current) {
-      observer.observe(sideBarRef.current);
-    }
-
-    // Respond to explicit requests from parent
-    const messageHandler = (event: MessageEvent) => {
-      if (event.data?.type === 'sol-request-sidebar-bounds') {
-        sendBounds();
-      }
-    };
-    window.addEventListener('message', messageHandler);
-
-    // Send initial bounds
-    sendBounds();
-    setTimeout(sendBounds, 100); // Fire a second time after mount for safety
-
-    return () => {
-      observer.disconnect();
-      window.removeEventListener('message', messageHandler);
-    };
-  }, []);
-
-  // Toggle pointer lock when mouse enters / leaves iframe root element
-  useLayoutEffect(() => {
-    const handleEnter = () => {
-      window.parent.postMessage({ type: 'sol-pointer-lock', enabled: true }, '*');
-    };
-
-    const handleLeave = () => {
-      window.parent.postMessage({ type: 'sol-pointer-lock', enabled: false }, '*');
-    };
-
-    const el = sideBarRef.current;
-    if (el) {
-      el.addEventListener('mouseenter', handleEnter);
-      el.addEventListener('mouseleave', handleLeave);
-      return () => {
-        el.removeEventListener('mouseenter', handleEnter);
-        el.removeEventListener('mouseleave', handleLeave);
-      };
-    }
-  }, []);
-
+  
   // Effects
   useEffect(() => {
     setIsVisible(true);
@@ -119,8 +48,15 @@ export const SideBar: React.FC = () => {
     setIsVisible(false);
     
     setTimeout(() => {
-      const closeMsg: IframeCloseMsg = { type: 'IFRAME_CLOSE' };
-      portManager.current.sendToParent(closeMsg);
+      // Send message through shadow DOM event system
+      const hostElement = document.querySelector('#sol-sidebar-container');
+      if (hostElement) {
+        hostElement.dispatchEvent(new CustomEvent('sol-shadow-message', {
+          detail: { type: 'sol-close-sidebar' },
+          bubbles: false,
+          composed: false
+        }));
+      }
     }, 300);
   };
 

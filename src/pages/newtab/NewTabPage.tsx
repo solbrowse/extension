@@ -171,6 +171,7 @@ export const NewTabPage: React.FC = () => {
                 onSubmit={chatInput.handleSubmit}
                 isStreaming={chatInput.isStreaming}
                 showCloseButton={false}
+                placeholder='Ask anything...'
               />
               {chatInput.error && (
                 <div className="mt-2 text-red-600 text-sm">{chatInput.error}</div>

@@ -1,22 +1,2 @@
 {
-  "action": {
-    "default_icon": "public/icon-32.png",
-    "default_popup": "src/pages/popup/index.html"
-  },
-  "icons": {
-    "128": "public/icon-128.png"
-  },
-  "web_accessible_resources": [
-    {
-      "resources": [
-        "src/pages/askbar/index.html",
-        "src/pages/askbar/*",
-        "src/pages/sidebar/index.html",
-        "src/pages/sidebar/*",
-        "askbar/*",
-        "sidebar/*"
-      ],
-      "matches": ["<all_urls>"]
-    }
-  ]
 }

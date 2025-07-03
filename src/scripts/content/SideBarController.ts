@@ -1,13 +1,14 @@
 import '@src/utils/logger';
 import browser from 'webextension-polyfill';
 import settingsService from '@src/utils/settings';
-import { IframeInjector, IframeInstance } from '@src/utils/inject';
+import { ShadowUiInjector, ShadowInstance } from '@src/utils/shadowInject';
+import { ShadowRenderer } from '@src/utils/shadowRender';
 import { PortManager } from '@src/services/messaging/portManager';
 import { attachToggleKeybind } from '@src/services/keybind';
-import { IframeCloseMsg } from '@src/types/messaging';
 
 export class SideBarController {
-  private sideBarInstance: IframeInstance | null = null;
+  private shadowInstance: ShadowInstance | null = null;
+  private renderInstance: any = null;
   private isSideBarVisible = false;
   private sideBarEnabled = false;
   private targetKeybindString = '';
@@ -25,7 +26,6 @@ export class SideBarController {
   async init(): Promise<void> {
     await this.loadSettings();
     this.setupMessageHandlers();
-    this.setupIframeMessageListener();
   }
 
   cleanup(): void {
@@ -49,13 +49,26 @@ export class SideBarController {
     const settings = await settingsService.getAll();
     const colorScheme = this.detectColorScheme();
 
-    this.sideBarInstance = await IframeInjector.inject({
-      iframeUrl: browser.runtime.getURL('src/pages/sidebar/index.html'),
+    // Use Shadow DOM injection
+    this.shadowInstance = await ShadowUiInjector.inject({
       containerId: 'sol-sidebar-container',
       settings,
       position: settings.features?.sideBar?.position ?? 'left',
       colorScheme,
     });
+
+    // Render React component in shadow DOM
+    this.renderInstance = ShadowRenderer.renderSideBar(
+      this.shadowInstance.shadowRoot.getElementById('shadow-root') as HTMLElement,
+      {
+        containerId: 'sol-sidebar-container',
+        position: settings.features?.sideBar?.position ?? 'left',
+        colorScheme,
+      }
+    );
+
+    // Set up shadow DOM event listeners
+    this.setupShadowEventListeners();
 
     this.isSideBarVisible = true;
     
@@ -68,10 +81,14 @@ export class SideBarController {
   hide(): void {
     if (!this.isSideBarVisible) return;
 
-    // Fully remove the iframe from the DOM
-    if (this.sideBarInstance) {
-      this.sideBarInstance.remove();
-      this.sideBarInstance = null;
+    // Clean up shadow DOM instances
+    if (this.renderInstance) {
+      this.renderInstance.unmount();
+      this.renderInstance = null;
+    }
+    if (this.shadowInstance) {
+      this.shadowInstance.remove();
+      this.shadowInstance = null;
     }
 
     this.isSideBarVisible = false;
@@ -84,15 +101,17 @@ export class SideBarController {
 
   /** Close with animation - triggers the same close animation as the X button */
   closeWithAnimation(): void {
-    if (!this.isSideBarVisible || !this.sideBarInstance?.iframe.contentWindow) return;
+    if (!this.isSideBarVisible || !this.shadowInstance?.hostElement) return;
 
-    // Send a message to the iframe to trigger the close animation
-    this.sideBarInstance.iframe.contentWindow.postMessage({
-      type: 'sol-trigger-close'
-    }, '*');
+    // Send a message to the shadow DOM to trigger the close animation
+    this.shadowInstance.hostElement.dispatchEvent(new CustomEvent('sol-shadow-message', {
+      detail: { type: 'sol-trigger-close' },
+      bubbles: false,
+      composed: false
+    }));
 
-    // The iframe will handle the animation and send IFRAME_CLOSE message
-    // which will be caught by our IFRAME_CLOSE handler that calls hide()
+    // The component will handle the animation and send close message back
+    // which will be caught by our shadow event handler that calls hide()
   }
 
   // ---------------------------------------------------------
@@ -152,19 +171,29 @@ export class SideBarController {
   }
 
   private setupMessageHandlers(): void {
-    // Handle iframe close requests
-    this.portManager.addIframeHandler<IframeCloseMsg>('IFRAME_CLOSE', (message, source) => {
-      if (this.isSideBarVisible) this.hide();
-    });
+    // Note: Shadow DOM doesn't need complex message handlers like iframes
+    // Most communication is direct method calls since we're in the same context
   }
 
-  private setupIframeMessageListener(): void {
-    // Listen for close requests from the iframe
-    window.addEventListener('message', (event) => {
-      if (event.data?.type === 'sol-close-sidebar') {
-        this.hide(); // Direct hide like expand button
+  private setupShadowEventListeners(): void {
+    if (!this.shadowInstance) return;
+
+    // Listen for events from shadow DOM components
+    const handleShadowMessage = (event: CustomEvent) => {
+      const message = event.detail;
+      
+      switch (message?.type) {
+        case 'sol-close-sidebar':
+        case 'sol-trigger-close':
+          this.hide();
+          break;
+        default:
+          // Handle other shadow DOM messages
+          break;
       }
-    });
+    };
+
+    this.shadowInstance.hostElement.addEventListener('sol-shadow-message', handleShadowMessage as EventListener);
   }
 
   // Utility similar to AskBarController

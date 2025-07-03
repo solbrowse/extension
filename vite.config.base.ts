@@ -29,9 +29,9 @@ export const baseBuildOptions: BuildOptions = {
   emptyOutDir: !isDev,
   rollupOptions: {
     input: {
-      askbar: resolve(pagesDir, "askbar", "index.html"),
-      sidebar: resolve(pagesDir, "sidebar", "index.html"),
       newtab: resolve(pagesDir, "newtab", "index.html"),
+      popup: resolve(pagesDir, "popup", "index.html"),
+      dashboard: resolve(pagesDir, "dashboard", "index.html"),
     },
     output: {
       entryFileNames: (chunk) => `src/pages/${chunk.name}/index.js`,

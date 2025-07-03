@@ -2,327 +2,387 @@ import { ScraperPlugin } from '../pluginRegistry';
 import { ScrapedContent, TranscriptCue } from '../scrape';
 
 /**
- * Regex helpers
+ * Utilities ────────────────────────────────────────────────────────────────
  */
-const RE_YOUTUBE_ID = /(?:youtube\.com\/(?:[^\/]+\/.*\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/)([^"&?\/#\s]{11})/i;
 
-// Cache to prevent re-scraping the same content
-const contentCache = new Map<string, { content: ScrapedContent; timestamp: number }>();
-const CACHE_DURATION = 30000; // 30 seconds
-
-/**
- * Extract the YouTube video ID from a URL.
- */
-function extractVideoId(url: string): string | null {
-  const match = url.match(RE_YOUTUBE_ID);
-  return match?.[1] || null;
-}
-
-/**
- * Utility to wait for elements to appear in the DOM
- */
-function waitForElement(selector: string, timeout = 5000): Promise<Element | null> {
-  return new Promise((resolve) => {
-    const element = document.querySelector(selector);
-    if (element) {
-      resolve(element);
-      return;
-    }
-
-    const observer = new MutationObserver(() => {
-      const element = document.querySelector(selector);
-      if (element) {
-        observer.disconnect();
-        resolve(element);
-      }
-    });
-
-    observer.observe(document.body, { childList: true, subtree: true });
-
-    setTimeout(() => {
-      observer.disconnect();
-      resolve(null);
-    }, timeout);
-  });
-}
-
-/**
- * Extract transcript using YouTube's UI - but only if not already extracted recently
- */
-async function extractTranscriptFromUI(videoId: string): Promise<TranscriptCue[]> {
-  console.log('Sol YouTube: Attempting transcript extraction via UI');
-
-  try {
-    // Check if transcript panel is already open
-    const existingPanel = document.querySelector('ytd-engagement-panel-section-list-renderer[target-id="engagement-panel-searchable-transcript"] #content');
-    if (existingPanel) {
-      console.log('Sol YouTube: Transcript panel already open, extracting segments');
-      return extractSegmentsFromPanel(existingPanel);
-    }
-
-    // Step 1: Click "More actions" button (three dots) - only if not already clicked
-    const moreActionsButton = document.querySelector('button[aria-label="More actions"]') as HTMLElement;
-    if (!moreActionsButton) {
-      console.log('Sol YouTube: More actions button not found');
-      return [];
-    }
-
-    // Check if menu is already open
-    const existingMenu = document.querySelector('ytd-menu-popup-renderer[role="menu"]');
-    if (!existingMenu) {
-      moreActionsButton.click();
-      console.log('Sol YouTube: Clicked more actions button');
-      await new Promise(resolve => setTimeout(resolve, 500));
-    }
-
-    // Step 2: Wait for and click "Show transcript" button
-    const transcriptButton = await waitForElement('[aria-label="Show transcript"]', 3000) as HTMLElement;
-    if (!transcriptButton) {
-      console.log('Sol YouTube: Show transcript button not found');
-      return [];
-    }
-
-    transcriptButton.click();
-    console.log('Sol YouTube: Clicked show transcript button');
-
-    // Step 3: Wait for transcript panel to load with segments
-    const transcriptPanel = await waitForElement('ytd-engagement-panel-section-list-renderer[target-id="engagement-panel-searchable-transcript"] #content', 5000);
-    if (!transcriptPanel) {
-      console.log('Sol YouTube: Transcript panel not found');
-      return [];
-    }
-
-    // Wait a bit for segments to load
-    await new Promise(resolve => setTimeout(resolve, 1000));
-
-    return extractSegmentsFromPanel(transcriptPanel);
-
-  } catch (error) {
-    console.error('Sol YouTube: Error in UI transcript extraction:', error);
-    return [];
-  }
-}
-
-/**
- * Extract segments from an already loaded transcript panel
- */
-function extractSegmentsFromPanel(transcriptPanel: Element): TranscriptCue[] {
-  const segmentElements = transcriptPanel.querySelectorAll('ytd-transcript-segment-renderer');
-  console.log(`Sol YouTube: Found ${segmentElements.length} transcript segments`);
-
-  if (segmentElements.length === 0) {
-    return [];
-  }
-
-  const cues: TranscriptCue[] = [];
+/** Extract the ytInitialPlayerResponse JSON from the page <script> tags */
+function extractPlayerResponse(doc: Document): any | null {
+  console.log('Sol:[YouTube Scraper] Looking for ytInitialPlayerResponse in scripts...');
+  const scripts = Array.from(doc.querySelectorAll('script'));
+  console.log('Sol:[YouTube Scraper] Found', scripts.length, 'script tags');
   
-  segmentElements.forEach((segment) => {
-    try {
-      const timestampElement = segment.querySelector('.segment-timestamp');
-      const textElement = segment.querySelector('.segment-text');
-      
-      if (timestampElement && textElement) {
-        const timeText = timestampElement.textContent?.trim();
-        const text = textElement.textContent?.trim();
-        
-        if (timeText && text) {
-          // Parse time format (e.g., "1:23" or "12:34")
-          const timeParts = timeText.split(':').map(p => parseInt(p, 10));
-          let startTime = 0;
-          
-          if (timeParts.length === 2) {
-            startTime = timeParts[0] * 60 + timeParts[1];
-          } else if (timeParts.length === 3) {
-            startTime = timeParts[0] * 3600 + timeParts[1] * 60 + timeParts[2];
-          }
-          
-          cues.push({
-            offset: startTime,
-            duration: 5, // Default duration since YouTube doesn't provide end times
-            text: text
-          });
+  for (let i = 0; i < scripts.length; i++) {
+    const script = scripts[i];
+    const content = script.textContent || '';
+    const marker = 'ytInitialPlayerResponse';
+    const idx = content.indexOf(marker);
+    if (idx === -1) continue;
+
+    console.log('Sol:[YouTube Scraper] Found ytInitialPlayerResponse in script', i);
+    console.log('Sol:[YouTube Scraper] Script content preview around marker:', content.substring(Math.max(0, idx - 50), idx + 100));
+
+    // Find the first "{" after the marker and parse until matching "}" balance.
+    const braceStart = content.indexOf('{', idx);
+    if (braceStart === -1) {
+      console.log('Sol:[YouTube Scraper] No opening brace found after marker');
+      continue;
+    }
+
+    console.log('Sol:[YouTube Scraper] Found opening brace at position', braceStart);
+
+    let braceDepth = 0;
+    let endIdx = -1;
+    for (let i = braceStart; i < content.length; i++) {
+      const ch = content[i];
+      if (ch === '{') braceDepth++;
+      else if (ch === '}') {
+        braceDepth--;
+        if (braceDepth === 0) {
+          endIdx = i + 1; // include closing brace
+          break;
         }
       }
-    } catch (error) {
-      console.warn('Sol YouTube: Error parsing transcript segment:', error);
     }
-  });
 
-  console.log(`Sol YouTube: Successfully extracted ${cues.length} transcript cues`);
+    if (endIdx !== -1) {
+      const jsonText = content.slice(braceStart, endIdx);
+      console.log('Sol:[YouTube Scraper] Extracted JSON length:', jsonText.length);
+      console.log('Sol:[YouTube Scraper] JSON preview:', jsonText.substring(0, 200));
+      try {
+        const parsed = JSON.parse(jsonText);
+        console.log('Sol:[YouTube Scraper] Successfully parsed ytInitialPlayerResponse');
+        return parsed;
+      } catch (err) {
+        console.warn('Sol:[YouTube Scraper] Failed to parse playerResponse JSON', err);
+        console.log('Sol:[YouTube Scraper] JSON text that failed to parse:', jsonText.substring(0, 500));
+      }
+    } else {
+      console.log('Sol:[YouTube Scraper] No matching closing brace found');
+    }
+  }
+  
+  console.log('Sol:[YouTube Scraper] ytInitialPlayerResponse not found in any script');
+  return null;
+}
+
+/** Pick the best caption track according to preference rules */
+function pickBestCaptionTrack(tracks: any[] | undefined): any | null {
+  if (!tracks || !Array.isArray(tracks)) return null;
+  // Helper predicates
+  const isEnglish = (t: any) => t.languageCode?.startsWith('en');
+  const isManual = (t: any) => !t.kind || t.kind !== 'asr';
+  // Preference order
+  const candidates = [
+    tracks.find(t => isEnglish(t) && isManual(t)), // English manual
+    tracks.find(t => isEnglish(t) && !isManual(t)), // English ASR
+    tracks[0] // Anything
+  ];
+  return candidates.find(Boolean) || null;
+}
+
+/** Append / replace a query param */
+function withQueryParam(url: string, key: string, value: string): string {
+  const u = new URL(url);
+  u.searchParams.set(key, value);
+  return u.toString();
+}
+
+/** Parse caption JSON3 response into TranscriptCue[] */
+function parseJson3Captions(json: any, lang?: string): TranscriptCue[] {
+  if (!json?.events) return [];
+  const cues: TranscriptCue[] = [];
+  for (const ev of json.events) {
+    if (!ev?.segs?.length) continue;
+    const text = ev.segs.map((s: any) => s.utf8).join('').trim();
+    if (!text) continue;
+    const offset = (ev.tStartMs ?? 0) / 1000;
+    const duration = (ev.dDurationMs ?? ev.dDuration ?? 0) / 1000;
+    cues.push({ text, offset, duration, lang });
+  }
   return cues;
 }
 
-/**
- * Main YouTube scraper function.
- */
-async function youtubeScraper(document: Document): Promise<ScrapedContent> {
-  console.log('Sol YouTube Scraper: Starting extraction for', window.location.href);
-  
-  const videoId = extractVideoId(window.location.href);
-  if (!videoId) {
-    console.warn('Sol YouTube Scraper: Could not extract video ID');
-    return createEmptyResult();
+/** Parse XML captions <text start dur> */
+function parseXmlCaptions(xmlStr: string, lang?: string): TranscriptCue[] {
+  try {
+    const parser = new DOMParser();
+    const xmlDoc = parser.parseFromString(xmlStr, 'text/xml');
+    const texts = Array.from(xmlDoc.getElementsByTagName('text'));
+    const decode = (s: string) => {
+      const div = document.createElement('div');
+      div.innerHTML = s.replace(/\n/g, ' ');
+      return div.textContent || div.innerText || '';
+    };
+    return texts.map(t => {
+      const offset = parseFloat(t.getAttribute('start') || '0');
+      const duration = parseFloat(t.getAttribute('dur') || '0');
+      const text = decode(t.textContent || '');
+      return { text, offset, duration, lang } as TranscriptCue;
+    }).filter(c => c.text.trim().length > 0);
+  } catch (err) {
+    console.warn('Sol:[YouTube Scraper] Failed to parse XML captions', err);
+    return [];
   }
-
-  // Check cache first to prevent unnecessary re-scraping
-  const cacheKey = `${videoId}-${window.location.href}`;
-  const cached = contentCache.get(cacheKey);
-  if (cached && (Date.now() - cached.timestamp) < CACHE_DURATION) {
-    console.log('Sol YouTube Scraper: Using cached content');
-    return cached.content;
-  }
-
-  let content = '';
-  let transcriptCues: TranscriptCue[] = [];
-
-  // Extract title - always available
-  const titleElement = document.querySelector('h1.ytd-video-primary-info-renderer yt-formatted-string, h1.ytd-video-primary-info-renderer');
-  if (titleElement) {
-    const title = titleElement.textContent?.trim();
-    if (title) {
-      console.log(`Sol YouTube Scraper: Found title: ${title}`);
-      content += `Title: ${title}\n\n`;
-    }
-  }
-
-  // Extract description - always available
-  const descriptionElement = document.querySelector('ytd-expandable-video-description-body-renderer, #description-text, .ytd-video-secondary-info-renderer #description');
-  if (descriptionElement) {
-    const description = descriptionElement.textContent?.trim();
-    if (description) {
-      console.log(`Sol YouTube Scraper: Found description (${description.length} chars)`);
-      content += `Description: ${description}\n\n`;
-    }
-  }
-
-  // Extract transcript - but only if transcript panel is already open or can be opened quietly
-  console.log(`Sol YouTube Scraper: Checking for transcript for video ID: ${videoId}`);
-  
-  // Only attempt transcript extraction if we haven't tried recently for this video
-  const transcriptCacheKey = `transcript-${videoId}`;
-  const transcriptCached = contentCache.get(transcriptCacheKey);
-  if (!transcriptCached || (Date.now() - transcriptCached.timestamp) > CACHE_DURATION * 2) {
-    transcriptCues = await extractTranscriptFromUI(videoId);
-    
-    // Cache transcript result
-    contentCache.set(transcriptCacheKey, {
-      content: { transcriptCues } as any,
-      timestamp: Date.now()
-    });
-  } else {
-    transcriptCues = (transcriptCached.content as any).transcriptCues || [];
-    console.log('Sol YouTube Scraper: Using cached transcript');
-  }
-  
-  if (transcriptCues.length > 0) {
-    const transcriptText = transcriptCues.map(cue => cue.text).join(' ');
-    console.log(`Sol YouTube Scraper: Using ${transcriptCues.length} transcript cues, ${transcriptText.length} chars`);
-    content += `Transcript:\n${transcriptText}\n\n`;
-  } else {
-    console.log('Sol YouTube Scraper: No transcript available');
-  }
-
-  console.log(`Sol YouTube Scraper: Final extraction - text: ${content.length} chars, transcript cues: ${transcriptCues.length}`);
-  
-  // Extract title for metadata
-  const titleEl = document.querySelector('h1.ytd-video-primary-info-renderer yt-formatted-string, h1.ytd-video-primary-info-renderer');
-  const title = titleEl?.textContent?.trim() || document.title || '';
-  
-  const result: ScrapedContent = {
-    text: content,
-    markdown: content, // Use same content as markdown since it's already formatted
-    title: title,
-    excerpt: content.length > 200 ? content.substring(0, 200) + '...' : content,
-    metadata: {
-      hostname: window.location.hostname,
-      url: window.location.href,
-      title: title,
-      byline: null,
-      dir: null,
-      lang: document.documentElement.lang || null,
-      contentLength: content.length,
-      wordCount: content.split(/\s+/).length,
-      readingTimeMinutes: Math.ceil(content.split(/\s+/).length / 200),
-      hasContent: content.length > 0,
-      extractionMethod: 'youtube-plugin',
-      shadowDOMCount: 0,
-      iframeCount: 0,
-      readabilityScore: 85, // YouTube content is generally easy to read
-      contentDensity: content.length / Math.max(1, document.body.textContent?.length || 1),
-      isArticle: false,
-      publishedTime: null,
-      siteName: 'YouTube',
-      fallbackUsed: false,
-      debugInfo: {
-        originalLength: document.body.textContent?.length || 0,
-        cleanedLength: content.length,
-        removedElements: [],
-        contentSelectors: ['h1.ytd-video-primary-info-renderer', 'ytd-expandable-video-description-body-renderer'],
-        imageCount: 0,
-        linkCount: 0,
-        paragraphCount: content.split('\n\n').length
-      }
-    },
-    transcriptCues
-  };
-
-  // Cache the result
-  contentCache.set(cacheKey, {
-    content: result,
-    timestamp: Date.now()
-  });
-
-  return result;
 }
 
-function createEmptyResult(): ScrapedContent {
-  return {
-    text: '',
-    markdown: '',
-    title: document.title || '',
-    excerpt: '',
+/** Convert cues to plain text (joined by newline) */
+function cuesToText(cues: TranscriptCue[]): string {
+  return cues.map(c => c.text).join('\n').trim();
+}
+
+/**
+ * Alternative approach: Try to get captions from YouTube's internal state
+ */
+function extractCaptionsFromYouTubeInternals(doc: Document): TranscriptCue[] {
+  console.log('Sol:[YouTube Scraper] Attempting to extract captions from YouTube internals');
+  
+  // Try to access YouTube's internal player state
+  try {
+    // @ts-ignore - accessing YouTube's global objects
+    const ytd = (window as any).ytd;
+    const ytplayer = (window as any).ytplayer;
+    
+    if (ytd?.app?.data) {
+      console.log('Sol:[YouTube Scraper] Found ytd.app.data');
+      // Try to find caption data in the app state
+      const appData = ytd.app.data;
+      console.log('Sol:[YouTube Scraper] App data keys:', Object.keys(appData));
+    }
+    
+    if (ytplayer) {
+      console.log('Sol:[YouTube Scraper] Found ytplayer object');
+      // Try to get captions from the player
+      console.log('Sol:[YouTube Scraper] ytplayer keys:', Object.keys(ytplayer));
+    }
+    
+    // Look for any caption-related objects in the global scope
+    const globalKeys = Object.keys(window).filter(key => 
+      key.toLowerCase().includes('caption') || 
+      key.toLowerCase().includes('subtitle') ||
+      key.toLowerCase().includes('transcript')
+    );
+    
+    if (globalKeys.length > 0) {
+      console.log('Sol:[YouTube Scraper] Found caption-related globals:', globalKeys);
+    }
+    
+  } catch (err) {
+    console.log('Sol:[YouTube Scraper] Could not access YouTube internals:', err);
+  }
+  
+  return [];
+}
+
+/**
+ * Scraper implementation ───────────────────────────────────────────────────
+ */
+async function scrapeYouTube(doc: Document, pageUrl: string): Promise<ScrapedContent> {
+  console.log('Sol:[YouTube Scraper] Starting for', pageUrl);
+
+  const playerResponse = extractPlayerResponse(doc);
+  console.log('Sol:[YouTube Scraper] Player response:', playerResponse ? 'Found' : 'Not found');
+
+  const videoDetails = playerResponse?.videoDetails || {};
+  console.log('Sol:[YouTube Scraper] Video details keys:', videoDetails ? Object.keys(videoDetails) : 'none');
+
+  const captionTracks = playerResponse?.captions?.playerCaptionsTracklistRenderer?.captionTracks;
+  console.log('Sol:[YouTube Scraper] Caption tracks found:', captionTracks?.length || 0);
+
+  let transcriptCues: TranscriptCue[] = [];
+  let extractionMethod = 'youtube-plugin';
+  let fallbackUsed = false;
+
+  // First try: Extract from YouTube's internal state
+  transcriptCues = extractCaptionsFromYouTubeInternals(doc);
+  if (transcriptCues.length > 0) {
+    console.log('Sol:[YouTube Scraper] Extracted', transcriptCues.length, 'cues from internals');
+    extractionMethod = 'youtube-internals';
+  }
+
+  // Second try: Fetch captions via API (likely to fail in extension context)
+  if (captionTracks?.length && transcriptCues.length === 0) {
+    console.log('Sol:[YouTube Scraper] Attempting API-based caption extraction');
+    const track = pickBestCaptionTrack(captionTracks);
+    if (track) {
+      console.log('Sol:[YouTube Scraper] Selected track', track.languageCode, track.kind || 'manual');
+      
+      // Note: This approach likely won't work in browser extensions due to CORS/auth restrictions
+      // but we'll try it once with same-origin credentials as a fallback
+      try {
+        const xmlUrl = track.baseUrl as string;
+        console.log('Sol:[YouTube Scraper] Attempting single XML fetch (likely to fail)');
+        const resp = await fetch(xmlUrl, { credentials: 'same-origin' });
+        
+        if (resp.ok) {
+          const xmlText = await resp.text();
+          if (xmlText.trim().length > 0) {
+            transcriptCues = parseXmlCaptions(xmlText, track.languageCode);
+            if (transcriptCues.length > 0) {
+              console.log('Sol:[YouTube Scraper] Successfully extracted', transcriptCues.length, 'cues from API');
+              extractionMethod = 'youtube-caption-api-xml';
+            }
+          }
+        }
+      } catch (err) {
+        console.log('Sol:[YouTube Scraper] API extraction failed as expected:', err);
+      }
+    }
+  }
+
+  // Third try: Extract from DOM transcript panel (most reliable method)
+  if (!transcriptCues.length) {
+    console.log('Sol:[YouTube Scraper] Attempting DOM transcript extraction');
+    
+    // Try multiple selectors for transcript segments
+    const transcriptSelectors = [
+      'ytd-transcript-segment-renderer',
+      '.ytd-transcript-segment-renderer',
+      '[class*="transcript-segment"]',
+      '.segment-text',
+      '.cue-group'
+    ];
+    
+    let segs: Element[] = [];
+    for (const selector of transcriptSelectors) {
+      segs = Array.from(doc.querySelectorAll(selector));
+      if (segs.length > 0) {
+        console.log(`Sol:[YouTube Scraper] Found ${segs.length} segments with selector: ${selector}`);
+        break;
+      }
+    }
+    
+    if (segs.length) {
+      console.log('Sol:[YouTube Scraper] Extracting from transcript panel with', segs.length, 'segments');
+      extractionMethod = 'youtube-transcript-panel';
+      transcriptCues = segs.map((seg, idx) => {
+        // Try multiple text selectors
+        const textSelectors = ['#segment-text', 'yt-formatted-string', '.segment-text', '.cue-text'];
+        const timeSelectors = ['#segment-timestamp', '.segment-timestamp', '.cue-time'];
+        
+        let textEl: Element | null = null;
+        let timeEl: Element | null = null;
+        
+        for (const selector of textSelectors) {
+          textEl = seg.querySelector(selector);
+          if (textEl) break;
+        }
+        
+        for (const selector of timeSelectors) {
+          timeEl = seg.querySelector(selector);
+          if (timeEl) break;
+        }
+        
+        const text = textEl?.textContent?.trim() || '';
+        const ts = timeEl?.textContent?.trim() || '';
+        const offset = parseTimestampToSeconds(ts);
+        
+        if (idx < 5) { // Log first 5 segments for debugging
+          console.log(`Sol:[YouTube Scraper] Segment ${idx}: "${text}" at ${ts} (${offset}s)`);
+        }
+        
+        return {
+          text,
+          offset,
+          duration: 0,
+        } as TranscriptCue;
+      }).filter(c => c.text.length > 0);
+      
+      console.log('Sol:[YouTube Scraper] Successfully extracted', transcriptCues.length, 'transcript cues from DOM');
+    } else {
+      console.log('Sol:[YouTube Scraper] No transcript segments found in DOM');
+      console.log('Sol:[YouTube Scraper] To get transcripts, open the video transcript panel before scraping');
+      
+      // Try to find the transcript button to give user guidance
+      const transcriptButton = doc.querySelector('[aria-label*="transcript" i], [aria-label*="Show transcript" i], .ytd-transcript-search-panel-renderer');
+      if (transcriptButton) {
+        console.log('Sol:[YouTube Scraper] Found transcript button - user should click it to enable transcript extraction');
+      } else {
+        console.log('Sol:[YouTube Scraper] No transcript button found - video may not have captions available');
+      }
+    }
+  }
+
+  if (!transcriptCues.length) {
+    console.log('Sol:[YouTube Scraper] No transcript available');
+    fallbackUsed = true;
+  }
+
+  // Build content strings
+  const transcriptText = transcriptCues.length ? cuesToText(transcriptCues) : 'Transcript unavailable';
+
+  const title = videoDetails.title || doc.querySelector('meta[property="og:title"]')?.getAttribute('content') || doc.title || 'YouTube Video';
+  const description = videoDetails.shortDescription || doc.querySelector('meta[property="og:description"]')?.getAttribute('content') || '';
+
+  const combinedText = [description, transcriptText].filter(Boolean).join('\n\n');
+
+  const words = combinedText.split(/\s+/).filter(Boolean);
+
+  const scraped: ScrapedContent = {
+    text: combinedText,
+    markdown: `# ${title}\n\n${combinedText}`,
+    title,
+    excerpt: combinedText.slice(0, 200) + (combinedText.length > 200 ? '...' : ''),
     metadata: {
-      hostname: window.location.hostname,
-      url: window.location.href,
-      title: document.title || '',
+      hostname: new URL(pageUrl).hostname,
+      url: pageUrl,
+      title,
       byline: null,
       dir: null,
-      lang: null,
-      contentLength: 0,
-      wordCount: 0,
-      readingTimeMinutes: 0,
-      hasContent: false,
-      extractionMethod: 'youtube-plugin',
+      lang: doc.documentElement.lang || null,
+      contentLength: combinedText.length,
+      wordCount: words.length,
+      readingTimeMinutes: Math.max(1, Math.ceil(words.length / 200)),
+      hasContent: combinedText.length > 0,
+      extractionMethod,
       shadowDOMCount: 0,
-      iframeCount: 0,
-      readabilityScore: 0,
+      iframeCount: doc.querySelectorAll('iframe').length,
+      readabilityScore: 0, // N/A for video transcripts
       contentDensity: 0,
       isArticle: false,
       publishedTime: null,
       siteName: 'YouTube',
-      fallbackUsed: false,
+      fallbackUsed,
       debugInfo: {
-        originalLength: 0,
-        cleanedLength: 0,
+        originalLength: doc.body?.textContent?.length || 0,
+        cleanedLength: combinedText.length,
         removedElements: [],
-        contentSelectors: [],
-        imageCount: 0,
-        linkCount: 0,
-        paragraphCount: 0
-      }
+        contentSelectors: [extractionMethod],
+        imageCount: doc.querySelectorAll('img').length,
+        linkCount: doc.querySelectorAll('a').length,
+        paragraphCount: doc.querySelectorAll('p').length,
+      },
     },
     comments: [],
-    transcriptCues: []
+    transcriptCues,
   };
+
+  console.log('Sol:[YouTube Scraper] Finished – cues:', transcriptCues.length);
+  return scraped;
 }
 
+/** Parse timestamps like "1:23" or "01:02:03" to seconds */
+function parseTimestampToSeconds(ts: string): number {
+  if (!ts) return 0;
+  const parts = ts.split(':').map(Number).filter(n => !isNaN(n));
+  if (!parts.length) return 0;
+  let seconds = 0;
+  for (let i = 0; i < parts.length; i++) {
+    const value = parts[parts.length - 1 - i];
+    seconds += value * Math.pow(60, i);
+  }
+  return seconds;
+}
+
+/**
+ * Plugin definition ────────────────────────────────────────────────────────
+ */
 const youtubePlugin: ScraperPlugin = {
   name: 'YouTube',
-  version: '8.0.0',
-  description: 'Extracts YouTube video title, description, and transcript without scrolling. Includes caching to prevent constant re-scraping.',
-  hostPatterns: [/youtube\.com\//, /youtu\.be\//],
-  priority: 85, // Higher priority due to reliability
-  scraper: youtubeScraper
+  version: '1.1.0',
+  description: 'Scrapes YouTube video metadata and captions/transcripts',
+  hostPatterns: [/youtube\.com\/(watch|shorts)/, /youtu\.be\//],
+  priority: 85,
+  scraper: scrapeYouTube,
 };
 
 export default youtubePlugin; 

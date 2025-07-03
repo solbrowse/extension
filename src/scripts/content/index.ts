@@ -76,7 +76,7 @@ if (isExtensionContext()) {
     // Expose globally for debugging/testing
     (window as any).solContentScript = { askBar, sideBar, scraper };
 
-    // Listen for debug context requests from the AskBar iframe
+          // Listen for debug context requests from the AskBar shadow DOM
     window.addEventListener('message', (event) => {
       if (event.data?.type === 'sol-copy-context') {
         const context = {

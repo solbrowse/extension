@@ -45,17 +45,5 @@
       "run_at": "document_idle"
     }
   ],
-  "web_accessible_resources": [
-    {
-      "resources": [
-        "src/pages/askbar/index.html",
-        "src/pages/askbar/*",
-        "src/pages/sidebar/index.html",
-        "src/pages/sidebar/*",
-        "askbar/*",
-        "sidebar/*"
-      ],
-      "matches": ["<all_urls>"]
-    }
-  ]
+  "web_accessible_resources": []
 }

@@ -1,14 +1,16 @@
 import '@src/utils/logger';
 import browser from 'webextension-polyfill';
 import settingsService from '@src/utils/settings';
-import { IframeInjector, IframeInstance } from '@src/utils/inject';
+import { ShadowUiInjector, ShadowInstance } from '@src/utils/shadowInject';
+import { ShadowRenderer } from '@src/utils/shadowRender';
 import conversation, { TabConversation } from '@src/services/conversation';
 import { PortManager } from '@src/services/messaging/portManager';
 import { attachToggleKeybind } from '@src/services/keybind';
-import { IframeActionMsg, IframeCloseMsg, IframeGetCurrentTabMsg, IframeCurrentTabResponseMsg } from '@src/types/messaging';
+import { ShadowGetCurrentTabMsg, ShadowCurrentTabResponseMsg } from '@src/types/messaging';
 
 export class AskBarController {
-  private askBarInstance: IframeInstance | null = null;
+  private shadowInstance: ShadowInstance | null = null;
+  private renderInstance: any = null;
   private isAskBarVisible = false;
   private askBarEnabled = false;
   private targetKeybindString = '';
@@ -34,7 +36,6 @@ export class AskBarController {
     await this.loadSettings();
     this.setupMessageHandlers();
     this.setupStateSync();
-    this.setupIframeMessageListener();
   }
 
   cleanup(): void {
@@ -58,17 +59,30 @@ export class AskBarController {
 
     const settings = await settingsService.getAll();
     const existingConversation = conversation.getTabState(this.tabId);
-
     const colorScheme = this.detectColorScheme();
 
-    this.askBarInstance = await IframeInjector.inject({
-      iframeUrl: browser.runtime.getURL('src/pages/askbar/index.html'),
+    // Use Shadow DOM injection
+    this.shadowInstance = await ShadowUiInjector.inject({
       containerId: 'sol-askbar-container',
       settings,
       position: settings.features.askBar.position,
       existingConversation: existingConversation as any,
       colorScheme,
     });
+
+    // Render React component in shadow DOM
+    this.renderInstance = ShadowRenderer.renderAskBar(
+      this.shadowInstance.shadowRoot.getElementById('shadow-root') as HTMLElement,
+      {
+        containerId: 'sol-askbar-container',
+        position: settings.features.askBar.position,
+        colorScheme,
+        existingConversation: existingConversation as any,
+      }
+    );
+
+    // Set up shadow DOM event listeners
+    this.setupShadowEventListeners();
 
     this.isAskBarVisible = true;
     
@@ -81,11 +95,14 @@ export class AskBarController {
   hide(): void {
     if (!this.isAskBarVisible) return;
 
-    // Fully remove the iframe from the DOM.  This gets rid of any lingering
-    // overlay that could swallow future key events on sites like GitHub.
-    if (this.askBarInstance) {
-      this.askBarInstance.remove();
-      this.askBarInstance = null;
+    // Clean up shadow DOM instances
+    if (this.renderInstance) {
+      this.renderInstance.unmount();
+      this.renderInstance = null;
+    }
+    if (this.shadowInstance) {
+      this.shadowInstance.remove();
+      this.shadowInstance = null;
     }
 
     this.isAskBarVisible = false;
@@ -98,16 +115,17 @@ export class AskBarController {
 
   /** Close with animation - triggers the same close animation as the X button */
   closeWithAnimation(): void {
-    if (!this.isAskBarVisible || !this.askBarInstance?.iframe.contentWindow) return;
+    if (!this.isAskBarVisible || !this.shadowInstance?.hostElement) return;
 
-    // Send a message to the iframe to trigger the close animation
-    // This mimics what happens when the X button is clicked
-    this.askBarInstance.iframe.contentWindow.postMessage({
-      type: 'sol-trigger-close'
-    }, '*');
+    // Send a message to the shadow DOM to trigger the close animation
+    this.shadowInstance.hostElement.dispatchEvent(new CustomEvent('sol-shadow-message', {
+      detail: { type: 'sol-trigger-close' },
+      bubbles: false,
+      composed: false
+    }));
 
-    // The iframe will handle the animation and send IFRAME_CLOSE message
-    // which will be caught by our IFRAME_CLOSE handler that calls hide()
+    // The component will handle the animation and send close message back
+    // which will be caught by our shadow event handler that calls hide()
   }
 
   // ---------------------------------------------------------
@@ -160,9 +178,67 @@ export class AskBarController {
   }
 
   private setupMessageHandlers(): void {
-    // Handle iframe actions
-    this.portManager.addIframeHandler<IframeActionMsg>('IFRAME_ACTION', (message, source) => {
-      // Dispatch actions to the unified conversation service for this tab
+    // Shadow DOM communication is handled in setupShadowEventListeners()
+    // No iframe handlers needed anymore
+  }
+
+  private setupStateSync(): void {
+    // Listen for state changes from unified conversation service for this tab
+    this.stateChangeCleanup = conversation.subscribeToTab(this.tabId, (state: TabConversation) => {
+      this.updateShadowState();
+    });
+  }
+
+  private updateShadowState(): void {
+    if (this.shadowInstance && this.isAskBarVisible && this.renderInstance) {
+      const state = conversation.getTabState(this.tabId);
+      // Update the React component props directly since we're in the same context
+      this.renderInstance.updateProps({
+        conversationHistory: state.messages.map(msg => ({
+          type: msg.type,
+          content: msg.content,
+          timestamp: msg.timestamp
+        })),
+        conversationId: state.conversationId
+      });
+    }
+  }
+
+  private setupShadowEventListeners(): void {
+    if (!this.shadowInstance) return;
+
+    // Listen for events from shadow DOM components
+    const handleShadowMessage = (event: CustomEvent) => {
+      const message = event.detail;
+      
+      switch (message?.type) {
+        case 'sol-expand-to-sidebar':
+        case 'sol-open-sidebar':
+          this.expandToSidebar();
+          break;
+        case 'sol-close-askbar':
+          this.hide();
+          break;
+        case 'CONVERSATION_ACTION':
+          // Handle conversation actions directly
+          this.handleConversationAction(message);
+          break;
+        case 'GET_CURRENT_TAB':
+          // Handle tab information requests
+          this.handleTabInfoRequest(message);
+          break;
+        default:
+          break;
+      }
+    };
+
+    this.shadowInstance.hostElement.addEventListener('sol-shadow-message', handleShadowMessage as EventListener);
+  }
+
+  private handleConversationAction(message: any): void {
+    // Handle actions that would normally go through PortManager for iframes
+    // but now come directly from shadow DOM components
+    if (message.action) {
       switch (message.action.type) {
         case 'ADD_USER_MESSAGE':
           conversation.addTabUserMessage(
@@ -193,62 +269,26 @@ export class AskBarController {
           );
           break;
         default:
-          // Handle other actions as needed
           break;
       }
-    });
-
-    // Handle iframe close requests
-    this.portManager.addIframeHandler<IframeCloseMsg>('IFRAME_CLOSE', (message, source) => {
-      if (this.isAskBarVisible) this.hide();
-    });
-
-    // Handle current tab requests
-    this.portManager.addIframeHandler<IframeGetCurrentTabMsg>('IFRAME_GET_CURRENT_TAB', (message, source) => {
-      const response: IframeCurrentTabResponseMsg = {
-        type: 'IFRAME_CURRENT_TAB_RESPONSE',
-        tabId: (window as any).solTabId ?? null,
-        url: window.location.href,
-        title: document.title,
-      };
-      this.portManager.sendToIframe(source, response);
-    });
-  }
-
-  private setupStateSync(): void {
-    // Listen for state changes from unified conversation service for this tab
-    this.stateChangeCleanup = conversation.subscribeToTab(this.tabId, (state: TabConversation) => {
-      this.updateIframeState();
-    });
-  }
-
-  private updateIframeState(): void {
-    if (this.askBarInstance && this.isAskBarVisible && this.askBarInstance.iframe.contentWindow) {
-      const state = conversation.getTabState(this.tabId);
-      // Send state update via postMessage
-      this.askBarInstance.iframe.contentWindow.postMessage({
-        type: 'sol-state-update',
-        conversationHistory: state.messages.map(msg => ({
-          type: msg.type,
-          content: msg.content,
-          timestamp: msg.timestamp
-        })),
-        conversationId: state.conversationId
-      }, '*');
     }
   }
 
-  private setupIframeMessageListener(): void {
-    // Listen for expand requests from the iframe
-    window.addEventListener('message', (event) => {
-      if (event.data?.type === 'sol-expand-to-sidebar') {
-        this.expandToSidebar();
-      } else if (event.data?.type === 'sol-open-sidebar') {
-        this.expandToSidebar();
-      } else if (event.data?.type === 'sol-close-askbar') {
-        this.hide(); // Direct hide like expand button
-      }
-    });
+  private handleTabInfoRequest(message: any): void {
+    // Respond to tab information requests from shadow DOM components
+    if (this.shadowInstance) {
+      this.shadowInstance.hostElement.dispatchEvent(new CustomEvent('sol-shadow-message', {
+        detail: {
+          type: 'TAB_INFO_RESPONSE',
+          requestId: message.requestId,
+        tabId: (window as any).solTabId ?? null,
+        url: window.location.href,
+        title: document.title,
+        },
+        bubbles: false,
+        composed: false
+      }));
+    }
   }
 
   private expandToSidebar(): void {

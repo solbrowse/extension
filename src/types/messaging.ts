@@ -95,35 +95,21 @@ export type UiPortMsg =
   | UiListTabsMsg
   | UiTabsResponseMsg;
 
-// Content Script ↔ Iframe Communication Messages
-export interface IframeActionMsg {
-  type: 'IFRAME_ACTION';
-  action: {
-    type: 'ADD_USER_MESSAGE' | 'ADD_ASSISTANT_MESSAGE' | 'CLEAR_CONVERSATION' | 'UPDATE_CONVERSATION_ID' | 'UPDATE_STREAMING_MESSAGE';
-    payload: any;
-  };
+// Shadow DOM Communication Messages (replacing iframe messages)
+export interface ShadowGetCurrentTabMsg {
+  type: 'SHADOW_GET_CURRENT_TAB';
 }
 
-export interface IframeCloseMsg {
-  type: 'IFRAME_CLOSE';
-}
-
-export interface IframeGetCurrentTabMsg {
-  type: 'IFRAME_GET_CURRENT_TAB';
-}
-
-export interface IframeCurrentTabResponseMsg {
-  type: 'IFRAME_CURRENT_TAB_RESPONSE';
+export interface ShadowCurrentTabResponseMsg {
+  type: 'SHADOW_CURRENT_TAB_RESPONSE';
   tabId: number | null;
   url: string;
   title: string;
 }
 
-export type IframePortMsg = 
-  | IframeActionMsg 
-  | IframeCloseMsg 
-  | IframeGetCurrentTabMsg 
-  | IframeCurrentTabResponseMsg;
+export type ShadowPortMsg = 
+  | ShadowGetCurrentTabMsg 
+  | ShadowCurrentTabResponseMsg;
 
 // Background Script Messages
 export interface GetCurrentTabIdMsg {
@@ -157,7 +143,6 @@ export interface TabSnapshot {
 export const PORT_NAMES = {
   CONTENT_PORT: 'CONTENT_PORT',
   UI_PORT: 'UI_PORT',
-  IFRAME_PORT: 'IFRAME_PORT',
 } as const;
 
 // Add interface extension for Sol init if not defined

@@ -188,18 +188,18 @@ export class ContentScraperService {
       '.newsletter', '.subscription', '.promo', '.banner'
     ];
 
-    // Hide iframe before cloning to exclude iframe content
-    const solIframe = document.querySelector('#sol-askbar-container') as HTMLElement;
-    const originalDisplay = solIframe?.style.display;
-    if (solIframe) {
-      solIframe.style.display = 'none';
+        // Hide shadow DOM containers before cloning to exclude extension content
+    const solContainer = document.querySelector('sol-overlay-container') as HTMLElement;
+    const originalDisplay = solContainer?.style.display;
+    if (solContainer) {
+      solContainer.style.display = 'none';
     }
 
     const body = document.body.cloneNode(true) as HTMLElement;
     
-    // Restore iframe visibility
-    if (solIframe && originalDisplay !== undefined) {
-      solIframe.style.display = originalDisplay;
+    // Restore shadow container visibility
+    if (solContainer && originalDisplay !== undefined) {
+      solContainer.style.display = originalDisplay;
     }
     
     // Remove all iframes and extension elements
@@ -322,20 +322,20 @@ export class ContentScraperService {
         await new Promise(resolve => setTimeout(resolve, 1000));
       }
 
-      // Remove iframe content BEFORE cloning to prevent iframe content inclusion
-      // Temporarily hide our extension iframe to exclude it from content extraction
-      const solIframe = document.querySelector('#sol-askbar-container') as HTMLElement;
-      const originalDisplay = solIframe?.style.display;
-      if (solIframe) {
-        solIframe.style.display = 'none';
+      // Remove shadow DOM content BEFORE cloning to prevent extension content inclusion
+      // Temporarily hide our extension shadow containers to exclude them from content extraction
+      const solContainer = document.querySelector('sol-overlay-container') as HTMLElement;
+      const originalDisplay = solContainer?.style.display;
+      if (solContainer) {
+        solContainer.style.display = 'none';
       }
 
-      // Clone document to avoid mutations (iframe content now excluded)
+      // Clone document to avoid mutations (shadow DOM content now excluded)
       const doc = document.cloneNode(true) as Document;
       
-      // Restore iframe visibility
-      if (solIframe && originalDisplay !== undefined) {
-        solIframe.style.display = originalDisplay;
+      // Restore shadow container visibility
+      if (solContainer && originalDisplay !== undefined) {
+        solContainer.style.display = originalDisplay;
       }
       
       // Remove any remaining iframe elements and extension content
