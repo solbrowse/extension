@@ -27,7 +27,7 @@
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "dexie": "^4.0.11",
-    "lucide-react": "^0.522.0",
+    "lucide-react": "^0.525.0",
     "markdown-to-jsx": "^7.7.10",
     "prismjs": "^1.29.0",
     "react": "^19.1.0",
